@@ -250,3 +250,44 @@ export const getVideoAttribution = createServerFn({ method: "GET" })
     });
     return { enabled: true, contributors };
   });
+
+// ============ MV REFRESH LOG / FORCE FLUSH ============
+
+export const listMvRefreshLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requirePerm(context.userId, "settings.edit");
+    const { data, error } = await supabaseAdmin
+      .from("mv_refresh_log" as never)
+      .select("id, view_name, duration_ms, rows_affected, triggered_at, ok, error")
+      .order("triggered_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return { entries: (data ?? []) as Array<{
+      id: number; view_name: string; duration_ms: number;
+      rows_affected: number | null; triggered_at: string; ok: boolean; error: string | null;
+    }> };
+  });
+
+const ForceFlushInput = z.object({
+  view: z.enum(["mv_trending", "mv_suggested_feed", "mv_category_stats"]),
+});
+
+export const forceRefreshMv = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ForceFlushInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await requirePerm(context.userId, "settings.edit");
+    const { data: result, error } = await supabaseAdmin.rpc(
+      "refresh_mv" as never,
+      { _name: data.view } as never,
+    );
+    if (error) throw new Error(error.message);
+    await writeAudit({
+      actorId: context.userId,
+      action: "mv.force_refresh",
+      targetType: "materialized_view",
+      targetId: data.view,
+    });
+    return result as { ok: boolean; rows?: number; error?: string };
+  });
