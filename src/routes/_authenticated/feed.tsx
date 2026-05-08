@@ -20,6 +20,7 @@ export const Route = createFileRoute("/_authenticated/feed")({
 function FeedPage() {
   const list = useServerFn(listApprovedVideos);
   const { data: perms } = usePermissions();
+  const { setOpen } = useSubmitSheet();
   const canSubmit = perms?.has("submission.create");
 
   const { data, isLoading } = useQuery({
