@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Users, Sparkles, ExternalLink, AlertTriangle } from "lucide-react";
 
 import { getVideoDetail } from "@/lib/library.functions";
+import { getVideoAttribution } from "@/lib/admin.functions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
