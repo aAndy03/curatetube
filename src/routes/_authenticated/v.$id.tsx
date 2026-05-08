@@ -9,6 +9,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { VideoActions } from "@/components/video-actions";
 
 export const Route = createFileRoute("/_authenticated/v/$id")({
   component: VideoDetailPage,
