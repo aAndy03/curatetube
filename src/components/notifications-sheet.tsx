@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { listNotifications, markNotificationsRead } from "@/lib/lists.functions";
+import { listNotifications } from "@/lib/lists.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { enqueue } from "@/lib/action-queue";
 
 export function NotificationsSheet({
   open,
