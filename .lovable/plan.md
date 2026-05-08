@@ -1,142 +1,105 @@
-# CurateTube — Community-Curated YouTube Database
+# CurateTube — Plan 2 (builds on `.lovable/plan.md`)
 
-A desktop-first, monochromatic web app where contributors submit YouTube videos, moderators curate them, and the public browses a clean, organized library — with a community **Suggest** signal, time-anchored leaderboards, a privacy-aware internal audit trail, and an inline, surface-driven UI.
+Plan 1 shipped the product surface. Plan 2 closes the missing browse routes, makes the app feel instant via a client-side action queue, pre-computes server data so public pages read flat tables, and gives admins visibility into sync health.
 
-## 1. Foundations
+A new file `.lovable/plan2.md` will mirror this document.
 
-- **Stack**: TanStack Start + Lovable Cloud (Postgres + Auth + Storage), shadcn/ui, Tailwind v4, TanStack Query.
-- **Auth**: Email+password, Email magic link, Google sign-in.
-- **GDPR**: consent banner, data export, account+data deletion, audit log of personal-data access, EU region, legal pages.
-- **YouTube Data API v3**: `YOUTUBE_API_KEY` server secret; all calls in server functions.
-- **First-user-becomes-Owner**: server fn atomically promotes the first authenticated user.
+---
 
-## 2. Roles & Permissions (dynamic)
+## A. Missing routes
 
-`roles`, `permissions`, `role_permissions`, `user_roles`. `has_permission(user, key)` security-definer used in RLS. Owner has all; Admin defaults are editable; Owner can create custom roles; last Owner cannot be demoted. Permission catalog spans submissions, library, taxonomy, sections, suggest/leaderboard, users, rules, reports, audit visibility, system settings.
+Goal: every sidebar link resolves, browse pages are SSR + cached, no bare 404s.
 
-## 3. Submissions + duplicate counting
+1. **`/suggested`** — Suggested Feed. Reads `mv_suggested_feed` (see C). Grid of cards sorted by `suggest_count` over rolling window. SSR with `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`.
+2. **`/trending`** — Trending. Reads `mv_trending`. Tabs for 24h / 72h windows. Same caching as above.
+3. **`/categories`** — Category browser. Reads `mv_category_stats`. Card per category with thumbnails strip + counts. Click → existing `/categories/$id` filtered library.
+4. **Sidebar guard + 404 boundary.** Audit `app-sidebar.tsx` so every link points to an existing route. Add a shared `notFoundComponent` on `__root.tsx` and on `_authenticated.tsx` so missing routes render a branded NotFound (with sidebar still intact under auth) instead of a blank page.
 
-Submit 1–N URLs → server validates → YouTube API → metadata auto-filled → user adds categories/tags/note/warnings. Duplicates still recorded in `submissions`; `videos.submission_count` counts unique submitters via `video_submitters`. Hover tooltip: **"Submitted by N users"**. Moderation queue with side-by-side preview, approve/reject/edit, bulk actions, edge-case handling.
+## B. Client-side action queue + sync engine
 
-## 4. Suggest system
+Goal: only truly server-authoritative actions interrupt the user; everything else feels instant and flushes in batches.
 
-Distinct community signal from Like. `video_suggestions`, denormalized `videos.suggest_count`, hover tooltip **"Suggested by N users"**. `suggest.cast` default for logged-in users; rate-limited.
+### Immediate (always server round-trip)
+Submit video, moderation approve/reject, auth events, role/permission changes, leaderboard snapshot trigger.
 
-## 5. Leaderboards
+### Deferred (queued + coalesced)
+Suggest toggle, list status (like/dislike/wishlist/watched), watch progress %, feed section reorder/show-hide, notification mark-as-read, bulk audit re-anonymize.
 
-Configurable tiers (Top 10/30/100/500), per-tier refresh cadence. Immutable snapshots via `/api/public/cron/leaderboard` (HMAC). Scopes: global, category, language, creator. Pages: `/leaderboard` (current + countdown), `/leaderboard/archive` (date+tier+scope picker).
+### Implementation
+- **`src/lib/action-queue.ts`** — IndexedDB-backed queue (via `idb-keyval` if needed, otherwise a tiny wrapper). Entry shape: `{ id, type, payload, created_at, attempts }`.
+- **Coalescing rules** keyed by action type:
+  - `suggest`: dedup by `video_id` (only one pending toggle per video, latest wins).
+  - `status`: replace older entry with same `(video_id, status_type)`.
+  - `progress`: replace by `video_id` with latest `%`.
+  - `notif_read`: dedup by `notification_id`.
+  - `feed_reorder`: replace by `section_id`.
+- **Flush triggers**: `requestIdleCallback`, `visibilitychange === 'hidden'`, `pagehide`, and a configurable interval (default 10 min, read from `app_settings.action_flush_interval_ms`).
+- **`POST /api/actions/batch`** server route. Body: `{ actions: QueuedAction[] }`. Server handler dispatches per `type` to existing functions (`toggleSuggest`, `toggleVideoListStatus`, etc.) inside one transaction per type, returns `{ results: [{ id, ok, error? }] }`. Exponential backoff client-side, max 3 attempts.
+- **Optimistic UI**: every deferred action mutates the matching TanStack Query cache immediately; on flush failure, roll back and surface a subtle "Sync issue — retrying" chip (Sonner).
+- Refactor `video-actions.tsx`, notifications sheet, and feed reorder to enqueue instead of calling server fns directly. Existing server fns stay — they are reused by the batch handler.
 
-## 6. Public browsing UI (YouTube-style, monochromatic)
+## C. Server-side caching + idle computation
 
-Left sidebar (Home, Suggest Feed, Leaderboard, Trending, Categories, Creators, Wishlist, Liked, Watched, Moderation if permitted), top bar (search, submit, notifications, profile). Card icons: wishlist/like/dislike/watched/**suggest** + the two tooltips. Video detail with embedded player. Profile tabs: Wishlist / Liked / Disliked / Watched / Suggested.
+### Materialized views (new migration)
+- **`mv_trending`** — `trending_score = suggest_delta_24h*3 + like_delta_24h*2 + watch_delta_24h*1`. Refresh `*/15 * * * *`.
+- **`mv_category_stats`** — `category_id, video_count, top_thumbnails[5], avg_suggest_count`. Refresh `0 3 * * *`.
+- **`mv_suggested_feed`** — pre-ranked video ids by `suggest_count` over rolling window. Refresh on the same cadence as the global leaderboard tier.
+- Extend `videos` with denormalized `like_count`, `dislike_count`, `watch_count`. Add insert/delete triggers on `user_video_status` to keep counters in sync (separate from queue flush — flush writes the row, trigger updates the counter).
 
-## 7. Configurable feed
+### HTTP caching
+- Public browse pages: `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` set via `setResponseHeaders` in the route loader's server fn.
+- Authenticated feed/profile: `private, no-store`; rely on TanStack Query `staleTime: 5min`.
+- Leaderboard archive snapshots: `public, max-age=31536000, immutable`.
+- TanStack Query: `staleTime` 5min for feed, 30min for taxonomy, `Infinity` for leaderboard archive; `gcTime` 15min everywhere.
 
-Stack of **sections**: `source`, `filters`, `sort`, `layout`, `size`, `refresh_policy`, `cycle_policy` (keep_seen_ratio + inject_new_ratio + cycle_window + per-session seed). Admin templates; users add/remove/reorder/override. State in `user_feed_state`.
+### Cron endpoints (HMAC-authenticated, mirror existing leaderboard cron)
+- `/api/public/cron/refresh-trending`
+- `/api/public/cron/refresh-categories`
+- `/api/public/cron/refresh-suggested`
+- All scheduled via `pg_cron` + `pg_net` using the existing `LEADERBOARD_CRON_SECRET` pattern (or one shared `CRON_SECRET`). Each run writes a row to a new `mv_refresh_log` table (`view_name, duration_ms, rows_affected, triggered_at`).
 
-## 8. Personal lists
+### Heavy jobs
+Audit re-anonymize bulk rewrite returns `{ job_id }` immediately; a `pg_cron` worker drains a `background_jobs` table.
 
-`user_video_status (user_id, video_id, status)` ∈ {wishlist, liked, disliked, watched, suggested}. RLS-locked.
+## D. Client rendering polish
 
-## 9. Recommendations
+- **Hover prefetch** with 50ms debounce on `<Link>` for video / creator / category routes (`prefetchQuery` cancellation on `mouseleave`).
+- **Intersection Observer pagination** — sentinel div at 200px root margin replaces the "Load more" button on feed and library.
+- **Optimistic UI** for every deferred action (already covered in B).
+- **Skeleton calibration** — exact card/line counts per surface; `content-visibility: auto` on off-screen rows.
+- **Image pipeline** — YouTube thumbnails via `<img loading="lazy" decoding="async">`; first 4 above-fold cards get `fetchpriority="high"`. (Lovable Storage transform if/when migrated; YouTube CDN URLs in the meantime.)
 
-Weighted scorer (Owner/Admin sliders). Signals: recency, approval freshness, editorial boost, suggest_count, leaderboard presence, in-app trending, diversity penalty, and (personal only) user affinity. Personal runs only when `recommendation_opt_in = true`.
+## E. Refactor relational map
 
-## 10. Internal audit + per-user privacy mode
+Add `.lovable/refactor-map.md` (a checklist agents must consult) describing the touch-set for each schema change:
+- `videos` column change → card, detail page, moderation preview, leaderboard entry display, recommendation scorer, audit before/after, search.
+- `user_video_status` enum change → ActionQueue type map, batch handler, profile tabs, sidebar counts, optimistic rollback, GDPR export.
+- New permission key → seeds, every `has_permission` call, Roles matrix, HoverCard, audit action enum.
+- New sidebar item → sidebar nav, route, breadcrumb, Cmd-K, mobile nav.
+- `audit_log` visibility change → viewer filters, write-helper default, privacy policy, attribution renderer.
+- New batch action type → ActionQueue union, coalescing map, server switch, retry config, rollback handler.
 
-Every category writes to `audit_log (id, actor_id, actor_display_snapshot, action, target_type, target_id, before, after, ip_hash, created_at, visibility)` with `visibility ∈ {internal, staff, public}`, default `internal`. `actor_display_snapshot` resolved at write time using actor's then-current privacy mode.
+## F. Admin: queue config + sync health
 
-**Per-user privacy mode** (Profile → Settings → "Audit identity"):
+- **`app_settings.action_flush_interval_ms`** — admin-editable slider (1–60 min) under `/admin/settings`. Client reads at session start.
+- **Sync health widget** on a new `/admin/dashboard` (or extend `admin.settings`):
+  - Pending queue depth (estimated from last-flush timestamps logged on `POST /api/actions/batch`).
+  - Failed flush count (last 24h).
+  - Average flush latency.
+- **Materialized view refresh log viewer** — `/admin/jobs` reads `mv_refresh_log`; flags any view whose last refresh is older than `2×` expected cadence.
+- **Force-flush button** per view — calls the same HMAC cron endpoint with an admin bearer token.
 
-- **Public**: actions attributed to display name; can be surfaced publicly (e.g., "Originally submitted by {username}" plain-text chip under the player).
-- **Anonymous** (default on signup): stored `actor_id` for accountability; rendered as "Anonymous contributor". Owner-level forensic resolution gated by `audit.view_identity`, disclosed in the privacy policy.
-- Mode change is forward-only by default; one-click "Re-anonymize my past attributions" / "Attribute my past actions" rewrites `actor_display_snapshot` for the user's prior entries (themselves audited).
-- Per-action override: "Submit anonymously this time" checkbox on the submission form.
+---
 
-Public-attribution surfaces (Owner/Admin toggleable): video detail chip, creator-page contributors list, leaderboard "suggested early by" facet — each respects the contributor's mode at render time.
+## Build phases
 
-## 11. Account deletion (tailored to original signup method)
+1. **Routes + 404** (A) — unblocks navigation immediately.
+2. **Materialized views + cron** (C) — gives those routes data.
+3. **Action queue + batch endpoint** (B) — wire suggest/list/notif to it.
+4. **Caching headers + Query tuning + hover prefetch + IO pagination** (C/D).
+5. **Admin dashboard + flush config + refresh log + force-flush** (F).
+6. **Refactor map document + audit existing surfaces** (E).
 
-- **Email+password**: re-enter password.
-- **Magic link**: fresh confirmation link emailed.
-- **Google**: Google re-auth + revoke OAuth refresh token.
-- Multi-method users must satisfy the strongest available.
-- 7-day soft-delete grace window, one-click cancel link.
-- After expiry: hard-delete cascades personal data; submissions/approvals retained with `actor_id = NULL`, `actor_display_snapshot = "Deleted user"`, `actor_deleted = true`. GDPR ZIP export offered before deletion. Deletion event itself logged (PII-scrubbed).
+## Open question
 
-## 12. Notifications
-
-Submission outcomes, role changes, new videos for wishlisted creators, "your video entered Top N", "your suggestion reached a tier", admin broadcasts, audit-mode acknowledgements, deletion grace reminders.
-
-## 13. Admin areas
-
-Dashboard, Roles & Permissions matrix, Users, Rules, Taxonomy, Feed templates & sections, Leaderboard tiers/cadence, Recommendation weights, Audit log viewer (filter+visibility toggle), Public-attribution surface toggles, Settings.
-
-## 14. UI Guidelines (CRITICAL — applies to every screen)
-
-**Philosophy: surface over overlay.** Do work where the user is looking. Modals interrupt; inline editors don't. Default to inline; reach for an overlay only when the action genuinely needs a separate context.
-
-### Component-selection ladder (pick the lowest level that fits)
-
-1. **Inline editing in place** — click a field/chip/badge, it becomes editable in-row. Confirm with Enter / blur / explicit save chip. Use for: rename, retag, change category, edit curator note, toggle role permission cell, edit section filter, rename role, change leaderboard tier name.
-2. **Inline expand / collapsible row** (`Collapsible`, `Accordion`) — for "show more" details, audit entry diffs, moderation reasons, advanced filters. Never open a modal for "more info".
-3. **Dropdown menu** (`DropdownMenu`, `Select`, `Combobox` via `Command` + `Popover`) — for picking from a list (roles, categories, tags, languages, scopes, refresh cadence, layout type, sort).
-4. **Hover card / tooltip** (`HoverCard`, `Tooltip`) — for passive info on hover. The "Submitted by N users" / "Suggested by N users" chips are `Tooltip`. Author preview, creator preview, permission description = `HoverCard`.
-5. **Popover** (`Popover`) — small focused editors anchored to their trigger: date picker, color picker, weight slider, share menu, notification preferences quick-toggle. Used sparingly.
-6. **Floating menu / Command palette** (`Command`, `CommandDialog`) — global search (`Cmd/Ctrl+K`) and admin quick-actions. Single global instance.
-7. **Sheet** (`Sheet`, side drawer) — for **configuration surfaces** that need real estate but should keep the underlying screen visible. **Profile Settings opens as a right-side `Sheet`**, not a modal. Other Sheet uses: section editor, role-permissions editor, submission detail in moderation queue, audit-entry inspector, account-deletion flow, notification center.
-8. **Dialog** (`Dialog`, `AlertDialog`) — only for truly modal, blocking decisions: destructive confirmations (delete account final step, revoke Owner, hard-delete video), legal acceptance (consent, ToS update), the very first signup welcome step. Target: ≤ 5 dialogs in the entire app.
-
-> Hard rule: if a screen is opening more than one dialog in a flow, redesign with a Sheet or inline.
-
-### Concrete component map
-
-- **Layout shell**: `SidebarProvider` + `Sidebar` (collapsible="icon" — never offcanvas on desktop), `SidebarTrigger` in header, `Breadcrumb` under header, `ScrollArea` for main content, `Resizable` panels for moderation queue and admin tables.
-- **Navigation**: `NavigationMenu` for top bar, `Tabs` for profile sections and admin sub-areas, `Breadcrumb` everywhere deeper than 1 level.
-- **Data display**: `Table` + `DataTable` patterns with column-header `DropdownMenu` for sort/filter, sticky headers via `ScrollArea`, `Pagination`. Inline-editable cells (no row-detail modals).
-- **Forms**: `Form` + `react-hook-form` + Zod. Multi-step flows use `Tabs` or vertical `Stepper` (built from `Separator` + `Badge`), not multiple dialogs.
-- **Pickers**: `Combobox` (`Command` in `Popover`) for tags/categories/creators with multi-select chips; `Calendar` in `Popover` for the leaderboard archive date picker.
-- **Status & feedback**: `Sonner` toasts for non-blocking confirmations (saved, copied, suggestion recorded). Never use a dialog for "Saved!". `Progress` for uploads/exports. `Skeleton` for loading.
-- **Density**: `Toggle`/`ToggleGroup` for grid/list/compact density on the feed.
-- **Keyboard**: `Cmd/Ctrl+K` opens the global `CommandDialog` (the only acceptable always-on dialog); `?` opens shortcut overlay (a Sheet).
-- **Charts**: `Chart` (Recharts wrapper) for leaderboard deltas and admin dashboard.
-
-### Specific surface choices (mandates)
-
-- **Profile Settings** → right `Sheet`, sectioned with `Tabs` (Account, Audit identity, Notifications, Privacy & data, Sessions, Delete account). Each setting edits inline with auto-save + `Sonner` confirmation. Audit-identity toggle is a `Switch` with a `HoverCard` explaining implications.
-- **Submit a video** → top-bar trigger opens a right `Sheet` with the multi-URL form; tag/category pickers are `Combobox`s; "submit anonymously this time" is an inline `Switch`.
-- **Moderation queue** → split view via `Resizable`: list left, detail right (no modal). Approve/reject inline; reasons via `Combobox` of templates plus inline `Textarea`.
-- **Roles & permissions** → matrix `Table` with checkbox cells; click a permission column header → `HoverCard` describing it; per-role rename inline.
-- **Leaderboard archive** → `Calendar` in `Popover` next to tier `Select` and scope `Select`; results stream into a `Table` below — no dialog hop.
-- **Notifications** → bell button opens a `Sheet` from the right (notification center), not a popover, so users can act on items without losing context.
-- **Account deletion** → sequence is a Sheet wizard (re-auth → export offer → reason → schedule). Only the _final_ irreversible confirm uses `AlertDialog`.
-- **Section editor (feed)** → click a section's gear → inline `Popover` for quick edits; "Advanced" link opens a right `Sheet` with the full editor.
-- **Audit log viewer** → `Table` with row-expand (`Collapsible`) showing diff; inspect detail in a right `Sheet` only when cross-referencing other entries.
-
-### Visual & interaction system
-
-- Pure monochrome `oklch` palette; one neutral accent. Light + dark via design tokens (no hard-coded colors in components).
-- Fluid type with `clamp()`, base `16px`. Density-aware spacing tokens (`--space-1…6`) and a compact mode for power users.
-- Container queries for cards; cards keep aspect ratio via `AspectRatio`.
-- DPI/scaling: rem + clamp; min hit area 32px desktop, 40px touch.
-- Breakpoints: ≥1280 primary, 1024 fallback, mobile graceful (sidebar becomes offcanvas only below `md`).
-- Motion: 120–180ms ease-out for inline edits; Sheets slide in 220ms; respect `prefers-reduced-motion`.
-- Focus: visible focus ring on every interactive surface; full keyboard navigation; ARIA correct on all custom widgets (shadcn handles most).
-
-## 15. Data model (high level)
-
-`profiles (…, audit_privacy_mode, deleted_at, actor_deleted)`, `roles, permissions, role_permissions, user_roles, creators, videos, submissions, video_submitters, submission_videos, categories, video_categories, tags, video_tags, tag_suggestions, user_video_status, video_suggestions, leaderboard_tiers, leaderboard_snapshots, leaderboard_entries, sections, section_items, feed_templates, user_feed_layouts, user_feed_state, recommendation_settings, rate_limit_rules, notifications, audit_log, reports, app_settings, account_deletion_requests`. All RLS-enabled; `audit_log` append-only.
-
-## 16. Build phases
-
-1. **Foundation** — Cloud, 3 auth methods, profiles (incl. `audit_privacy_mode = anonymous` default), roles/permissions matrix, first-user-Owner, design tokens + UI primitives wired to the guidelines above, layout shell (sidebar + header + Cmd-K), GDPR pages, `audit_log` table + write helper.
-2. **Submissions & Library** — YouTube integration, submit `Sheet`, duplicate counting + tooltip, moderation `Resizable` queue, video & creator pages, taxonomy, rate limits, audit on every action.
-3. **Personal lists, Suggest, Notifications** — lists, suggest action + counter + tooltip, profile `Sheet` + tabs, notification `Sheet`, audit-identity toggle + bulk rewrite, tailored deletion wizard.
-4. **Leaderboards** — tiers, snapshot engine, current + archive pages.
-5. **Configurable feed** — sections, templates, layouts, cycle policy.
-6. **Recommendations & polish** — weighted recommender, audit log viewer, public-attribution chips + admin toggles, broadcast notifications, edge-case hardening.
-
-## What I need from you
-
-- Confirm this revised scope (or tell me what to cut/defer).
-- I'll prompt for `YOUTUBE_API_KEY` when Phase 2 starts.
+Should the deferred flush interval be **per-user overridable** (Profile → Settings → Sync) on top of the admin default, or admin-only as written above? Defaulting to admin-only keeps the surface simple — flag if you want the per-user knob.
