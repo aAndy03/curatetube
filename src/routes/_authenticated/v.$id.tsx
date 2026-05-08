@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Users, Sparkles, ExternalLink, AlertTriangle } from "lucide-react";
 
 import { getVideoDetail } from "@/lib/library.functions";
+import { getVideoAttribution } from "@/lib/admin.functions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +27,14 @@ export const Route = createFileRoute("/_authenticated/v/$id")({
 function VideoDetailPage() {
   const { id } = Route.useParams();
   const fetchDetail = useServerFn(getVideoDetail);
+  const fetchAttribution = useServerFn(getVideoAttribution);
   const { data, isLoading } = useQuery({
     queryKey: ["video", id],
     queryFn: () => fetchDetail({ data: { id } }),
+  });
+  const attrQ = useQuery({
+    queryKey: ["video-attribution", id],
+    queryFn: () => fetchAttribution({ data: { videoId: id } }),
   });
 
   if (isLoading) {
@@ -106,6 +112,23 @@ function VideoDetailPage() {
         <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2">
           <VideoActions videoId={video.id} size="md" />
         </div>
+
+        {attrQ.data?.enabled && attrQ.data.contributors.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {(() => {
+              const named = attrQ.data.contributors.filter((c) => c.name);
+              const anonCount = attrQ.data.contributors.length - named.length;
+              const parts: string[] = [];
+              if (named.length)
+                parts.push(named.map((n) => n.name).join(", "));
+              if (anonCount)
+                parts.push(
+                  `${anonCount} anonymous contributor${anonCount === 1 ? "" : "s"}`,
+                );
+              return `Originally submitted by ${parts.join(" and ")}.`;
+            })()}
+          </p>
+        ) : null}
 
         {(video.content_warnings ?? []).length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-foreground/20 bg-muted px-3 py-2 text-sm">

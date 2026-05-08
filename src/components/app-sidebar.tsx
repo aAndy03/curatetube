@@ -12,6 +12,9 @@ import {
   ShieldCheck,
   Settings,
   Sparkles,
+  ScrollText,
+  SlidersHorizontal,
+  Megaphone,
 } from "lucide-react";
 
 import {
@@ -129,17 +132,24 @@ export function AppSidebar() {
             <SidebarGroupLabel>Admin</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive("/admin/roles")}
-                  >
-                    <Link to="/admin/roles">
-                      <Settings />
-                      <span>Roles &amp; Permissions</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {[
+                  { url: "/admin/roles", icon: Settings, title: "Roles & Permissions" },
+                  { url: "/admin/audit", icon: ScrollText, title: "Audit log", perm: "audit.view" },
+                  { url: "/admin/recommendations", icon: SlidersHorizontal, title: "Recommendations", perm: "settings.edit" },
+                  { url: "/admin/settings", icon: Settings, title: "App settings", perm: "settings.edit" },
+                  { url: "/admin/broadcast", icon: Megaphone, title: "Broadcast", perm: "notification.broadcast" },
+                ]
+                  .filter((i) => !i.perm || perms?.has(i.perm) || perms?.isOwner)
+                  .map((i) => (
+                    <SidebarMenuItem key={i.url}>
+                      <SidebarMenuButton asChild isActive={isActive(i.url)}>
+                        <Link to={i.url}>
+                          <i.icon />
+                          <span>{i.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
