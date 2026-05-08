@@ -79,86 +79,82 @@ function ModerationPage() {
         </Tabs>
       </header>
 
-      <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-lg border bg-card">
-        <ResizablePanel defaultSize={36} minSize={25}>
-          <ScrollArea className="h-full">
-            <div className="divide-y">
-              {isLoading ? (
-                <div className="space-y-2 p-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : submissions.length === 0 ? (
-                <p className="p-6 text-center text-sm text-muted-foreground">
-                  Nothing to review.
-                </p>
-              ) : (
-                submissions.map((s) => {
-                  const v = s.video;
-                  const active = s.id === selected?.id;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => setSelectedId(s.id)}
-                      className={`flex w-full items-start gap-3 p-3 text-left transition ${
-                        active ? "bg-accent" : "hover:bg-muted/40"
-                      }`}
-                    >
-                      {v?.thumbnail_url ? (
-                        <img
-                          src={v.thumbnail_url}
-                          alt=""
-                          className="h-14 w-24 flex-shrink-0 rounded object-cover"
-                        />
-                      ) : (
-                        <div className="h-14 w-24 flex-shrink-0 rounded bg-muted" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-2 text-sm font-medium">
-                          {v?.title ?? s.youtube_url}
-                        </p>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                          {v?.creator ? <span>{v.creator.title}</span> : null}
-                          {v ? (
-                            <span className="inline-flex items-center gap-0.5">
-                              <Users className="h-3 w-3" /> {v.submission_count}
-                            </span>
-                          ) : null}
-                          {s.anonymous ? (
-                            <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                              anon
-                            </Badge>
-                          ) : null}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </ScrollArea>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={64} minSize={40}>
-          <ScrollArea className="h-full">
-            {selected ? (
-              <DetailPane
-                submission={selected}
-                reason={reason}
-                onReasonChange={setReason}
-                onDecide={(d) => decide.mutate(d)}
-                pending={decide.isPending}
-                readOnly={status !== "pending"}
-              />
-            ) : (
-              <div className="p-10 text-center text-sm text-muted-foreground">
-                Select a submission to review.
+      <div className="grid flex-1 grid-cols-1 overflow-hidden rounded-lg border bg-card md:grid-cols-[minmax(280px,36%)_1px_1fr]">
+        <ScrollArea className="h-full">
+          <div className="divide-y">
+            {isLoading ? (
+              <div className="space-y-2 p-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
               </div>
+            ) : submissions.length === 0 ? (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                Nothing to review.
+              </p>
+            ) : (
+              submissions.map((s) => {
+                const v = s.video;
+                const active = s.id === selected?.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedId(s.id)}
+                    className={`flex w-full items-start gap-3 p-3 text-left transition ${
+                      active ? "bg-accent" : "hover:bg-muted/40"
+                    }`}
+                  >
+                    {v?.thumbnail_url ? (
+                      <img
+                        src={v.thumbnail_url}
+                        alt=""
+                        className="h-14 w-24 flex-shrink-0 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="h-14 w-24 flex-shrink-0 rounded bg-muted" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 text-sm font-medium">
+                        {v?.title ?? s.youtube_url}
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                        {v?.creator ? <span>{v.creator.title}</span> : null}
+                        {v ? (
+                          <span className="inline-flex items-center gap-0.5">
+                            <Users className="h-3 w-3" /> {v.submission_count}
+                          </span>
+                        ) : null}
+                        {s.anonymous ? (
+                          <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                            anon
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
             )}
-          </ScrollArea>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          </div>
+        </ScrollArea>
+        <div className="hidden bg-border md:block" />
+        <ScrollArea className="h-full">
+          {selected ? (
+            <DetailPane
+              submission={selected}
+              reason={reason}
+              onReasonChange={setReason}
+              onDecide={(d) => decide.mutate(d)}
+              pending={decide.isPending}
+              readOnly={status !== "pending"}
+            />
+          ) : (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              Select a submission to review.
+            </div>
+          )}
+        </ScrollArea>
+      </div>
     </div>
   );
 }
