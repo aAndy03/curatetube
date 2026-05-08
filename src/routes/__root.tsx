@@ -9,6 +9,9 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { AuthProvider } from "@/lib/auth-context";
+import { Toaster } from "@/components/ui/sonner";
+import { CookieConsent } from "@/components/cookie-consent";
 
 function NotFoundComponent() {
   return (
@@ -72,21 +75,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-    ],
-    links: [
+      { title: "CurateTube — Community-curated YouTube library" },
       {
-        rel: "stylesheet",
-        href: appCss,
+        name: "description",
+        content:
+          "A community-curated public database of YouTube videos and creators. Submit, browse, and suggest the best of YouTube.",
       },
+      { property: "og:title", content: "CurateTube" },
+      {
+        property: "og:description",
+        content: "A community-curated public database of YouTube videos and creators.",
+      },
+      { property: "og:type", content: "website" },
     ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -113,7 +115,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <AuthProvider>
+        <Outlet />
+        <Toaster richColors closeButton />
+        <CookieConsent />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
