@@ -93,6 +93,76 @@ function SettingsPage() {
           );
         })}
       </section>
+
+      <MvRefreshSection canEdit={!!canEdit} />
     </div>
+  );
+}
+
+function MvRefreshSection({ canEdit }: { canEdit: boolean }) {
+  const fetchLog = useServerFn(listMvRefreshLog);
+  const flushFn = useServerFn(forceRefreshMv);
+  const qc = useQueryClient();
+  const log = useQuery({
+    queryKey: ["mv-refresh-log"],
+    queryFn: () => fetchLog(),
+    refetchInterval: 30_000,
+  });
+  const flush = useMutation({
+    mutationFn: (view: "mv_trending" | "mv_suggested_feed" | "mv_category_stats") =>
+      flushFn({ data: { view } }),
+    onSuccess: (r) => {
+      if (r.ok) toast.success(`Refreshed (${r.rows ?? 0} rows)`);
+      else toast.error(r.error ?? "Refresh failed");
+      qc.invalidateQueries({ queryKey: ["mv-refresh-log"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const VIEWS = [
+    { key: "mv_trending" as const, label: "Trending" },
+    { key: "mv_suggested_feed" as const, label: "Suggested feed" },
+    { key: "mv_category_stats" as const, label: "Category stats" },
+  ];
+
+  const lastByView = new Map<string, { triggered_at: string; ok: boolean; duration_ms: number }>();
+  for (const e of log.data?.entries ?? []) {
+    if (!lastByView.has(e.view_name)) lastByView.set(e.view_name, e);
+  }
+
+  return (
+    <section className="space-y-3 rounded-md border bg-card p-4">
+      <header>
+        <h2 className="text-base font-semibold">Background caches</h2>
+        <p className="text-xs text-muted-foreground">
+          Pre-computed views for browse pages. Refreshed automatically; force a refresh below.
+        </p>
+      </header>
+      <div className="space-y-2">
+        {VIEWS.map((v) => {
+          const last = lastByView.get(v.key);
+          return (
+            <div key={v.key} className="flex items-center justify-between gap-3 rounded border p-3">
+              <div className="text-sm">
+                <p className="font-medium">{v.label}</p>
+                <p className="text-xs text-muted-foreground">
+                  {last
+                    ? `${last.ok ? "ok" : "failed"} · ${formatDistanceToNow(new Date(last.triggered_at))} ago · ${last.duration_ms}ms`
+                    : "No refreshes yet"}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!canEdit || flush.isPending}
+                onClick={() => flush.mutate(v.key)}
+              >
+                Force refresh
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
