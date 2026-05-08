@@ -283,7 +283,7 @@ export const forceRefreshMv = createServerFn({ method: "POST" })
       { _name: data.view } as never,
     );
     if (error) throw new Error(error.message);
-    await writeAudit({
+    await writeAudit(supabaseAdmin, {
       actorId: context.userId,
       action: "mv.force_refresh",
       targetType: "materialized_view",
