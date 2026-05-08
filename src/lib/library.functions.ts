@@ -458,7 +458,7 @@ export const listSuggestedVideos = createServerFn({ method: "GET" })
       .in("id", ids);
     if (error) throw new Error(error.message);
     const byId = new Map((rows ?? []).map((v) => [v.id as string, v]));
-    return { videos: ids.map((id) => byId.get(id)).filter(Boolean) };
+    return { videos: ids.map((id) => byId.get(id)).filter((v): v is NonNullable<typeof v> => Boolean(v)) };
   });
 
 export const listTrendingVideos = createServerFn({ method: "GET" })
@@ -488,7 +488,7 @@ export const listTrendingVideos = createServerFn({ method: "GET" })
       .eq("status", "approved");
     if (error) throw new Error(error.message);
     const byId = new Map((rows ?? []).map((v) => [v.id as string, v]));
-    return { videos: ids.map((id) => byId.get(id)).filter(Boolean), windowHours };
+    return { videos: ids.map((id) => byId.get(id)).filter((v): v is NonNullable<typeof v> => Boolean(v)), windowHours };
   });
 
 export const listCategoriesWithStats = createServerFn({ method: "GET" })
