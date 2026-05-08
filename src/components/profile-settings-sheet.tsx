@@ -63,7 +63,13 @@ export function ProfileSettingsSheet({
     }
   }, [profileQ.data]);
 
-  const save = async (patch: Record<string, unknown>) => {
+  type ProfilePatch = Partial<{
+    display_name: string | null;
+    username: string | null;
+    audit_privacy_mode: "anonymous" | "public";
+    recommendation_opt_in: boolean;
+  }>;
+  const save = async (patch: ProfilePatch) => {
     const { error } = await supabase
       .from("profiles")
       .update(patch)
