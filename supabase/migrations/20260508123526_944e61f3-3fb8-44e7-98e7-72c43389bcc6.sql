@@ -1,0 +1,1 @@
+revoke execute on function public.video_suggestions_count_sync() from public, anon, authenticated;
