@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
+import { Route as AuthenticatedCreatorsRouteImport } from './routes/_authenticated/creators'
 import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
 
@@ -47,6 +48,11 @@ const AuthenticatedFeedRoute = AuthenticatedFeedRouteImport.update({
   path: '/feed',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedCreatorsRoute = AuthenticatedCreatorsRouteImport.update({
+  id: '/creators',
+  path: '/creators',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedVIdRoute = AuthenticatedVIdRouteImport.update({
   id: '/v/$id',
   path: '/v/$id',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/creators': typeof AuthenticatedCreatorsRoute
   '/feed': typeof AuthenticatedFeedRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/v/$id': typeof AuthenticatedVIdRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/creators': typeof AuthenticatedCreatorsRoute
   '/feed': typeof AuthenticatedFeedRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/v/$id': typeof AuthenticatedVIdRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/creators': typeof AuthenticatedCreatorsRoute
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
+    | '/creators'
     | '/feed'
     | '/admin/roles'
     | '/v/$id'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
+    | '/creators'
     | '/feed'
     | '/admin/roles'
     | '/v/$id'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
+    | '/_authenticated/creators'
     | '/_authenticated/feed'
     | '/_authenticated/admin/roles'
     | '/_authenticated/v/$id'
@@ -170,6 +182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFeedRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/creators': {
+      id: '/_authenticated/creators'
+      path: '/creators'
+      fullPath: '/creators'
+      preLoaderRoute: typeof AuthenticatedCreatorsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/v/$id': {
       id: '/_authenticated/v/$id'
       path: '/v/$id'
@@ -188,12 +207,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedCreatorsRoute: typeof AuthenticatedCreatorsRoute
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedCreatorsRoute: AuthenticatedCreatorsRoute,
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedVIdRoute: AuthenticatedVIdRoute,
