@@ -56,6 +56,92 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creators: {
+        Row: {
+          channel_url: string | null
+          country: string | null
+          created_at: string
+          description: string | null
+          fetched_at: string | null
+          handle: string | null
+          id: string
+          subscriber_count: number | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          video_count: number | null
+          youtube_channel_id: string
+        }
+        Insert: {
+          channel_url?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          fetched_at?: string | null
+          handle?: string | null
+          id?: string
+          subscriber_count?: number | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          video_count?: number | null
+          youtube_channel_id: string
+        }
+        Update: {
+          channel_url?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          fetched_at?: string | null
+          handle?: string | null
+          id?: string
+          subscriber_count?: number | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          video_count?: number | null
+          youtube_channel_id?: string
+        }
+        Relationships: []
+      }
       permissions: {
         Row: {
           area: string
@@ -110,6 +196,27 @@ export type Database = {
           recommendation_opt_in?: boolean
           updated_at?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      rate_limit_events: {
+        Row: {
+          action: string
+          created_at: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: number
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -170,6 +277,95 @@ export type Database = {
         }
         Relationships: []
       }
+      submissions: {
+        Row: {
+          anonymous: boolean
+          content_warnings: string[]
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          id: string
+          note: string | null
+          status: Database["public"]["Enums"]["submission_status"]
+          submitter_id: string
+          suggested_categories: string[]
+          suggested_tags: string[]
+          updated_at: string
+          video_id: string | null
+          youtube_id: string | null
+          youtube_url: string
+        }
+        Insert: {
+          anonymous?: boolean
+          content_warnings?: string[]
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          note?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          submitter_id: string
+          suggested_categories?: string[]
+          suggested_tags?: string[]
+          updated_at?: string
+          video_id?: string | null
+          youtube_id?: string | null
+          youtube_url: string
+        }
+        Update: {
+          anonymous?: boolean
+          content_warnings?: string[]
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          note?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          submitter_id?: string
+          suggested_categories?: string[]
+          suggested_tags?: string[]
+          updated_at?: string
+          video_id?: string | null
+          youtube_id?: string | null
+          youtube_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          approved: boolean
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           granted_at: string
@@ -199,6 +395,175 @@ export type Database = {
           },
         ]
       }
+      video_categories: {
+        Row: {
+          category_id: string
+          video_id: string
+        }
+        Insert: {
+          category_id: string
+          video_id: string
+        }
+        Update: {
+          category_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_categories_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_submitters: {
+        Row: {
+          anonymous: boolean
+          first_submitted_at: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          anonymous?: boolean
+          first_submitted_at?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          anonymous?: boolean
+          first_submitted_at?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_submitters_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_tags: {
+        Row: {
+          tag_id: string
+          video_id: string
+        }
+        Insert: {
+          tag_id: string
+          video_id: string
+        }
+        Update: {
+          tag_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_tags_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      videos: {
+        Row: {
+          content_warnings: string[]
+          created_at: string
+          creator_id: string | null
+          curator_note: string | null
+          description: string | null
+          duration_seconds: number | null
+          first_submitted_at: string
+          id: string
+          is_featured: boolean
+          language: string | null
+          last_metadata_fetch: string | null
+          like_count: number | null
+          published_at: string | null
+          status: Database["public"]["Enums"]["video_status"]
+          submission_count: number
+          suggest_count: number
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          view_count: number | null
+          youtube_id: string
+        }
+        Insert: {
+          content_warnings?: string[]
+          created_at?: string
+          creator_id?: string | null
+          curator_note?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          first_submitted_at?: string
+          id?: string
+          is_featured?: boolean
+          language?: string | null
+          last_metadata_fetch?: string | null
+          like_count?: number | null
+          published_at?: string | null
+          status?: Database["public"]["Enums"]["video_status"]
+          submission_count?: number
+          suggest_count?: number
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          view_count?: number | null
+          youtube_id: string
+        }
+        Update: {
+          content_warnings?: string[]
+          created_at?: string
+          creator_id?: string | null
+          curator_note?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          first_submitted_at?: string
+          id?: string
+          is_featured?: boolean
+          language?: string | null
+          last_metadata_fetch?: string | null
+          like_count?: number | null
+          published_at?: string | null
+          status?: Database["public"]["Enums"]["video_status"]
+          submission_count?: number
+          suggest_count?: number
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          view_count?: number | null
+          youtube_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -213,6 +578,13 @@ export type Database = {
     Enums: {
       audit_privacy_mode: "anonymous" | "public"
       audit_visibility: "internal" | "staff" | "public"
+      submission_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "duplicate"
+        | "invalid"
+      video_status: "pending" | "approved" | "rejected" | "removed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -342,6 +714,14 @@ export const Constants = {
     Enums: {
       audit_privacy_mode: ["anonymous", "public"],
       audit_visibility: ["internal", "staff", "public"],
+      submission_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "duplicate",
+        "invalid",
+      ],
+      video_status: ["pending", "approved", "rejected", "removed"],
     },
   },
 } as const
