@@ -23,6 +23,7 @@ import { Route as AuthenticatedMeTabRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedLeaderboardArchiveRouteImport } from './routes/_authenticated/leaderboard.archive'
 import { Route as AuthenticatedCreatorsIdRouteImport } from './routes/_authenticated/creators.$id'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
+import { Route as AuthenticatedAdminRecommendationsRouteImport } from './routes/_authenticated/admin.recommendations'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as ApiPublicCronLeaderboardRouteImport } from './routes/api/public/cron/leaderboard'
 
@@ -97,6 +98,12 @@ const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   path: '/admin/roles',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAdminRecommendationsRoute =
+  AuthenticatedAdminRecommendationsRouteImport.update({
+    id: '/admin/recommendations',
+    path: '/admin/recommendations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   id: '/admin/audit',
   path: '/admin/audit',
@@ -119,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/admin/recommendations': typeof AuthenticatedAdminRecommendationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
@@ -136,6 +144,7 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/admin/recommendations': typeof AuthenticatedAdminRecommendationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
@@ -155,6 +164,7 @@ export interface FileRoutesById {
   '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/_authenticated/moderation': typeof AuthenticatedModerationRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/_authenticated/admin/recommendations': typeof AuthenticatedAdminRecommendationsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/_authenticated/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/moderation'
     | '/admin/audit'
+    | '/admin/recommendations'
     | '/admin/roles'
     | '/creators/$id'
     | '/leaderboard/archive'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/moderation'
     | '/admin/audit'
+    | '/admin/recommendations'
     | '/admin/roles'
     | '/creators/$id'
     | '/leaderboard/archive'
@@ -209,6 +221,7 @@ export interface FileRouteTypes {
     | '/_authenticated/leaderboard'
     | '/_authenticated/moderation'
     | '/_authenticated/admin/audit'
+    | '/_authenticated/admin/recommendations'
     | '/_authenticated/admin/roles'
     | '/_authenticated/creators/$id'
     | '/_authenticated/leaderboard/archive'
@@ -326,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/recommendations': {
+      id: '/_authenticated/admin/recommendations'
+      path: '/admin/recommendations'
+      fullPath: '/admin/recommendations'
+      preLoaderRoute: typeof AuthenticatedAdminRecommendationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin/audit': {
       id: '/_authenticated/admin/audit'
       path: '/admin/audit'
@@ -376,6 +396,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRouteWithChildren
   AuthenticatedModerationRoute: typeof AuthenticatedModerationRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
+  AuthenticatedAdminRecommendationsRoute: typeof AuthenticatedAdminRecommendationsRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedMeTabRoute: typeof AuthenticatedMeTabRoute
   AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
@@ -387,6 +408,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRouteWithChildren,
   AuthenticatedModerationRoute: AuthenticatedModerationRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
+  AuthenticatedAdminRecommendationsRoute:
+    AuthenticatedAdminRecommendationsRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedMeTabRoute: AuthenticatedMeTabRoute,
   AuthenticatedVIdRoute: AuthenticatedVIdRoute,
