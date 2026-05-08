@@ -21,6 +21,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listNotifications } from "@/lib/lists.functions";
 import { useAuth } from "@/lib/auth-context";
+import { initActionQueue, subscribeQueue, flushNow } from "@/lib/action-queue";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
@@ -76,6 +78,23 @@ function AuthNotFound() {
 }
 
 function AuthenticatedLayout() {
+  React.useEffect(() => {
+    const teardown = initActionQueue();
+    let lastErr: string | null = null;
+    const unsub = subscribeQueue(({ lastError }) => {
+      if (lastError && lastError !== lastErr) {
+        toast.error("Sync issue — retrying", { id: "sync-issue" });
+      }
+      lastErr = lastError;
+    });
+    // Initial drain on mount
+    void flushNow();
+    return () => {
+      teardown();
+      unsub();
+    };
+  }, []);
+
   return (
     <TooltipProvider delayDuration={200}>
       <SubmitSheetProvider>

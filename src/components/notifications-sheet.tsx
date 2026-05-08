@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { listNotifications, markNotificationsRead } from "@/lib/lists.functions";
+import { listNotifications } from "@/lib/lists.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { enqueue } from "@/lib/action-queue";
 
 export function NotificationsSheet({
   open,
@@ -26,7 +27,6 @@ export function NotificationsSheet({
   const { user } = useAuth();
   const qc = useQueryClient();
   const fetchList = useServerFn(listNotifications);
-  const markRead = useServerFn(markNotificationsRead);
 
   const q = useQuery({
     queryKey: ["notifications"],
@@ -55,13 +55,28 @@ export function NotificationsSheet({
     };
   }, [user, qc]);
 
+  const optimisticMarkAll = React.useCallback(() => {
+    qc.setQueryData<{ notifications: { id: string; read_at: string | null }[]; unread: number } | undefined>(
+      ["notifications"],
+      (prev) =>
+        prev
+          ? {
+              ...prev,
+              unread: 0,
+              notifications: prev.notifications.map((n) =>
+                n.read_at ? n : { ...n, read_at: new Date().toISOString() },
+              ),
+            }
+          : prev,
+    );
+    void enqueue({ type: "notif_read", ids: null });
+  }, [qc]);
+
   React.useEffect(() => {
     if (open && (q.data?.unread ?? 0) > 0) {
-      void markRead({ data: {} }).then(() =>
-        qc.invalidateQueries({ queryKey: ["notifications"] }),
-      );
+      optimisticMarkAll();
     }
-  }, [open, q.data?.unread, markRead, qc]);
+  }, [open, q.data?.unread, optimisticMarkAll]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -69,15 +84,7 @@ export function NotificationsSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between">
             Notifications
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                markRead({ data: {} }).then(() =>
-                  qc.invalidateQueries({ queryKey: ["notifications"] }),
-                )
-              }
-            >
+            <Button variant="ghost" size="sm" onClick={optimisticMarkAll}>
               <CheckCheck className="mr-1 h-4 w-4" /> Mark all read
             </Button>
           </SheetTitle>
