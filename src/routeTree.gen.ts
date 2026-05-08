@@ -15,12 +15,15 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedModerationRouteImport } from './routes/_authenticated/moderation'
+import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
 import { Route as AuthenticatedCreatorsRouteImport } from './routes/_authenticated/creators'
 import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
 import { Route as AuthenticatedMeTabRouteImport } from './routes/_authenticated/me.$tab'
+import { Route as AuthenticatedLeaderboardArchiveRouteImport } from './routes/_authenticated/leaderboard.archive'
 import { Route as AuthenticatedCreatorsIdRouteImport } from './routes/_authenticated/creators.$id'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
+import { Route as ApiPublicCronLeaderboardRouteImport } from './routes/api/public/cron/leaderboard'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -51,6 +54,12 @@ const AuthenticatedModerationRoute = AuthenticatedModerationRouteImport.update({
   path: '/moderation',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedLeaderboardRoute =
+  AuthenticatedLeaderboardRouteImport.update({
+    id: '/leaderboard',
+    path: '/leaderboard',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedFeedRoute = AuthenticatedFeedRouteImport.update({
   id: '/feed',
   path: '/feed',
@@ -71,6 +80,12 @@ const AuthenticatedMeTabRoute = AuthenticatedMeTabRouteImport.update({
   path: '/me/$tab',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedLeaderboardArchiveRoute =
+  AuthenticatedLeaderboardArchiveRouteImport.update({
+    id: '/archive',
+    path: '/archive',
+    getParentRoute: () => AuthenticatedLeaderboardRoute,
+  } as any)
 const AuthenticatedCreatorsIdRoute = AuthenticatedCreatorsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -81,6 +96,12 @@ const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   path: '/admin/roles',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const ApiPublicCronLeaderboardRoute =
+  ApiPublicCronLeaderboardRouteImport.update({
+    id: '/api/public/cron/leaderboard',
+    path: '/api/public/cron/leaderboard',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,11 +110,14 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
+  '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
+  '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
+  '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,11 +126,14 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
+  '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
+  '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
+  '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -117,11 +144,14 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_authenticated/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
+  '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/_authenticated/moderation': typeof AuthenticatedModerationRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
+  '/_authenticated/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/_authenticated/me/$tab': typeof AuthenticatedMeTabRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
+  '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -132,11 +162,14 @@ export interface FileRouteTypes {
     | '/terms'
     | '/creators'
     | '/feed'
+    | '/leaderboard'
     | '/moderation'
     | '/admin/roles'
     | '/creators/$id'
+    | '/leaderboard/archive'
     | '/me/$tab'
     | '/v/$id'
+    | '/api/public/cron/leaderboard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -145,11 +178,14 @@ export interface FileRouteTypes {
     | '/terms'
     | '/creators'
     | '/feed'
+    | '/leaderboard'
     | '/moderation'
     | '/admin/roles'
     | '/creators/$id'
+    | '/leaderboard/archive'
     | '/me/$tab'
     | '/v/$id'
+    | '/api/public/cron/leaderboard'
   id:
     | '__root__'
     | '/'
@@ -159,11 +195,14 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_authenticated/creators'
     | '/_authenticated/feed'
+    | '/_authenticated/leaderboard'
     | '/_authenticated/moderation'
     | '/_authenticated/admin/roles'
     | '/_authenticated/creators/$id'
+    | '/_authenticated/leaderboard/archive'
     | '/_authenticated/me/$tab'
     | '/_authenticated/v/$id'
+    | '/api/public/cron/leaderboard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -172,6 +211,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicCronLeaderboardRoute: typeof ApiPublicCronLeaderboardRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -218,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedModerationRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/leaderboard': {
+      id: '/_authenticated/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof AuthenticatedLeaderboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/feed': {
       id: '/_authenticated/feed'
       path: '/feed'
@@ -246,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMeTabRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/leaderboard/archive': {
+      id: '/_authenticated/leaderboard/archive'
+      path: '/archive'
+      fullPath: '/leaderboard/archive'
+      preLoaderRoute: typeof AuthenticatedLeaderboardArchiveRouteImport
+      parentRoute: typeof AuthenticatedLeaderboardRoute
+    }
     '/_authenticated/creators/$id': {
       id: '/_authenticated/creators/$id'
       path: '/$id'
@@ -259,6 +313,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/roles'
       preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/cron/leaderboard': {
+      id: '/api/public/cron/leaderboard'
+      path: '/api/public/cron/leaderboard'
+      fullPath: '/api/public/cron/leaderboard'
+      preLoaderRoute: typeof ApiPublicCronLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -276,9 +337,24 @@ const AuthenticatedCreatorsRouteWithChildren =
     AuthenticatedCreatorsRouteChildren,
   )
 
+interface AuthenticatedLeaderboardRouteChildren {
+  AuthenticatedLeaderboardArchiveRoute: typeof AuthenticatedLeaderboardArchiveRoute
+}
+
+const AuthenticatedLeaderboardRouteChildren: AuthenticatedLeaderboardRouteChildren =
+  {
+    AuthenticatedLeaderboardArchiveRoute: AuthenticatedLeaderboardArchiveRoute,
+  }
+
+const AuthenticatedLeaderboardRouteWithChildren =
+  AuthenticatedLeaderboardRoute._addFileChildren(
+    AuthenticatedLeaderboardRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedCreatorsRoute: typeof AuthenticatedCreatorsRouteWithChildren
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
+  AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRouteWithChildren
   AuthenticatedModerationRoute: typeof AuthenticatedModerationRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedMeTabRoute: typeof AuthenticatedMeTabRoute
@@ -288,6 +364,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCreatorsRoute: AuthenticatedCreatorsRouteWithChildren,
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
+  AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRouteWithChildren,
   AuthenticatedModerationRoute: AuthenticatedModerationRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedMeTabRoute: AuthenticatedMeTabRoute,
@@ -304,6 +381,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  ApiPublicCronLeaderboardRoute: ApiPublicCronLeaderboardRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
