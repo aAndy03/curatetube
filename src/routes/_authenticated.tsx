@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listNotifications } from "@/lib/lists.functions";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
@@ -62,8 +63,10 @@ function Header() {
   const { data: perms } = usePermissions();
   const canSubmit = perms?.has("submission.create");
   const fetchNotifs = useServerFn(listNotifications);
+  const { user } = useAuth();
   const notifQ = useQuery({
     queryKey: ["notifications"],
+    enabled: !!user,
     queryFn: () => fetchNotifs(),
     refetchInterval: 60_000,
   });
