@@ -27,9 +27,14 @@ export const Route = createFileRoute("/_authenticated/v/$id")({
 function VideoDetailPage() {
   const { id } = Route.useParams();
   const fetchDetail = useServerFn(getVideoDetail);
+  const fetchAttribution = useServerFn(getVideoAttribution);
   const { data, isLoading } = useQuery({
     queryKey: ["video", id],
     queryFn: () => fetchDetail({ data: { id } }),
+  });
+  const attrQ = useQuery({
+    queryKey: ["video-attribution", id],
+    queryFn: () => fetchAttribution({ data: { videoId: id } }),
   });
 
   if (isLoading) {
