@@ -113,6 +113,23 @@ function VideoDetailPage() {
           <VideoActions videoId={video.id} size="md" />
         </div>
 
+        {attrQ.data?.enabled && attrQ.data.contributors.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {(() => {
+              const named = attrQ.data.contributors.filter((c) => c.name);
+              const anonCount = attrQ.data.contributors.length - named.length;
+              const parts: string[] = [];
+              if (named.length)
+                parts.push(named.map((n) => n.name).join(", "));
+              if (anonCount)
+                parts.push(
+                  `${anonCount} anonymous contributor${anonCount === 1 ? "" : "s"}`,
+                );
+              return `Originally submitted by ${parts.join(" and ")}.`;
+            })()}
+          </p>
+        ) : null}
+
         {(video.content_warnings ?? []).length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-foreground/20 bg-muted px-3 py-2 text-sm">
             <AlertTriangle className="h-4 w-4" />
