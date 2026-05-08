@@ -172,7 +172,7 @@ export const broadcastNotification = createServerFn({ method: "POST" })
     if (uerr) throw new Error(uerr.message);
     const rows = (users ?? []).map((u) => ({
       user_id: u.id,
-      type: "system" as const,
+      type: "admin_broadcast" as const,
       title: data.title,
       body: data.body ?? null,
       link: data.link ?? null,
