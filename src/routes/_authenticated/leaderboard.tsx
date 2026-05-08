@@ -82,17 +82,17 @@ function LeaderboardPage() {
   const countdown = remainingMs == null ? "" : formatCountdown(remainingMs);
 
   const setTier = (t: string) =>
-    navigate({ search: (s) => ({ ...s, tier: t }) });
+    navigate({ search: (s: z.infer<typeof Search>) => ({ ...s, tier: t }) });
   const setScope = (s: string) =>
     navigate({
-      search: (q) => ({
+      search: (q: z.infer<typeof Search>) => ({
         ...q,
         scope: s as typeof scopeType,
         scopeValue: undefined,
       }),
     });
   const setScopeValue = (v: string) =>
-    navigate({ search: (q) => ({ ...q, scopeValue: v || undefined }) });
+    navigate({ search: (q: z.infer<typeof Search>) => ({ ...q, scopeValue: v || undefined }) });
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
