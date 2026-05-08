@@ -65,6 +65,11 @@ export function VideoCard({ video }: { video: VideoCardData }) {
             {formatDuration(video.duration_seconds)}
           </span>
         ) : null}
+        <div className="pointer-events-auto absolute bottom-1.5 left-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+          <div className="rounded-md bg-background/90 p-1 shadow-sm backdrop-blur">
+            <VideoActions videoId={video.id} size="sm" />
+          </div>
+        </div>
       </div>
       <div className="mt-2 px-0.5">
         <h3 className="line-clamp-2 text-sm font-medium leading-snug">
