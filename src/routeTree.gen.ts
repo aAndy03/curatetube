@@ -18,6 +18,7 @@ import { Route as AuthenticatedModerationRouteImport } from './routes/_authentic
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
 import { Route as AuthenticatedCreatorsRouteImport } from './routes/_authenticated/creators'
 import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
+import { Route as AuthenticatedMeTabRouteImport } from './routes/_authenticated/me.$tab'
 import { Route as AuthenticatedCreatorsIdRouteImport } from './routes/_authenticated/creators.$id'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
 
@@ -65,6 +66,11 @@ const AuthenticatedVIdRoute = AuthenticatedVIdRouteImport.update({
   path: '/v/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedMeTabRoute = AuthenticatedMeTabRouteImport.update({
+  id: '/me/$tab',
+  path: '/me/$tab',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedCreatorsIdRoute = AuthenticatedCreatorsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/moderation': typeof AuthenticatedModerationRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
+  '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
 }
 export interface FileRoutesByTo {
@@ -98,6 +105,7 @@ export interface FileRoutesByTo {
   '/moderation': typeof AuthenticatedModerationRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
+  '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
 }
 export interface FileRoutesById {
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   '/_authenticated/moderation': typeof AuthenticatedModerationRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
+  '/_authenticated/me/$tab': typeof AuthenticatedMeTabRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
 }
 export interface FileRouteTypes {
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/moderation'
     | '/admin/roles'
     | '/creators/$id'
+    | '/me/$tab'
     | '/v/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/moderation'
     | '/admin/roles'
     | '/creators/$id'
+    | '/me/$tab'
     | '/v/$id'
   id:
     | '__root__'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/_authenticated/moderation'
     | '/_authenticated/admin/roles'
     | '/_authenticated/creators/$id'
+    | '/_authenticated/me/$tab'
     | '/_authenticated/v/$id'
   fileRoutesById: FileRoutesById
 }
@@ -227,6 +239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/me/$tab': {
+      id: '/_authenticated/me/$tab'
+      path: '/me/$tab'
+      fullPath: '/me/$tab'
+      preLoaderRoute: typeof AuthenticatedMeTabRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/creators/$id': {
       id: '/_authenticated/creators/$id'
       path: '/$id'
@@ -262,6 +281,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
   AuthenticatedModerationRoute: typeof AuthenticatedModerationRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
+  AuthenticatedMeTabRoute: typeof AuthenticatedMeTabRoute
   AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
 }
 
@@ -270,6 +290,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
   AuthenticatedModerationRoute: AuthenticatedModerationRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
+  AuthenticatedMeTabRoute: AuthenticatedMeTabRoute,
   AuthenticatedVIdRoute: AuthenticatedVIdRoute,
 }
 

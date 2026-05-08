@@ -42,7 +42,7 @@ const personal = [
   { title: "Liked", url: "/me/liked", icon: Heart },
   { title: "Watched", url: "/me/watched", icon: Eye },
   { title: "Suggested", url: "/me/suggested", icon: Sparkles },
-];
+] as const;
 
 export function AppSidebar() {
   const pathname = useRouterState({
