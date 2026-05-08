@@ -172,6 +172,71 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_sections: {
+        Row: {
+          created_at: string
+          cycle: Json
+          enabled: boolean
+          filters: Json
+          id: string
+          is_template: boolean
+          layout: string
+          name: string
+          owner_id: string | null
+          position: number
+          refresh_minutes: number
+          size: number
+          sort: string
+          source: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cycle?: Json
+          enabled?: boolean
+          filters?: Json
+          id?: string
+          is_template?: boolean
+          layout?: string
+          name: string
+          owner_id?: string | null
+          position?: number
+          refresh_minutes?: number
+          size?: number
+          sort?: string
+          source: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cycle?: Json
+          enabled?: boolean
+          filters?: Json
+          id?: string
+          is_template?: boolean
+          layout?: string
+          name?: string
+          owner_id?: string | null
+          position?: number
+          refresh_minutes?: number
+          size?: number
+          sort?: string
+          source?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_sections_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "feed_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leaderboard_entries: {
         Row: {
           prev_rank: number | null
@@ -547,6 +612,35 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      user_feed_state: {
+        Row: {
+          last_cycled_at: string
+          section_id: string
+          session_seed: number
+          user_id: string
+        }
+        Insert: {
+          last_cycled_at?: string
+          section_id: string
+          session_seed: number
+          user_id: string
+        }
+        Update: {
+          last_cycled_at?: string
+          section_id?: string
+          session_seed?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_feed_state_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "feed_sections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
