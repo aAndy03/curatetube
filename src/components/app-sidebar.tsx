@@ -12,6 +12,9 @@ import {
   ShieldCheck,
   Settings,
   Sparkles,
+  ScrollText,
+  SlidersHorizontal,
+  Megaphone,
 } from "lucide-react";
 
 import {
