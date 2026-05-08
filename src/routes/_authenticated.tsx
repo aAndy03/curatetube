@@ -13,9 +13,13 @@ import { Separator } from "@/components/ui/separator";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ProfileSettingsSheet } from "@/components/profile-settings-sheet";
 import { SubmitSheet } from "@/components/submit-sheet";
+import { NotificationsSheet } from "@/components/notifications-sheet";
 import { SubmitSheetProvider, useSubmitSheet } from "@/lib/use-submit-sheet";
 import { usePermissions } from "@/lib/use-permissions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { listNotifications } from "@/lib/lists.functions";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
