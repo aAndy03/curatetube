@@ -15,7 +15,7 @@ import { ProfileSettingsSheet } from "@/components/profile-settings-sheet";
 import { SubmitSheet } from "@/components/submit-sheet";
 import { SubmitSheetProvider, useSubmitSheet } from "@/lib/use-submit-sheet";
 import { usePermissions } from "@/lib/use-permissions";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
