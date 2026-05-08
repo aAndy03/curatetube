@@ -29,7 +29,6 @@ export const Route = createFileRoute("/_authenticated/feed")({
 function FeedPage() {
   const listFn = useServerFn(listMySections);
   const adoptFn = useServerFn(adoptTemplate);
-  const reorderFn = useServerFn(reorderSections);
   const qc = useQueryClient();
   const { data: perms } = usePermissions();
   const { setOpen } = useSubmitSheet();
@@ -49,11 +48,6 @@ function FeedPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const reorder = useMutation({
-    mutationFn: (orderedIds: string[]) => reorderFn({ data: { orderedIds } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-sections"] }),
-  });
-
   const sections = sectionsQ.data?.sections ?? [];
   const templates = sectionsQ.data?.templates ?? [];
 
@@ -63,7 +57,15 @@ function FeedPage() {
     const j = i + dir;
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j], ids[i]];
-    reorder.mutate(ids);
+    // Optimistic local reorder
+    const reordered = ids
+      .map((sid) => sections.find((s) => s.id === sid))
+      .filter(Boolean) as FeedSection[];
+    qc.setQueryData<{ sections: FeedSection[]; templates: FeedSection[] } | undefined>(
+      ["my-sections"],
+      (prev) => (prev ? { ...prev, sections: reordered } : prev),
+    );
+    void enqueue({ type: "feed_reorder", orderedIds: ids });
   };
 
   return (
