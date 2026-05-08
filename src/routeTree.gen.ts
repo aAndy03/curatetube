@@ -31,6 +31,7 @@ import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminRecommendationsRouteImport } from './routes/_authenticated/admin.recommendations'
 import { Route as AuthenticatedAdminBroadcastRouteImport } from './routes/_authenticated/admin.broadcast'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as ApiPublicCronRefreshMvsRouteImport } from './routes/api/public/cron/refresh-mvs'
 import { Route as ApiPublicCronLeaderboardRouteImport } from './routes/api/public/cron/leaderboard'
 
 const TermsRoute = TermsRouteImport.update({
@@ -148,6 +149,11 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/admin/audit',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const ApiPublicCronRefreshMvsRoute = ApiPublicCronRefreshMvsRouteImport.update({
+  id: '/api/public/cron/refresh-mvs',
+  path: '/api/public/cron/refresh-mvs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronLeaderboardRoute =
   ApiPublicCronLeaderboardRouteImport.update({
     id: '/api/public/cron/leaderboard',
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
+  '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByTo {
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
+  '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/_authenticated/me/$tab': typeof AuthenticatedMeTabRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
+  '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -254,6 +263,7 @@ export interface FileRouteTypes {
     | '/me/$tab'
     | '/v/$id'
     | '/api/public/cron/leaderboard'
+    | '/api/public/cron/refresh-mvs'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -278,6 +288,7 @@ export interface FileRouteTypes {
     | '/me/$tab'
     | '/v/$id'
     | '/api/public/cron/leaderboard'
+    | '/api/public/cron/refresh-mvs'
   id:
     | '__root__'
     | '/'
@@ -303,6 +314,7 @@ export interface FileRouteTypes {
     | '/_authenticated/me/$tab'
     | '/_authenticated/v/$id'
     | '/api/public/cron/leaderboard'
+    | '/api/public/cron/refresh-mvs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -312,6 +324,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiPublicCronLeaderboardRoute: typeof ApiPublicCronLeaderboardRoute
+  ApiPublicCronRefreshMvsRoute: typeof ApiPublicCronRefreshMvsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -470,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/cron/refresh-mvs': {
+      id: '/api/public/cron/refresh-mvs'
+      path: '/api/public/cron/refresh-mvs'
+      fullPath: '/api/public/cron/refresh-mvs'
+      preLoaderRoute: typeof ApiPublicCronRefreshMvsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/leaderboard': {
       id: '/api/public/cron/leaderboard'
       path: '/api/public/cron/leaderboard'
@@ -567,7 +587,18 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiPublicCronLeaderboardRoute: ApiPublicCronLeaderboardRoute,
+  ApiPublicCronRefreshMvsRoute: ApiPublicCronRefreshMvsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
