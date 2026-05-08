@@ -21,6 +21,7 @@ import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.
 import { Route as AuthenticatedMeTabRouteImport } from './routes/_authenticated/me.$tab'
 import { Route as AuthenticatedCreatorsIdRouteImport } from './routes/_authenticated/creators.$id'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
+import { Route as ApiPublicCronLeaderboardRouteImport } from './routes/api/public/cron/leaderboard'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -81,6 +82,12 @@ const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   path: '/admin/roles',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const ApiPublicCronLeaderboardRoute =
+  ApiPublicCronLeaderboardRouteImport.update({
+    id: '/api/public/cron/leaderboard',
+    path: '/api/public/cron/leaderboard',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
+  '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
+  '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/_authenticated/me/$tab': typeof AuthenticatedMeTabRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
+  '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/creators/$id'
     | '/me/$tab'
     | '/v/$id'
+    | '/api/public/cron/leaderboard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/creators/$id'
     | '/me/$tab'
     | '/v/$id'
+    | '/api/public/cron/leaderboard'
   id:
     | '__root__'
     | '/'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/_authenticated/creators/$id'
     | '/_authenticated/me/$tab'
     | '/_authenticated/v/$id'
+    | '/api/public/cron/leaderboard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -172,6 +185,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicCronLeaderboardRoute: typeof ApiPublicCronLeaderboardRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -260,6 +274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/cron/leaderboard': {
+      id: '/api/public/cron/leaderboard'
+      path: '/api/public/cron/leaderboard'
+      fullPath: '/api/public/cron/leaderboard'
+      preLoaderRoute: typeof ApiPublicCronLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -304,7 +325,18 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  ApiPublicCronLeaderboardRoute: ApiPublicCronLeaderboardRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
