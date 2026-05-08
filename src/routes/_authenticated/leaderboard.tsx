@@ -11,7 +11,15 @@ import {
   Sparkles,
   RefreshCw,
 } from "lucide-react";
-import { getCurrentLeaderboard, listTiers } from "@/lib/leaderboard.functions";
+import {
+  getCurrentLeaderboard,
+  listTiers,
+  rebuildSnapshotNow,
+} from "@/lib/leaderboard.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePermissions } from "@/lib/use-permissions";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
