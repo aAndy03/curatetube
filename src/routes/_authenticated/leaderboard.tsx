@@ -181,6 +181,17 @@ function LeaderboardPage() {
           ) : (
             <span>No snapshot yet for this scope.</span>
           )}
+          {canManage ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => rebuild.mutate()}
+              disabled={rebuild.isPending}
+            >
+              <RefreshCw className={`size-3 ${rebuild.isPending ? "animate-spin" : ""}`} />
+              Rebuild
+            </Button>
+          ) : null}
           <Button asChild size="sm" variant="outline">
             <Link to="/leaderboard/archive" search={{ tier, scope: scopeType, scopeValue: scopeValue ?? undefined }}>
               Archive
