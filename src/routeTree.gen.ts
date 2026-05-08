@@ -14,6 +14,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedModerationRouteImport } from './routes/_authenticated/moderation'
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
 import { Route as AuthenticatedCreatorsRouteImport } from './routes/_authenticated/creators'
 import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
@@ -43,6 +44,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedModerationRoute = AuthenticatedModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedFeedRoute = AuthenticatedFeedRouteImport.update({
   id: '/feed',
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
+  '/moderation': typeof AuthenticatedModerationRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/v/$id': typeof AuthenticatedVIdRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
+  '/moderation': typeof AuthenticatedModerationRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/v/$id': typeof AuthenticatedVIdRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_authenticated/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
+  '/_authenticated/moderation': typeof AuthenticatedModerationRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/creators'
     | '/feed'
+    | '/moderation'
     | '/admin/roles'
     | '/creators/$id'
     | '/v/$id'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/creators'
     | '/feed'
+    | '/moderation'
     | '/admin/roles'
     | '/creators/$id'
     | '/v/$id'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_authenticated/creators'
     | '/_authenticated/feed'
+    | '/_authenticated/moderation'
     | '/_authenticated/admin/roles'
     | '/_authenticated/creators/$id'
     | '/_authenticated/v/$id'
@@ -186,6 +198,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/moderation': {
+      id: '/_authenticated/moderation'
+      path: '/moderation'
+      fullPath: '/moderation'
+      preLoaderRoute: typeof AuthenticatedModerationRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/feed': {
       id: '/_authenticated/feed'
@@ -241,6 +260,7 @@ const AuthenticatedCreatorsRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedCreatorsRoute: typeof AuthenticatedCreatorsRouteWithChildren
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
+  AuthenticatedModerationRoute: typeof AuthenticatedModerationRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
 }
@@ -248,6 +268,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCreatorsRoute: AuthenticatedCreatorsRouteWithChildren,
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
+  AuthenticatedModerationRoute: AuthenticatedModerationRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedVIdRoute: AuthenticatedVIdRoute,
 }
