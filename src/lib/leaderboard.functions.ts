@@ -1,6 +1,32 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { rebuildSnapshot } from "./leaderboard.server";
+
+export const rebuildSnapshotNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        tierSlug: z.string().min(1).max(40),
+        scopeType: z.enum(["global", "category", "language", "creator"]).default("global"),
+        scopeValue: z.string().max(200).optional().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: ok } = await supabaseAdmin.rpc("has_permission", {
+      _user_id: context.userId,
+      _key: "leaderboard.manage",
+    });
+    if (!ok) throw new Error("Forbidden");
+    const r = await rebuildSnapshot(data.tierSlug, {
+      scopeType: data.scopeType,
+      scopeValue: data.scopeValue ?? null,
+    });
+    return { result: r };
+  });
 
 export type LeaderboardEntry = {
   rank: number;
