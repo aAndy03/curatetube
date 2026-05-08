@@ -172,6 +172,122 @@ export type Database = {
         }
         Relationships: []
       }
+      leaderboard_entries: {
+        Row: {
+          prev_rank: number | null
+          rank: number
+          score: number
+          snapshot_id: string
+          submission_count: number
+          suggest_count: number
+          video_id: string
+        }
+        Insert: {
+          prev_rank?: number | null
+          rank: number
+          score: number
+          snapshot_id: string
+          submission_count?: number
+          suggest_count?: number
+          video_id: string
+        }
+        Update: {
+          prev_rank?: number | null
+          rank?: number
+          score?: number
+          snapshot_id?: string
+          submission_count?: number
+          suggest_count?: number
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_entries_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_entries_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leaderboard_snapshots: {
+        Row: {
+          created_at: string
+          id: string
+          next_refresh_at: string
+          scope_type: string
+          scope_value: string | null
+          tier_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          next_refresh_at: string
+          scope_type: string
+          scope_value?: string | null
+          tier_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          next_refresh_at?: string
+          scope_type?: string
+          scope_value?: string | null
+          tier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_snapshots_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leaderboard_tiers: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          refresh_minutes: number
+          size: number
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          refresh_minutes?: number
+          size: number
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          refresh_minutes?: number
+          size?: number
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
