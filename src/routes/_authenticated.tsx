@@ -32,20 +32,22 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
   return (
-    <SubmitSheetProvider>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-background text-foreground">
-          <AppSidebar />
-          <SidebarInset>
-            <Header />
-            <main className="min-h-[calc(100vh-3.5rem)] p-4 md:p-6">
-              <Outlet />
-            </main>
-          </SidebarInset>
-        </div>
-        <SheetMounts />
-      </SidebarProvider>
-    </SubmitSheetProvider>
+    <TooltipProvider delayDuration={200}>
+      <SubmitSheetProvider>
+        <SidebarProvider>
+          <div className="flex min-h-screen w-full bg-background text-foreground">
+            <AppSidebar />
+            <SidebarInset>
+              <Header />
+              <main className="min-h-[calc(100vh-3.5rem)] p-4 md:p-6">
+                <Outlet />
+              </main>
+            </SidebarInset>
+          </div>
+          <SheetMounts />
+        </SidebarProvider>
+      </SubmitSheetProvider>
+    </TooltipProvider>
   );
 }
 
