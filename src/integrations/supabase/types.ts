@@ -143,6 +143,13 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_stats"
+            referencedColumns: ["category_id"]
+          },
         ]
       }
       creators: {
@@ -298,6 +305,20 @@ export type Database = {
             foreignKeyName: "leaderboard_entries_video_id_fkey"
             columns: ["video_id"]
             isOneToOne: false
+            referencedRelation: "mv_suggested_feed"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "leaderboard_entries_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "mv_trending"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "leaderboard_entries_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
             referencedRelation: "videos"
             referencedColumns: ["id"]
           },
@@ -371,6 +392,36 @@ export type Database = {
           slug?: string
           sort_order?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      mv_refresh_log: {
+        Row: {
+          duration_ms: number
+          error: string | null
+          id: number
+          ok: boolean
+          rows_affected: number | null
+          triggered_at: string
+          view_name: string
+        }
+        Insert: {
+          duration_ms: number
+          error?: string | null
+          id?: number
+          ok?: boolean
+          rows_affected?: number | null
+          triggered_at?: string
+          view_name: string
+        }
+        Update: {
+          duration_ms?: number
+          error?: string | null
+          id?: number
+          ok?: boolean
+          rows_affected?: number | null
+          triggered_at?: string
+          view_name?: string
         }
         Relationships: []
       }
@@ -626,6 +677,20 @@ export type Database = {
             foreignKeyName: "submissions_video_id_fkey"
             columns: ["video_id"]
             isOneToOne: false
+            referencedRelation: "mv_suggested_feed"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "submissions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "mv_trending"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "submissions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
             referencedRelation: "videos"
             referencedColumns: ["id"]
           },
@@ -737,6 +802,20 @@ export type Database = {
             foreignKeyName: "user_video_status_video_id_fkey"
             columns: ["video_id"]
             isOneToOne: false
+            referencedRelation: "mv_suggested_feed"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "user_video_status_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "mv_trending"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "user_video_status_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
             referencedRelation: "videos"
             referencedColumns: ["id"]
           },
@@ -762,6 +841,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_stats"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "video_categories_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "mv_suggested_feed"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "video_categories_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "mv_trending"
+            referencedColumns: ["video_id"]
           },
           {
             foreignKeyName: "video_categories_video_id_fkey"
@@ -796,6 +896,20 @@ export type Database = {
             foreignKeyName: "video_submitters_video_id_fkey"
             columns: ["video_id"]
             isOneToOne: false
+            referencedRelation: "mv_suggested_feed"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "video_submitters_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "mv_trending"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "video_submitters_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
             referencedRelation: "videos"
             referencedColumns: ["id"]
           },
@@ -821,6 +935,20 @@ export type Database = {
           video_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "video_suggestions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "mv_suggested_feed"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "video_suggestions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "mv_trending"
+            referencedColumns: ["video_id"]
+          },
           {
             foreignKeyName: "video_suggestions_video_id_fkey"
             columns: ["video_id"]
@@ -855,6 +983,20 @@ export type Database = {
             foreignKeyName: "video_tags_video_id_fkey"
             columns: ["video_id"]
             isOneToOne: false
+            referencedRelation: "mv_suggested_feed"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "video_tags_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "mv_trending"
+            referencedColumns: ["video_id"]
+          },
+          {
+            foreignKeyName: "video_tags_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
             referencedRelation: "videos"
             referencedColumns: ["id"]
           },
@@ -862,6 +1004,9 @@ export type Database = {
       }
       videos: {
         Row: {
+          app_dislike_count: number
+          app_like_count: number
+          app_watch_count: number
           content_warnings: string[]
           created_at: string
           creator_id: string | null
@@ -885,6 +1030,9 @@ export type Database = {
           youtube_id: string
         }
         Insert: {
+          app_dislike_count?: number
+          app_like_count?: number
+          app_watch_count?: number
           content_warnings?: string[]
           created_at?: string
           creator_id?: string | null
@@ -908,6 +1056,9 @@ export type Database = {
           youtube_id: string
         }
         Update: {
+          app_dislike_count?: number
+          app_like_count?: number
+          app_watch_count?: number
           content_warnings?: string[]
           created_at?: string
           creator_id?: string | null
@@ -942,7 +1093,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_category_stats: {
+        Row: {
+          avg_suggest_count: number | null
+          category_id: string | null
+          name: string | null
+          slug: string | null
+          top_thumbnails: string[] | null
+          video_count: number | null
+        }
+        Relationships: []
+      }
+      mv_suggested_feed: {
+        Row: {
+          first_submitted_at: string | null
+          suggest_count: number | null
+          video_id: string | null
+        }
+        Relationships: []
+      }
+      mv_trending: {
+        Row: {
+          engage_24h: number | null
+          suggest_24h: number | null
+          suggest_72h: number | null
+          trending_score_24h: number | null
+          trending_score_72h: number | null
+          video_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_permission: {
@@ -950,6 +1130,7 @@ export type Database = {
         Returns: boolean
       }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      refresh_mv: { Args: { _name: string }; Returns: Json }
     }
     Enums: {
       audit_privacy_mode: "anonymous" | "public"

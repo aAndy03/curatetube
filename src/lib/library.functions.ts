@@ -1,9 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { extractYouTubeId, fetchVideos, fetchChannels } from "./youtube.server";
 import { writeAudit } from "./audit.server";
+
+const PUBLIC_BROWSE_CACHE = new Headers({
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+});
 
 // ============ SUBMIT ============
 
@@ -433,109 +438,82 @@ export const getCreatorDetail = createServerFn({ method: "GET" })
 export const listSuggestedVideos = createServerFn({ method: "GET" })
   .inputValidator((d: { limit?: number } | undefined) => d ?? {})
   .handler(async ({ data }) => {
+    setResponseHeaders(PUBLIC_BROWSE_CACHE);
     const limit = Math.min(data.limit ?? 36, 60);
+    // Read pre-ranked ids from materialized view
+    const { data: ranked, error: rErr } = await supabaseAdmin
+      .from("mv_suggested_feed" as never)
+      .select("video_id, suggest_count, first_submitted_at")
+      .order("suggest_count", { ascending: false })
+      .order("first_submitted_at", { ascending: false })
+      .limit(limit);
+    if (rErr) throw new Error(rErr.message);
+    const ids = ((ranked ?? []) as Array<{ video_id: string }>).map((r) => r.video_id);
+    if (ids.length === 0) return { videos: [] };
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
         "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)",
       )
-      .eq("status", "approved")
-      .gt("suggest_count", 0)
-      .order("suggest_count", { ascending: false })
-      .order("first_submitted_at", { ascending: false })
-      .limit(limit);
+      .in("id", ids);
     if (error) throw new Error(error.message);
-    return { videos: rows ?? [] };
+    const byId = new Map((rows ?? []).map((v) => [v.id as string, v]));
+    return { videos: ids.map((id) => byId.get(id)).filter((v): v is NonNullable<typeof v> => Boolean(v)) };
   });
 
 export const listTrendingVideos = createServerFn({ method: "GET" })
   .inputValidator((d: { windowHours?: number; limit?: number } | undefined) => d ?? {})
   .handler(async ({ data }) => {
+    setResponseHeaders(PUBLIC_BROWSE_CACHE);
     const limit = Math.min(data.limit ?? 36, 60);
     const windowHours = data.windowHours === 72 ? 72 : 24;
-    const since = new Date(Date.now() - windowHours * 3600 * 1000).toISOString();
+    const orderCol = windowHours === 72 ? "trending_score_72h" : "trending_score_24h";
 
-    // Approximate trending via recent suggestions count (proper materialized view comes in Phase 2)
-    const { data: recent, error: recentErr } = await supabaseAdmin
-      .from("video_suggestions")
-      .select("video_id")
-      .gte("created_at", since)
-      .limit(2000);
-    if (recentErr) throw new Error(recentErr.message);
-
-    const counts = new Map<string, number>();
-    for (const r of recent ?? []) {
-      counts.set(r.video_id as string, (counts.get(r.video_id as string) ?? 0) + 1);
-    }
-    const topIds = Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, limit)
-      .map(([id]) => id);
-
-    if (topIds.length === 0) return { videos: [], windowHours };
+    const { data: ranked, error: rErr } = await supabaseAdmin
+      .from("mv_trending" as never)
+      .select(`video_id, ${orderCol}`)
+      .gt(orderCol, 0)
+      .order(orderCol, { ascending: false })
+      .limit(limit);
+    if (rErr) throw new Error(rErr.message);
+    const ids = ((ranked ?? []) as Array<{ video_id: string }>).map((r) => r.video_id);
+    if (ids.length === 0) return { videos: [], windowHours };
 
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
         "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)",
       )
-      .in("id", topIds)
+      .in("id", ids)
       .eq("status", "approved");
     if (error) throw new Error(error.message);
     const byId = new Map((rows ?? []).map((v) => [v.id as string, v]));
-    const ordered = topIds.map((id) => byId.get(id)).filter(Boolean);
-    return { videos: ordered, windowHours };
+    return { videos: ids.map((id) => byId.get(id)).filter((v): v is NonNullable<typeof v> => Boolean(v)), windowHours };
   });
 
 export const listCategoriesWithStats = createServerFn({ method: "GET" })
   .handler(async () => {
-    const { data: cats, error } = await supabaseAdmin
-      .from("categories")
-      .select("id, slug, name, description")
-      .order("name", { ascending: true });
+    setResponseHeaders(PUBLIC_BROWSE_CACHE);
+    const { data: stats, error } = await supabaseAdmin
+      .from("mv_category_stats" as never)
+      .select("category_id, slug, name, video_count, top_thumbnails")
+      .order("video_count", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const ids = (cats ?? []).map((c) => c.id as string);
-    if (ids.length === 0) return { categories: [] };
-
-    const { data: links } = await supabaseAdmin
-      .from("video_categories")
-      .select("category_id, video_id")
-      .in("category_id", ids);
-
-    const byCat = new Map<string, string[]>();
-    for (const l of links ?? []) {
-      const arr = byCat.get(l.category_id as string) ?? [];
-      arr.push(l.video_id as string);
-      byCat.set(l.category_id as string, arr);
-    }
-
-    const allVideoIds = Array.from(new Set((links ?? []).map((l) => l.video_id as string)));
-    const thumbsByVideo = new Map<string, string | null>();
-    if (allVideoIds.length > 0) {
-      const { data: vids } = await supabaseAdmin
-        .from("videos")
-        .select("id, thumbnail_url, status")
-        .in("id", allVideoIds)
-        .eq("status", "approved");
-      for (const v of vids ?? []) thumbsByVideo.set(v.id as string, (v.thumbnail_url as string) ?? null);
-    }
-
-    const out = (cats ?? []).map((c) => {
-      const videoIds = byCat.get(c.id as string) ?? [];
-      const thumbs = videoIds
-        .map((id) => thumbsByVideo.get(id))
-        .filter((t): t is string => !!t)
-        .slice(0, 4);
-      return {
-        id: c.id as string,
-        slug: c.slug as string,
-        name: c.name as string,
-        description: (c.description as string) ?? null,
-        video_count: videoIds.filter((id) => thumbsByVideo.has(id)).length,
-        thumbnails: thumbs,
-      };
-    });
+    const out = ((stats ?? []) as Array<{
+      category_id: string;
+      slug: string;
+      name: string;
+      video_count: number;
+      top_thumbnails: string[] | null;
+    }>).map((s) => ({
+      id: s.category_id,
+      slug: s.slug,
+      name: s.name,
+      description: null,
+      video_count: Number(s.video_count ?? 0),
+      thumbnails: (s.top_thumbnails ?? []).slice(0, 4),
+    }));
     return { categories: out };
   });
 
