@@ -14,16 +14,205 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_log: {
+        Row: {
+          action: string
+          actor_display_snapshot: string | null
+          actor_id: string | null
+          after: Json | null
+          before: Json | null
+          created_at: string
+          id: number
+          ip_hash: string | null
+          target_id: string | null
+          target_type: string | null
+          visibility: Database["public"]["Enums"]["audit_visibility"]
+        }
+        Insert: {
+          action: string
+          actor_display_snapshot?: string | null
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          id?: number
+          ip_hash?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          visibility?: Database["public"]["Enums"]["audit_visibility"]
+        }
+        Update: {
+          action?: string
+          actor_display_snapshot?: string | null
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          id?: number
+          ip_hash?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          visibility?: Database["public"]["Enums"]["audit_visibility"]
+        }
+        Relationships: []
+      }
+      permissions: {
+        Row: {
+          area: string
+          created_at: string
+          description: string | null
+          key: string
+        }
+        Insert: {
+          area: string
+          created_at?: string
+          description?: string | null
+          key: string
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          description?: string | null
+          key?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          audit_privacy_mode: Database["public"]["Enums"]["audit_privacy_mode"]
+          avatar_url: string | null
+          created_at: string
+          deleted_at: string | null
+          display_name: string | null
+          id: string
+          recommendation_opt_in: boolean
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          audit_privacy_mode?: Database["public"]["Enums"]["audit_privacy_mode"]
+          avatar_url?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          display_name?: string | null
+          id: string
+          recommendation_opt_in?: boolean
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          audit_privacy_mode?: Database["public"]["Enums"]["audit_privacy_mode"]
+          avatar_url?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          display_name?: string | null
+          id?: string
+          recommendation_opt_in?: boolean
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          permission_key: string
+          role_id: string
+        }
+        Insert: {
+          permission_key: string
+          role_id: string
+        }
+        Update: {
+          permission_key?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_permission: {
+        Args: { _key: string; _user_id: string }
+        Returns: boolean
+      }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      audit_privacy_mode: "anonymous" | "public"
+      audit_visibility: "internal" | "staff" | "public"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +339,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      audit_privacy_mode: ["anonymous", "public"],
+      audit_visibility: ["internal", "staff", "public"],
+    },
   },
 } as const
