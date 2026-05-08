@@ -22,7 +22,7 @@ export const listAppSettings = createServerFn({ method: "GET" }).handler(
     if (error) throw new Error(error.message);
     const map: Record<string, unknown> = {};
     for (const r of data ?? []) map[r.key] = r.value;
-    return { settings: map };
+    return { settings: map as Record<string, boolean | string | number | null> };
   },
 );
 
