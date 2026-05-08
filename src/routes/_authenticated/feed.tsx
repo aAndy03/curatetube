@@ -1,9 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Sparkles } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Plus, Sparkles } from "lucide-react";
 
-import { usePermissions } from "@/lib/use-permissions";
-import { Badge } from "@/components/ui/badge";
+import { listApprovedVideos } from "@/lib/library.functions";
+import { VideoCard } from "@/components/video-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/lib/use-permissions";
+import { useSubmitSheet } from "@/lib/use-submit-sheet";
 
 export const Route = createFileRoute("/_authenticated/feed")({
   head: () => ({
@@ -13,49 +18,57 @@ export const Route = createFileRoute("/_authenticated/feed")({
 });
 
 function FeedPage() {
-  const { data: perms, isLoading } = usePermissions();
+  const list = useServerFn(listApprovedVideos);
+  const { data: perms } = usePermissions();
+  const { setOpen } = useSubmitSheet();
+  const canSubmit = perms?.has("submission.create");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["videos", "approved", "feed"],
+    queryFn: () => list({ data: { limit: 24, offset: 0 } }),
+  });
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
-      <header className="flex items-center justify-between">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
+      <header className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Home</h1>
           <p className="text-sm text-muted-foreground">
-            Your configurable feed lives here. Sections arrive in Phase 5.
+            The newest curated videos in the library.
           </p>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {isLoading ? (
-            <Skeleton className="h-6 w-24" />
-          ) : (
-            (perms?.roleNames ?? []).map((r) => (
-              <Badge key={r} variant="secondary" className="capitalize">
-                {r}
-              </Badge>
-            ))
-          )}
         </div>
       </header>
 
-      <section className="rounded-xl border bg-card p-8 text-center">
-        <Sparkles className="mx-auto h-6 w-6 text-muted-foreground" />
-        <h2 className="mt-3 text-lg font-medium">Phase 1 is live</h2>
-        <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-          Auth, roles &amp; permissions, the audit log, and the app shell are
-          ready. Submissions, the Suggest signal, leaderboards, and the
-          configurable feed will follow.
-        </p>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="space-y-3 rounded-lg border bg-card p-3">
-            <Skeleton className="aspect-video w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-          </div>
-        ))}
-      </section>
+      {isLoading ? (
+        <section className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="aspect-video w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          ))}
+        </section>
+      ) : (data?.videos.length ?? 0) === 0 ? (
+        <section className="rounded-xl border bg-card p-10 text-center">
+          <Sparkles className="mx-auto h-6 w-6 text-muted-foreground" />
+          <h2 className="mt-3 text-lg font-medium">No approved videos yet</h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+            Be the first to seed the library. Submit a YouTube URL and a moderator will review it.
+          </p>
+          {canSubmit ? (
+            <Button className="mt-4" onClick={() => setOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" /> Submit a video
+            </Button>
+          ) : null}
+        </section>
+      ) : (
+        <section className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {data!.videos.map((v) => (
+            <VideoCard key={v.id} video={v} />
+          ))}
+        </section>
+      )}
     </div>
   );
 }

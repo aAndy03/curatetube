@@ -14,7 +14,11 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedModerationRouteImport } from './routes/_authenticated/moderation'
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
+import { Route as AuthenticatedCreatorsRouteImport } from './routes/_authenticated/creators'
+import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
+import { Route as AuthenticatedCreatorsIdRouteImport } from './routes/_authenticated/creators.$id'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
 
 const TermsRoute = TermsRouteImport.update({
@@ -41,10 +45,30 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedModerationRoute = AuthenticatedModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedFeedRoute = AuthenticatedFeedRouteImport.update({
   id: '/feed',
   path: '/feed',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCreatorsRoute = AuthenticatedCreatorsRouteImport.update({
+  id: '/creators',
+  path: '/creators',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedVIdRoute = AuthenticatedVIdRouteImport.update({
+  id: '/v/$id',
+  path: '/v/$id',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCreatorsIdRoute = AuthenticatedCreatorsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedCreatorsRoute,
 } as any)
 const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   id: '/admin/roles',
@@ -57,16 +81,24 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
+  '/moderation': typeof AuthenticatedModerationRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/creators/$id': typeof AuthenticatedCreatorsIdRoute
+  '/v/$id': typeof AuthenticatedVIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
+  '/moderation': typeof AuthenticatedModerationRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/creators/$id': typeof AuthenticatedCreatorsIdRoute
+  '/v/$id': typeof AuthenticatedVIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -75,14 +107,38 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
+  '/_authenticated/moderation': typeof AuthenticatedModerationRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
+  '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/privacy' | '/terms' | '/feed' | '/admin/roles'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/privacy'
+    | '/terms'
+    | '/creators'
+    | '/feed'
+    | '/moderation'
+    | '/admin/roles'
+    | '/creators/$id'
+    | '/v/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/privacy' | '/terms' | '/feed' | '/admin/roles'
+  to:
+    | '/'
+    | '/login'
+    | '/privacy'
+    | '/terms'
+    | '/creators'
+    | '/feed'
+    | '/moderation'
+    | '/admin/roles'
+    | '/creators/$id'
+    | '/v/$id'
   id:
     | '__root__'
     | '/'
@@ -90,8 +146,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
+    | '/_authenticated/creators'
     | '/_authenticated/feed'
+    | '/_authenticated/moderation'
     | '/_authenticated/admin/roles'
+    | '/_authenticated/creators/$id'
+    | '/_authenticated/v/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -139,12 +199,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/moderation': {
+      id: '/_authenticated/moderation'
+      path: '/moderation'
+      fullPath: '/moderation'
+      preLoaderRoute: typeof AuthenticatedModerationRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/feed': {
       id: '/_authenticated/feed'
       path: '/feed'
       fullPath: '/feed'
       preLoaderRoute: typeof AuthenticatedFeedRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/creators': {
+      id: '/_authenticated/creators'
+      path: '/creators'
+      fullPath: '/creators'
+      preLoaderRoute: typeof AuthenticatedCreatorsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/v/$id': {
+      id: '/_authenticated/v/$id'
+      path: '/v/$id'
+      fullPath: '/v/$id'
+      preLoaderRoute: typeof AuthenticatedVIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/creators/$id': {
+      id: '/_authenticated/creators/$id'
+      path: '/$id'
+      fullPath: '/creators/$id'
+      preLoaderRoute: typeof AuthenticatedCreatorsIdRouteImport
+      parentRoute: typeof AuthenticatedCreatorsRoute
     }
     '/_authenticated/admin/roles': {
       id: '/_authenticated/admin/roles'
@@ -156,14 +244,33 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedCreatorsRouteChildren {
+  AuthenticatedCreatorsIdRoute: typeof AuthenticatedCreatorsIdRoute
+}
+
+const AuthenticatedCreatorsRouteChildren: AuthenticatedCreatorsRouteChildren = {
+  AuthenticatedCreatorsIdRoute: AuthenticatedCreatorsIdRoute,
+}
+
+const AuthenticatedCreatorsRouteWithChildren =
+  AuthenticatedCreatorsRoute._addFileChildren(
+    AuthenticatedCreatorsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
+  AuthenticatedCreatorsRoute: typeof AuthenticatedCreatorsRouteWithChildren
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
+  AuthenticatedModerationRoute: typeof AuthenticatedModerationRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
+  AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedCreatorsRoute: AuthenticatedCreatorsRouteWithChildren,
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
+  AuthenticatedModerationRoute: AuthenticatedModerationRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
+  AuthenticatedVIdRoute: AuthenticatedVIdRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
