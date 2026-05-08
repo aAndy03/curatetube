@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          cancel_token: string
+          cancelled_at: string | null
+          finalized_at: string | null
+          reason: string | null
+          requested_at: string
+          scheduled_for: string
+          user_id: string
+        }
+        Insert: {
+          cancel_token: string
+          cancelled_at?: string | null
+          finalized_at?: string | null
+          reason?: string | null
+          requested_at?: string
+          scheduled_for: string
+          user_id: string
+        }
+        Update: {
+          cancel_token?: string
+          cancelled_at?: string | null
+          finalized_at?: string | null
+          reason?: string | null
+          requested_at?: string
+          scheduled_for?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -139,6 +169,42 @@ export type Database = {
           updated_at?: string
           video_count?: number | null
           youtube_channel_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          data: Json
+          id: string
+          link: string | null
+          read_at: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -395,6 +461,35 @@ export type Database = {
           },
         ]
       }
+      user_video_status: {
+        Row: {
+          created_at: string
+          status: Database["public"]["Enums"]["user_list_status"]
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          status: Database["public"]["Enums"]["user_list_status"]
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          status?: Database["public"]["Enums"]["user_list_status"]
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_video_status_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       video_categories: {
         Row: {
           category_id: string
@@ -447,6 +542,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "video_submitters_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_suggestions: {
+        Row: {
+          anonymous: boolean
+          created_at: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          anonymous?: boolean
+          created_at?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          anonymous?: boolean
+          created_at?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_suggestions_video_id_fkey"
             columns: ["video_id"]
             isOneToOne: false
             referencedRelation: "videos"
@@ -578,12 +702,23 @@ export type Database = {
     Enums: {
       audit_privacy_mode: "anonymous" | "public"
       audit_visibility: "internal" | "staff" | "public"
+      notification_type:
+        | "submission_approved"
+        | "submission_rejected"
+        | "role_changed"
+        | "wishlisted_creator_new_video"
+        | "video_entered_top_n"
+        | "suggestion_reached_tier"
+        | "admin_broadcast"
+        | "audit_mode_ack"
+        | "deletion_grace_reminder"
       submission_status:
         | "pending"
         | "approved"
         | "rejected"
         | "duplicate"
         | "invalid"
+      user_list_status: "wishlist" | "liked" | "disliked" | "watched"
       video_status: "pending" | "approved" | "rejected" | "removed"
     }
     CompositeTypes: {
@@ -714,6 +849,17 @@ export const Constants = {
     Enums: {
       audit_privacy_mode: ["anonymous", "public"],
       audit_visibility: ["internal", "staff", "public"],
+      notification_type: [
+        "submission_approved",
+        "submission_rejected",
+        "role_changed",
+        "wishlisted_creator_new_video",
+        "video_entered_top_n",
+        "suggestion_reached_tier",
+        "admin_broadcast",
+        "audit_mode_ack",
+        "deletion_grace_reminder",
+      ],
       submission_status: [
         "pending",
         "approved",
@@ -721,6 +867,7 @@ export const Constants = {
         "duplicate",
         "invalid",
       ],
+      user_list_status: ["wishlist", "liked", "disliked", "watched"],
       video_status: ["pending", "approved", "rejected", "removed"],
     },
   },
