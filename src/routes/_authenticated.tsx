@@ -57,9 +57,17 @@ function AuthenticatedLayout() {
 
 function Header() {
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [notifOpen, setNotifOpen] = React.useState(false);
   const { setOpen } = useSubmitSheet();
   const { data: perms } = usePermissions();
   const canSubmit = perms?.has("submission.create");
+  const fetchNotifs = useServerFn(listNotifications);
+  const notifQ = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => fetchNotifs(),
+    refetchInterval: 60_000,
+  });
+  const unread = notifQ.data?.unread ?? 0;
 
   return (
     <>
@@ -94,14 +102,20 @@ function Header() {
               <TooltipContent>You need the Contributor role to submit.</TooltipContent>
             </Tooltip>
           )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" disabled>
-                <Bell className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Notifications — Phase 3</TooltipContent>
-          </Tooltip>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="relative"
+            onClick={() => setNotifOpen(true)}
+            aria-label="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+            {unread > 0 ? (
+              <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-foreground px-1 text-[10px] font-medium leading-none text-background">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            ) : null}
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
             <UserCircle2 className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>
@@ -109,6 +123,7 @@ function Header() {
         </div>
       </header>
       <ProfileSettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <NotificationsSheet open={notifOpen} onOpenChange={setNotifOpen} />
     </>
   );
 }
