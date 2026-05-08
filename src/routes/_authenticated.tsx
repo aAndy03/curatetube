@@ -33,7 +33,47 @@ export const Route = createFileRoute("/_authenticated")({
     }
   },
   component: AuthenticatedLayout,
+  notFoundComponent: AuthNotFound,
 });
+
+function AuthNotFound() {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <SubmitSheetProvider>
+        <SidebarProvider>
+          <div className="flex min-h-screen w-full bg-background text-foreground">
+            <AppSidebar />
+            <SidebarInset>
+              <Header />
+              <main className="grid min-h-[calc(100vh-3.5rem)] place-items-center p-6">
+                <div className="max-w-md text-center">
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    404
+                  </p>
+                  <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+                    This page doesn't exist
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    The link may be broken, or the page may have moved. Use the sidebar to find what you need.
+                  </p>
+                  <div className="mt-6">
+                    <Link
+                      to="/feed"
+                      className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+                    >
+                      Back to Home
+                    </Link>
+                  </div>
+                </div>
+              </main>
+            </SidebarInset>
+          </div>
+          <SheetMounts />
+        </SidebarProvider>
+      </SubmitSheetProvider>
+    </TooltipProvider>
+  );
+}
 
 function AuthenticatedLayout() {
   return (

@@ -427,3 +427,147 @@ export const getCreatorDetail = createServerFn({ method: "GET" })
       .limit(60);
     return { creator, videos: videos ?? [] };
   });
+
+// ============ BROWSE: SUGGESTED / TRENDING / CATEGORIES ============
+
+export const listSuggestedVideos = createServerFn({ method: "GET" })
+  .inputValidator((d: { limit?: number } | undefined) => d ?? {})
+  .handler(async ({ data }) => {
+    const limit = Math.min(data.limit ?? 36, 60);
+    const { data: rows, error } = await supabaseAdmin
+      .from("videos")
+      .select(
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)",
+      )
+      .eq("status", "approved")
+      .gt("suggest_count", 0)
+      .order("suggest_count", { ascending: false })
+      .order("first_submitted_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return { videos: rows ?? [] };
+  });
+
+export const listTrendingVideos = createServerFn({ method: "GET" })
+  .inputValidator((d: { windowHours?: number; limit?: number } | undefined) => d ?? {})
+  .handler(async ({ data }) => {
+    const limit = Math.min(data.limit ?? 36, 60);
+    const windowHours = data.windowHours === 72 ? 72 : 24;
+    const since = new Date(Date.now() - windowHours * 3600 * 1000).toISOString();
+
+    // Approximate trending via recent suggestions count (proper materialized view comes in Phase 2)
+    const { data: recent, error: recentErr } = await supabaseAdmin
+      .from("video_suggestions")
+      .select("video_id")
+      .gte("created_at", since)
+      .limit(2000);
+    if (recentErr) throw new Error(recentErr.message);
+
+    const counts = new Map<string, number>();
+    for (const r of recent ?? []) {
+      counts.set(r.video_id as string, (counts.get(r.video_id as string) ?? 0) + 1);
+    }
+    const topIds = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([id]) => id);
+
+    if (topIds.length === 0) return { videos: [], windowHours };
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("videos")
+      .select(
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)",
+      )
+      .in("id", topIds)
+      .eq("status", "approved");
+    if (error) throw new Error(error.message);
+    const byId = new Map((rows ?? []).map((v) => [v.id as string, v]));
+    const ordered = topIds.map((id) => byId.get(id)).filter(Boolean);
+    return { videos: ordered, windowHours };
+  });
+
+export const listCategoriesWithStats = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { data: cats, error } = await supabaseAdmin
+      .from("categories")
+      .select("id, slug, name, description")
+      .order("name", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const ids = (cats ?? []).map((c) => c.id as string);
+    if (ids.length === 0) return { categories: [] };
+
+    const { data: links } = await supabaseAdmin
+      .from("video_categories")
+      .select("category_id, video_id")
+      .in("category_id", ids);
+
+    const byCat = new Map<string, string[]>();
+    for (const l of links ?? []) {
+      const arr = byCat.get(l.category_id as string) ?? [];
+      arr.push(l.video_id as string);
+      byCat.set(l.category_id as string, arr);
+    }
+
+    const allVideoIds = Array.from(new Set((links ?? []).map((l) => l.video_id as string)));
+    const thumbsByVideo = new Map<string, string | null>();
+    if (allVideoIds.length > 0) {
+      const { data: vids } = await supabaseAdmin
+        .from("videos")
+        .select("id, thumbnail_url, status")
+        .in("id", allVideoIds)
+        .eq("status", "approved");
+      for (const v of vids ?? []) thumbsByVideo.set(v.id as string, (v.thumbnail_url as string) ?? null);
+    }
+
+    const out = (cats ?? []).map((c) => {
+      const videoIds = byCat.get(c.id as string) ?? [];
+      const thumbs = videoIds
+        .map((id) => thumbsByVideo.get(id))
+        .filter((t): t is string => !!t)
+        .slice(0, 4);
+      return {
+        id: c.id as string,
+        slug: c.slug as string,
+        name: c.name as string,
+        description: (c.description as string) ?? null,
+        video_count: videoIds.filter((id) => thumbsByVideo.has(id)).length,
+        thumbnails: thumbs,
+      };
+    });
+    return { categories: out };
+  });
+
+export const listVideosByCategorySlug = createServerFn({ method: "GET" })
+  .inputValidator((d: { slug: string; limit?: number }) =>
+    z.object({ slug: z.string().min(1).max(80), limit: z.number().min(1).max(60).optional() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const limit = Math.min(data.limit ?? 36, 60);
+    const { data: cat } = await supabaseAdmin
+      .from("categories")
+      .select("id, name, description, slug")
+      .eq("slug", data.slug)
+      .maybeSingle();
+    if (!cat) return { category: null, videos: [] };
+
+    const { data: links } = await supabaseAdmin
+      .from("video_categories")
+      .select("video_id")
+      .eq("category_id", cat.id as string);
+    const ids = (links ?? []).map((l) => l.video_id as string);
+    if (ids.length === 0) return { category: cat, videos: [] };
+
+    const { data: vids, error } = await supabaseAdmin
+      .from("videos")
+      .select(
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)",
+      )
+      .in("id", ids)
+      .eq("status", "approved")
+      .order("suggest_count", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return { category: cat, videos: vids ?? [] };
+  });
