@@ -1,7 +1,8 @@
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 import {
   Sheet,
@@ -23,6 +24,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import {
+  rewriteAuditIdentity,
+  requestAccountDeletion,
+  cancelAccountDeletion,
+  getMyDeletionRequest,
+  getMyAuthIdentities,
+} from "@/lib/lists.functions";
 
 export function ProfileSettingsSheet({
   open,
