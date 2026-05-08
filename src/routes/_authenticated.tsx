@@ -78,6 +78,23 @@ function AuthNotFound() {
 }
 
 function AuthenticatedLayout() {
+  React.useEffect(() => {
+    const teardown = initActionQueue();
+    let lastErr: string | null = null;
+    const unsub = subscribeQueue(({ lastError }) => {
+      if (lastError && lastError !== lastErr) {
+        toast.error("Sync issue — retrying", { id: "sync-issue" });
+      }
+      lastErr = lastError;
+    });
+    // Initial drain on mount
+    void flushNow();
+    return () => {
+      teardown();
+      unsub();
+    };
+  }, []);
+
   return (
     <TooltipProvider delayDuration={200}>
       <SubmitSheetProvider>
