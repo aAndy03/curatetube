@@ -1,17 +1,13 @@
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bookmark, Heart, ThumbsDown, Eye, Sparkles, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Bookmark, Heart, ThumbsDown, Eye, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import {
-  toggleVideoListStatus,
-  toggleSuggest,
-  getMyVideoState,
-} from "@/lib/lists.functions";
+import { getMyVideoState } from "@/lib/lists.functions";
+import { enqueue } from "@/lib/action-queue";
 
 type ListStatus = "wishlist" | "liked" | "disliked" | "watched";
 
@@ -21,6 +17,8 @@ const ACTIONS: { key: ListStatus; icon: typeof Bookmark; label: string }[] = [
   { key: "disliked", icon: ThumbsDown, label: "Dislike" },
   { key: "watched", icon: Eye, label: "Mark watched" },
 ];
+
+type VideoState = { statuses: ListStatus[]; suggested: boolean };
 
 export function VideoActions({
   videoId,
@@ -33,34 +31,50 @@ export function VideoActions({
 }) {
   const qc = useQueryClient();
   const fetchState = useServerFn(getMyVideoState);
-  const toggleList = useServerFn(toggleVideoListStatus);
-  const toggleSug = useServerFn(toggleSuggest);
 
   const stateQ = useQuery({
     queryKey: ["video-state", videoId],
     queryFn: () => fetchState({ data: { videoId } }),
   });
 
-  const setStatus = useMutation({
-    mutationFn: (v: { status: ListStatus; on: boolean }) =>
-      toggleList({ data: { videoId, status: v.status, on: v.on } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["video-state", videoId] }),
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const data: VideoState = stateQ.data ?? { statuses: [], suggested: false };
+  const has = (s: ListStatus) => data.statuses.includes(s);
+  const suggested = data.suggested;
 
-  const setSuggest = useMutation({
-    mutationFn: (on: boolean) => toggleSug({ data: { videoId, on } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["video-state", videoId] });
-      qc.invalidateQueries({ queryKey: ["video", videoId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const optimisticStatus = (status: ListStatus, on: boolean) => {
+    qc.setQueryData<VideoState>(["video-state", videoId], (prev) => {
+      const base = prev ?? { statuses: [], suggested: false };
+      let statuses = base.statuses.filter((s) => s !== status);
+      if (on) {
+        statuses.push(status);
+        // Mutually exclusive like/dislike
+        if (status === "liked") statuses = statuses.filter((s) => s !== "disliked");
+        if (status === "disliked") statuses = statuses.filter((s) => s !== "liked");
+      }
+      return { ...base, statuses };
+    });
+  };
 
-  const has = (s: ListStatus) => stateQ.data?.statuses.includes(s) ?? false;
-  const suggested = stateQ.data?.suggested ?? false;
-  const busy = setStatus.isPending || setSuggest.isPending || stateQ.isLoading;
-  const btnSize = size === "md" ? "default" : "sm";
+  const onStatusClick = (status: ListStatus, active: boolean) => {
+    optimisticStatus(status, !active);
+    void enqueue({ type: "status", videoId, status, on: !active });
+  };
+
+  const onSuggestClick = () => {
+    qc.setQueryData<VideoState>(["video-state", videoId], (prev) => ({
+      ...(prev ?? { statuses: [], suggested: false }),
+      suggested: !suggested,
+    }));
+    // Also reflect in the cached video card suggest_count if present
+    qc.setQueriesData<{ suggest_count?: number } | undefined>(
+      { queryKey: ["video", videoId] },
+      (prev) =>
+        prev
+          ? { ...prev, suggest_count: Math.max(0, (prev.suggest_count ?? 0) + (suggested ? -1 : 1)) }
+          : prev,
+    );
+    void enqueue({ type: "suggest", videoId, on: !suggested });
+  };
 
   const stop = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -77,14 +91,10 @@ export function VideoActions({
               <Button
                 size="icon"
                 variant={active ? "default" : "ghost"}
-                className={cn(
-                  size === "sm" ? "h-7 w-7" : "h-9 w-9",
-                  "shrink-0",
-                )}
-                disabled={busy}
+                className={cn(size === "sm" ? "h-7 w-7" : "h-9 w-9", "shrink-0")}
                 onClick={(e) => {
                   stop(e);
-                  setStatus.mutate({ status: key, on: !active });
+                  onStatusClick(key, active);
                 }}
                 aria-pressed={active}
                 aria-label={label}
@@ -99,28 +109,21 @@ export function VideoActions({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            size={btnSize === "default" ? "sm" : "sm"}
+            size="sm"
             variant={suggested ? "default" : "outline"}
             className={cn("h-7 px-2", size === "md" && "h-9 px-3")}
-            disabled={busy}
             onClick={(e) => {
               stop(e);
-              setSuggest.mutate(!suggested);
+              onSuggestClick();
             }}
             aria-pressed={suggested}
           >
-            {busy && setSuggest.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
-            )}
+            <Sparkles className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
             <span className="ml-1 text-xs">{suggested ? "Suggested" : "Suggest"}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          {suggested
-            ? "Remove your suggestion"
-            : "Suggest this video to the community"}
+          {suggested ? "Remove your suggestion" : "Suggest this video to the community"}
         </TooltipContent>
       </Tooltip>
     </div>
