@@ -1,4 +1,3 @@
-
 # CurateTube — Community-Curated YouTube Database
 
 A desktop-first, monochromatic web app where contributors submit YouTube videos, moderators curate them, and the public browses a clean, organized library — with a community **Suggest** signal, time-anchored leaderboards, a privacy-aware internal audit trail, and an inline, surface-driven UI.
@@ -48,6 +47,7 @@ Weighted scorer (Owner/Admin sliders). Signals: recency, approval freshness, edi
 Every category writes to `audit_log (id, actor_id, actor_display_snapshot, action, target_type, target_id, before, after, ip_hash, created_at, visibility)` with `visibility ∈ {internal, staff, public}`, default `internal`. `actor_display_snapshot` resolved at write time using actor's then-current privacy mode.
 
 **Per-user privacy mode** (Profile → Settings → "Audit identity"):
+
 - **Public**: actions attributed to display name; can be surfaced publicly (e.g., "Originally submitted by {username}" plain-text chip under the player).
 - **Anonymous** (default on signup): stored `actor_id` for accountability; rendered as "Anonymous contributor". Owner-level forensic resolution gated by `audit.view_identity`, disclosed in the privacy policy.
 - Mode change is forward-only by default; one-click "Re-anonymize my past attributions" / "Attribute my past actions" rewrites `actor_display_snapshot` for the user's prior entries (themselves audited).
@@ -109,7 +109,7 @@ Dashboard, Roles & Permissions matrix, Users, Rules, Taxonomy, Feed templates & 
 - **Roles & permissions** → matrix `Table` with checkbox cells; click a permission column header → `HoverCard` describing it; per-role rename inline.
 - **Leaderboard archive** → `Calendar` in `Popover` next to tier `Select` and scope `Select`; results stream into a `Table` below — no dialog hop.
 - **Notifications** → bell button opens a `Sheet` from the right (notification center), not a popover, so users can act on items without losing context.
-- **Account deletion** → sequence is a Sheet wizard (re-auth → export offer → reason → schedule). Only the *final* irreversible confirm uses `AlertDialog`.
+- **Account deletion** → sequence is a Sheet wizard (re-auth → export offer → reason → schedule). Only the _final_ irreversible confirm uses `AlertDialog`.
 - **Section editor (feed)** → click a section's gear → inline `Popover` for quick edits; "Advanced" link opens a right `Sheet` with the full editor.
 - **Audit log viewer** → `Table` with row-expand (`Collapsible`) showing diff; inspect detail in a right `Sheet` only when cross-referencing other entries.
 
