@@ -62,8 +62,10 @@ function Header() {
   const { data: perms } = usePermissions();
   const canSubmit = perms?.has("submission.create");
   const fetchNotifs = useServerFn(listNotifications);
+  const { user } = useAuth();
   const notifQ = useQuery({
     queryKey: ["notifications"],
+    enabled: !!user,
     queryFn: () => fetchNotifs(),
     refetchInterval: 60_000,
   });
