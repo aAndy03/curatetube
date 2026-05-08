@@ -77,6 +77,20 @@ function LeaderboardPage() {
     refetchInterval: 60_000,
   });
 
+  const { data: perms } = usePermissions();
+  const canManage = perms?.has("leaderboard.manage") || perms?.isOwner;
+  const rebuildFn = useServerFn(rebuildSnapshotNow);
+  const qc = useQueryClient();
+  const rebuild = useMutation({
+    mutationFn: () =>
+      rebuildFn({ data: { tierSlug: tier, scopeType, scopeValue } }),
+    onSuccess: () => {
+      toast.success("Snapshot rebuilt");
+      qc.invalidateQueries({ queryKey: ["lb-current"] });
+      qc.invalidateQueries({ queryKey: ["lb-archive"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const [now, setNow] = React.useState(Date.now());
   React.useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
