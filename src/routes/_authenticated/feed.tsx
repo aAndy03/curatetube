@@ -5,11 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Plus, Sparkles, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  adoptTemplate,
-  listMySections,
-  reorderSections,
-} from "@/lib/sections.functions";
+import { adoptTemplate, listMySections, type FeedSection } from "@/lib/sections.functions";
+import { enqueue } from "@/lib/action-queue";
 import { FeedSectionView } from "@/components/feed-section";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
