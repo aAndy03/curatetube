@@ -44,12 +44,13 @@ export const getCurrentLeaderboard = createServerFn({ method: "GET" })
       .maybeSingle();
     if (!tier) return { tier: null, snapshot: null, entries: [] as LeaderboardEntry[] };
 
-    const { data: snap } = await supabaseAdmin
+    let snapQ = supabaseAdmin
       .from("leaderboard_snapshots")
       .select("id, created_at, next_refresh_at, scope_type, scope_value")
       .eq("tier_id", tier.id)
-      .eq("scope_type", data.scopeType)
-      .eq("scope_value", data.scopeValue ?? null)
+      .eq("scope_type", data.scopeType);
+    snapQ = data.scopeValue ? snapQ.eq("scope_value", data.scopeValue) : snapQ.is("scope_value", null);
+    const { data: snap } = await snapQ
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
