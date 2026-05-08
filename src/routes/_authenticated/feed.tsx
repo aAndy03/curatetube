@@ -57,10 +57,8 @@ function FeedPage() {
             Be the first to seed the library. Submit a YouTube URL and a moderator will review it.
           </p>
           {canSubmit ? (
-            <Button asChild className="mt-4">
-              <Link to="/submit">
-                <Plus className="mr-1 h-4 w-4" /> Submit a video
-              </Link>
+            <Button className="mt-4" onClick={() => setOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" /> Submit a video
             </Button>
           ) : null}
         </section>
