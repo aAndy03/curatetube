@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
 import { Route as AuthenticatedCreatorsRouteImport } from './routes/_authenticated/creators'
 import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
+import { Route as AuthenticatedCreatorsIdRouteImport } from './routes/_authenticated/creators.$id'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
 
 const TermsRoute = TermsRouteImport.update({
@@ -58,6 +59,11 @@ const AuthenticatedVIdRoute = AuthenticatedVIdRouteImport.update({
   path: '/v/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedCreatorsIdRoute = AuthenticatedCreatorsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedCreatorsRoute,
+} as any)
 const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   id: '/admin/roles',
   path: '/admin/roles',
@@ -69,9 +75,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/creators': typeof AuthenticatedCreatorsRoute
+  '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/v/$id': typeof AuthenticatedVIdRoute
 }
 export interface FileRoutesByTo {
@@ -79,9 +86,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/creators': typeof AuthenticatedCreatorsRoute
+  '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/v/$id': typeof AuthenticatedVIdRoute
 }
 export interface FileRoutesById {
@@ -91,9 +99,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/_authenticated/creators': typeof AuthenticatedCreatorsRoute
+  '/_authenticated/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
 }
 export interface FileRouteTypes {
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/creators'
     | '/feed'
     | '/admin/roles'
+    | '/creators/$id'
     | '/v/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/creators'
     | '/feed'
     | '/admin/roles'
+    | '/creators/$id'
     | '/v/$id'
   id:
     | '__root__'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/_authenticated/creators'
     | '/_authenticated/feed'
     | '/_authenticated/admin/roles'
+    | '/_authenticated/creators/$id'
     | '/_authenticated/v/$id'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/creators/$id': {
+      id: '/_authenticated/creators/$id'
+      path: '/$id'
+      fullPath: '/creators/$id'
+      preLoaderRoute: typeof AuthenticatedCreatorsIdRouteImport
+      parentRoute: typeof AuthenticatedCreatorsRoute
+    }
     '/_authenticated/admin/roles': {
       id: '/_authenticated/admin/roles'
       path: '/admin/roles'
@@ -206,15 +225,28 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedCreatorsRouteChildren {
+  AuthenticatedCreatorsIdRoute: typeof AuthenticatedCreatorsIdRoute
+}
+
+const AuthenticatedCreatorsRouteChildren: AuthenticatedCreatorsRouteChildren = {
+  AuthenticatedCreatorsIdRoute: AuthenticatedCreatorsIdRoute,
+}
+
+const AuthenticatedCreatorsRouteWithChildren =
+  AuthenticatedCreatorsRoute._addFileChildren(
+    AuthenticatedCreatorsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
-  AuthenticatedCreatorsRoute: typeof AuthenticatedCreatorsRoute
+  AuthenticatedCreatorsRoute: typeof AuthenticatedCreatorsRouteWithChildren
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedCreatorsRoute: AuthenticatedCreatorsRoute,
+  AuthenticatedCreatorsRoute: AuthenticatedCreatorsRouteWithChildren,
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedVIdRoute: AuthenticatedVIdRoute,
