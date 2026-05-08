@@ -9,6 +9,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { VideoActions } from "@/components/video-actions";
 
 export const Route = createFileRoute("/_authenticated/v/$id")({
   component: VideoDetailPage,
@@ -100,6 +101,10 @@ function VideoDetailPage() {
               </a>
             </Button>
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2">
+          <VideoActions videoId={video.id} size="md" />
         </div>
 
         {(video.content_warnings ?? []).length > 0 ? (

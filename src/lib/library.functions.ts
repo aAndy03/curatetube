@@ -308,7 +308,7 @@ export const moderateSubmission = createServerFn({ method: "POST" })
 
     const { data: sub, error: subErr } = await supabaseAdmin
       .from("submissions")
-      .select("id, video_id, status, youtube_id")
+      .select("id, video_id, status, youtube_id, submitter_id")
       .eq("id", data.submissionId)
       .single();
     if (subErr || !sub) throw new Error("Submission not found");
@@ -326,10 +326,12 @@ export const moderateSubmission = createServerFn({ method: "POST" })
 
     if (sub.video_id) {
       const videoStatus = data.decision === "approve" ? "approved" : "rejected";
-      await supabaseAdmin
+      const { data: vid } = await supabaseAdmin
         .from("videos")
         .update({ status: videoStatus })
-        .eq("id", sub.video_id);
+        .eq("id", sub.video_id)
+        .select("title")
+        .single();
 
       await writeAudit(supabaseAdmin, {
         actorId: userId,
@@ -338,6 +340,22 @@ export const moderateSubmission = createServerFn({ method: "POST" })
         targetId: sub.video_id,
         after: { reason: data.reason ?? null },
         visibility: "staff",
+      });
+
+      // Notify submitter
+      await supabaseAdmin.from("notifications").insert({
+        user_id: sub.submitter_id,
+        type:
+          data.decision === "approve"
+            ? "submission_approved"
+            : "submission_rejected",
+        title:
+          data.decision === "approve"
+            ? `Approved: ${vid?.title ?? "your submission"}`
+            : `Rejected: ${vid?.title ?? "your submission"}`,
+        body: data.reason ?? null,
+        link: `/v/${sub.video_id}`,
+        data: { video_id: sub.video_id },
       });
     }
 
