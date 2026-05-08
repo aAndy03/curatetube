@@ -219,3 +219,230 @@ export function ProfileSettingsSheet({
     </Sheet>
   );
 }
+
+function BulkRewriteButtons() {
+  const rewrite = useServerFn(rewriteAuditIdentity);
+  const m = useMutation({
+    mutationFn: (mode: "anonymize" | "attribute") =>
+      rewrite({ data: { mode } }),
+    onSuccess: (r) => toast.success(`Rewrote ${r.rewritten} audit entries`),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <div className="grid gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={m.isPending}
+        onClick={() => m.mutate("anonymize")}
+      >
+        Re-anonymize my past attributions
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={m.isPending}
+        onClick={() => m.mutate("attribute")}
+      >
+        Attribute my past actions
+      </Button>
+      <p className="text-[11px] text-muted-foreground">
+        Each rewrite is itself recorded in the audit log.
+      </p>
+    </div>
+  );
+}
+
+function DeleteAccountPanel() {
+  const { signOut } = useAuth();
+  const qc = useQueryClient();
+  const fetchReq = useServerFn(getMyDeletionRequest);
+  const fetchIds = useServerFn(getMyAuthIdentities);
+  const requestDel = useServerFn(requestAccountDeletion);
+  const cancelDel = useServerFn(cancelAccountDeletion);
+
+  const reqQ = useQuery({
+    queryKey: ["account-deletion"],
+    queryFn: () => fetchReq(),
+  });
+  const idsQ = useQuery({
+    queryKey: ["auth-identities"],
+    queryFn: () => fetchIds(),
+  });
+
+  const [confirm, setConfirm] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [reason, setReason] = React.useState("");
+
+  const active =
+    reqQ.data?.request &&
+    !reqQ.data.request.cancelled_at &&
+    !reqQ.data.request.finalized_at;
+
+  const submit = useMutation({
+    mutationFn: async () => {
+      const ids = idsQ.data;
+      if (!ids) throw new Error("Loading identity providers…");
+      // Tailored re-auth based on signup method (strongest if multi-method).
+      if (ids.hasGoogle) {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo: window.location.href },
+        });
+        if (error) throw error;
+        // OAuth redirects away; the deletion request happens after redirect.
+        return null;
+      }
+      if (ids.hasPassword) {
+        const { data: u } = await supabase.auth.getUser();
+        if (!u.user?.email) throw new Error("No email on file");
+        const { error } = await supabase.auth.signInWithPassword({
+          email: u.user.email,
+          password,
+        });
+        if (error) throw new Error("Password did not match");
+      } else {
+        // Magic link path
+        const { data: u } = await supabase.auth.getUser();
+        if (!u.user?.email) throw new Error("No email on file");
+        const { error } = await supabase.auth.signInWithOtp({
+          email: u.user.email,
+          options: { shouldCreateUser: false },
+        });
+        if (error) throw error;
+        toast.message(
+          "Check your email — finish from the magic link to confirm deletion.",
+        );
+        return null;
+      }
+      return requestDel({ data: { reason: reason || undefined } });
+    },
+    onSuccess: (r) => {
+      if (r) {
+        toast.success(
+          `Deletion scheduled for ${new Date(r.scheduledFor).toLocaleString()}.`,
+        );
+        qc.invalidateQueries({ queryKey: ["account-deletion"] });
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const cancel = useMutation({
+    mutationFn: () => cancelDel(),
+    onSuccess: () => {
+      toast.success("Deletion cancelled.");
+      qc.invalidateQueries({ queryKey: ["account-deletion"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (active) {
+    const scheduled = new Date(reqQ.data!.request!.scheduled_for);
+    return (
+      <div className="space-y-3 rounded-md border border-foreground/30 bg-muted p-3 text-sm">
+        <div className="flex items-center gap-2 font-medium">
+          <AlertTriangle className="h-4 w-4" />
+          Deletion scheduled
+        </div>
+        <p className="text-muted-foreground">
+          Your account will be permanently deleted on{" "}
+          <strong>{scheduled.toLocaleString()}</strong>. Sign in any time before
+          then to cancel.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={cancel.isPending}
+          onClick={() => cancel.mutate()}
+        >
+          Cancel deletion
+        </Button>
+      </div>
+    );
+  }
+
+  const ids = idsQ.data;
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="rounded-md border border-foreground/30 bg-muted p-3">
+        <div className="flex items-center gap-2 font-medium">
+          <AlertTriangle className="h-4 w-4" />
+          Delete account
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          7-day grace window. Personal data is hard-deleted afterward;
+          submissions and approvals are kept but their attribution becomes
+          “Deleted user”.
+        </p>
+      </div>
+
+      {ids?.hasPassword ? (
+        <div className="space-y-1.5">
+          <Label htmlFor="del-password">Confirm your password</Label>
+          <Input
+            id="del-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+      ) : null}
+
+      {ids?.hasGoogle ? (
+        <p className="text-xs text-muted-foreground">
+          You signed in with Google — clicking below will re-authenticate with
+          Google before scheduling deletion.
+        </p>
+      ) : null}
+
+      {!ids?.hasPassword && !ids?.hasGoogle ? (
+        <p className="text-xs text-muted-foreground">
+          You signed in with a magic link — clicking below will email a fresh
+          confirmation link.
+        </p>
+      ) : null}
+
+      <div className="space-y-1.5">
+        <Label htmlFor="del-reason">Reason (optional)</Label>
+        <Input
+          id="del-reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Helps us improve."
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="del-confirm">
+          Type <strong>DELETE</strong> to confirm
+        </Label>
+        <Input
+          id="del-confirm"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          variant="destructive"
+          disabled={
+            confirm !== "DELETE" ||
+            submit.isPending ||
+            (ids?.hasPassword && !password)
+          }
+          onClick={() => submit.mutate()}
+        >
+          {submit.isPending ? (
+            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+          ) : null}
+          Schedule deletion
+        </Button>
+        <Button variant="ghost" size="sm" onClick={signOut}>
+          Sign out instead
+        </Button>
+      </div>
+    </div>
+  );
+}
