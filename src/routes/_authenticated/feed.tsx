@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Plus, Sparkles } from "lucide-react";
@@ -8,6 +8,7 @@ import { VideoCard } from "@/components/video-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/lib/use-permissions";
+import { useSubmitSheet } from "@/lib/use-submit-sheet";
 
 export const Route = createFileRoute("/_authenticated/feed")({
   head: () => ({
