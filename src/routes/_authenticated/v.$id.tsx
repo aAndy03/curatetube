@@ -103,6 +103,10 @@ function VideoDetailPage() {
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2">
+          <VideoActions videoId={video.id} size="md" />
+        </div>
+
         {(video.content_warnings ?? []).length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-foreground/20 bg-muted px-3 py-2 text-sm">
             <AlertTriangle className="h-4 w-4" />
