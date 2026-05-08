@@ -182,24 +182,7 @@ export function ProfileSettingsSheet({
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled
-                  title="Available in Phase 3"
-                >
-                  Re-anonymize my past attributions
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled
-                  title="Available in Phase 3"
-                >
-                  Attribute my past actions
-                </Button>
-              </div>
+              <BulkRewriteButtons />
             </TabsContent>
 
             <TabsContent value="privacy" className="space-y-4 pt-4">
@@ -221,10 +204,14 @@ export function ProfileSettingsSheet({
                 />
               </div>
               <Separator />
-              <div className="text-sm text-muted-foreground">
-                Account deletion (tailored to your sign-in method) and full data
-                export will arrive in Phase 3.
-              </div>
+              <p className="text-xs text-muted-foreground">
+                A full data export (GDPR ZIP) will be offered before any
+                account deletion completes.
+              </p>
+            </TabsContent>
+
+            <TabsContent value="danger" className="space-y-4 pt-4">
+              <DeleteAccountPanel />
             </TabsContent>
           </Tabs>
         )}
