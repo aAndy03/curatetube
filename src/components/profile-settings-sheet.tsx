@@ -106,10 +106,11 @@ export function ProfileSettingsSheet({
           </div>
         ) : (
           <Tabs defaultValue="account" className="mt-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="account">Account</TabsTrigger>
               <TabsTrigger value="audit">Audit identity</TabsTrigger>
               <TabsTrigger value="privacy">Privacy</TabsTrigger>
+              <TabsTrigger value="danger">Delete</TabsTrigger>
             </TabsList>
 
             <TabsContent value="account" className="space-y-4 pt-4">
