@@ -14,14 +14,18 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedTrendingRouteImport } from './routes/_authenticated/trending'
+import { Route as AuthenticatedSuggestRouteImport } from './routes/_authenticated/suggest'
 import { Route as AuthenticatedModerationRouteImport } from './routes/_authenticated/moderation'
 import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
 import { Route as AuthenticatedCreatorsRouteImport } from './routes/_authenticated/creators'
+import { Route as AuthenticatedCategoriesRouteImport } from './routes/_authenticated/categories'
 import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
 import { Route as AuthenticatedMeTabRouteImport } from './routes/_authenticated/me.$tab'
 import { Route as AuthenticatedLeaderboardArchiveRouteImport } from './routes/_authenticated/leaderboard.archive'
 import { Route as AuthenticatedCreatorsIdRouteImport } from './routes/_authenticated/creators.$id'
+import { Route as AuthenticatedCategoriesSlugRouteImport } from './routes/_authenticated/categories.$slug'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
 import { Route as AuthenticatedAdminRecommendationsRouteImport } from './routes/_authenticated/admin.recommendations'
@@ -53,6 +57,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTrendingRoute = AuthenticatedTrendingRouteImport.update({
+  id: '/trending',
+  path: '/trending',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSuggestRoute = AuthenticatedSuggestRouteImport.update({
+  id: '/suggest',
+  path: '/suggest',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedModerationRoute = AuthenticatedModerationRouteImport.update({
   id: '/moderation',
   path: '/moderation',
@@ -72,6 +86,11 @@ const AuthenticatedFeedRoute = AuthenticatedFeedRouteImport.update({
 const AuthenticatedCreatorsRoute = AuthenticatedCreatorsRouteImport.update({
   id: '/creators',
   path: '/creators',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCategoriesRoute = AuthenticatedCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedVIdRoute = AuthenticatedVIdRouteImport.update({
@@ -95,6 +114,12 @@ const AuthenticatedCreatorsIdRoute = AuthenticatedCreatorsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedCreatorsRoute,
 } as any)
+const AuthenticatedCategoriesSlugRoute =
+  AuthenticatedCategoriesSlugRouteImport.update({
+    id: '/$slug',
+    path: '/$slug',
+    getParentRoute: () => AuthenticatedCategoriesRoute,
+  } as any)
 const AuthenticatedAdminSettingsRoute =
   AuthenticatedAdminSettingsRouteImport.update({
     id: '/admin/settings',
@@ -135,15 +160,19 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/categories': typeof AuthenticatedCategoriesRouteWithChildren
   '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
+  '/suggest': typeof AuthenticatedSuggestRoute
+  '/trending': typeof AuthenticatedTrendingRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/broadcast': typeof AuthenticatedAdminBroadcastRoute
   '/admin/recommendations': typeof AuthenticatedAdminRecommendationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/categories/$slug': typeof AuthenticatedCategoriesSlugRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
@@ -155,15 +184,19 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/categories': typeof AuthenticatedCategoriesRouteWithChildren
   '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
+  '/suggest': typeof AuthenticatedSuggestRoute
+  '/trending': typeof AuthenticatedTrendingRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/broadcast': typeof AuthenticatedAdminBroadcastRoute
   '/admin/recommendations': typeof AuthenticatedAdminRecommendationsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/categories/$slug': typeof AuthenticatedCategoriesSlugRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
@@ -177,15 +210,19 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/categories': typeof AuthenticatedCategoriesRouteWithChildren
   '/_authenticated/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
   '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/_authenticated/moderation': typeof AuthenticatedModerationRoute
+  '/_authenticated/suggest': typeof AuthenticatedSuggestRoute
+  '/_authenticated/trending': typeof AuthenticatedTrendingRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/broadcast': typeof AuthenticatedAdminBroadcastRoute
   '/_authenticated/admin/recommendations': typeof AuthenticatedAdminRecommendationsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/_authenticated/categories/$slug': typeof AuthenticatedCategoriesSlugRoute
   '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/_authenticated/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/_authenticated/me/$tab': typeof AuthenticatedMeTabRoute
@@ -199,15 +236,19 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
+    | '/categories'
     | '/creators'
     | '/feed'
     | '/leaderboard'
     | '/moderation'
+    | '/suggest'
+    | '/trending'
     | '/admin/audit'
     | '/admin/broadcast'
     | '/admin/recommendations'
     | '/admin/roles'
     | '/admin/settings'
+    | '/categories/$slug'
     | '/creators/$id'
     | '/leaderboard/archive'
     | '/me/$tab'
@@ -219,15 +260,19 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
+    | '/categories'
     | '/creators'
     | '/feed'
     | '/leaderboard'
     | '/moderation'
+    | '/suggest'
+    | '/trending'
     | '/admin/audit'
     | '/admin/broadcast'
     | '/admin/recommendations'
     | '/admin/roles'
     | '/admin/settings'
+    | '/categories/$slug'
     | '/creators/$id'
     | '/leaderboard/archive'
     | '/me/$tab'
@@ -240,15 +285,19 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
+    | '/_authenticated/categories'
     | '/_authenticated/creators'
     | '/_authenticated/feed'
     | '/_authenticated/leaderboard'
     | '/_authenticated/moderation'
+    | '/_authenticated/suggest'
+    | '/_authenticated/trending'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/broadcast'
     | '/_authenticated/admin/recommendations'
     | '/_authenticated/admin/roles'
     | '/_authenticated/admin/settings'
+    | '/_authenticated/categories/$slug'
     | '/_authenticated/creators/$id'
     | '/_authenticated/leaderboard/archive'
     | '/_authenticated/me/$tab'
@@ -302,6 +351,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/trending': {
+      id: '/_authenticated/trending'
+      path: '/trending'
+      fullPath: '/trending'
+      preLoaderRoute: typeof AuthenticatedTrendingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/suggest': {
+      id: '/_authenticated/suggest'
+      path: '/suggest'
+      fullPath: '/suggest'
+      preLoaderRoute: typeof AuthenticatedSuggestRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/moderation': {
       id: '/_authenticated/moderation'
       path: '/moderation'
@@ -328,6 +391,13 @@ declare module '@tanstack/react-router' {
       path: '/creators'
       fullPath: '/creators'
       preLoaderRoute: typeof AuthenticatedCreatorsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/categories': {
+      id: '/_authenticated/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof AuthenticatedCategoriesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/v/$id': {
@@ -357,6 +427,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/creators/$id'
       preLoaderRoute: typeof AuthenticatedCreatorsIdRouteImport
       parentRoute: typeof AuthenticatedCreatorsRoute
+    }
+    '/_authenticated/categories/$slug': {
+      id: '/_authenticated/categories/$slug'
+      path: '/$slug'
+      fullPath: '/categories/$slug'
+      preLoaderRoute: typeof AuthenticatedCategoriesSlugRouteImport
+      parentRoute: typeof AuthenticatedCategoriesRoute
     }
     '/_authenticated/admin/settings': {
       id: '/_authenticated/admin/settings'
@@ -403,6 +480,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedCategoriesRouteChildren {
+  AuthenticatedCategoriesSlugRoute: typeof AuthenticatedCategoriesSlugRoute
+}
+
+const AuthenticatedCategoriesRouteChildren: AuthenticatedCategoriesRouteChildren =
+  {
+    AuthenticatedCategoriesSlugRoute: AuthenticatedCategoriesSlugRoute,
+  }
+
+const AuthenticatedCategoriesRouteWithChildren =
+  AuthenticatedCategoriesRoute._addFileChildren(
+    AuthenticatedCategoriesRouteChildren,
+  )
+
 interface AuthenticatedCreatorsRouteChildren {
   AuthenticatedCreatorsIdRoute: typeof AuthenticatedCreatorsIdRoute
 }
@@ -431,10 +522,13 @@ const AuthenticatedLeaderboardRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedCategoriesRoute: typeof AuthenticatedCategoriesRouteWithChildren
   AuthenticatedCreatorsRoute: typeof AuthenticatedCreatorsRouteWithChildren
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRouteWithChildren
   AuthenticatedModerationRoute: typeof AuthenticatedModerationRoute
+  AuthenticatedSuggestRoute: typeof AuthenticatedSuggestRoute
+  AuthenticatedTrendingRoute: typeof AuthenticatedTrendingRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminBroadcastRoute: typeof AuthenticatedAdminBroadcastRoute
   AuthenticatedAdminRecommendationsRoute: typeof AuthenticatedAdminRecommendationsRoute
@@ -445,10 +539,13 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedCategoriesRoute: AuthenticatedCategoriesRouteWithChildren,
   AuthenticatedCreatorsRoute: AuthenticatedCreatorsRouteWithChildren,
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
   AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRouteWithChildren,
   AuthenticatedModerationRoute: AuthenticatedModerationRoute,
+  AuthenticatedSuggestRoute: AuthenticatedSuggestRoute,
+  AuthenticatedTrendingRoute: AuthenticatedTrendingRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminBroadcastRoute: AuthenticatedAdminBroadcastRoute,
   AuthenticatedAdminRecommendationsRoute:
