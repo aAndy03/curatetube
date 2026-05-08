@@ -89,14 +89,14 @@ export function NotificationsSheet({
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : (q.data?.notifications.length ?? 0) === 0 ? (
+          ) : !q.data || q.data.notifications.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-16 text-sm text-muted-foreground">
               <BellOff className="h-6 w-6" />
               No notifications yet.
             </div>
           ) : (
             <ul className="space-y-1.5">
-              {q.data!.notifications.map((n) => (
+              {q.data.notifications.map((n) => (
                 <li
                   key={n.id}
                   className="rounded-md border bg-card p-3 text-sm"
