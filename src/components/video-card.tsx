@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Users, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { VideoActions } from "@/components/video-actions";
 
 export type VideoCardData = {
   id: string;
