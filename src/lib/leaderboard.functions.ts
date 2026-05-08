@@ -93,10 +93,9 @@ export const listArchive = createServerFn({ method: "GET" })
       .from("leaderboard_snapshots")
       .select("id, created_at, next_refresh_at, scope_type, scope_value")
       .eq("tier_id", tier.id)
-      .eq("scope_type", data.scopeType)
-      .eq("scope_value", data.scopeValue ?? null)
-      .order("created_at", { ascending: false })
-      .limit(data.limit);
+      .eq("scope_type", data.scopeType);
+    q = data.scopeValue ? q.eq("scope_value", data.scopeValue) : q.is("scope_value", null);
+    q = q.order("created_at", { ascending: false }).limit(data.limit);
     if (data.from) q = q.gte("created_at", data.from);
     if (data.to) q = q.lte("created_at", data.to);
     const { data: snaps, error } = await q;
