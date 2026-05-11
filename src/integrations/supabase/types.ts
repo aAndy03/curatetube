@@ -107,6 +107,36 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_flush_log: {
+        Row: {
+          action_count: number
+          created_at: string
+          duration_ms: number
+          fail_count: number
+          id: number
+          success_count: number
+          user_id: string
+        }
+        Insert: {
+          action_count?: number
+          created_at?: string
+          duration_ms?: number
+          fail_count?: number
+          id?: number
+          success_count?: number
+          user_id: string
+        }
+        Update: {
+          action_count?: number
+          created_at?: string
+          duration_ms?: number
+          fail_count?: number
+          id?: number
+          success_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
