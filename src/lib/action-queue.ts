@@ -233,6 +233,22 @@ export function initActionQueue(intervalMs?: number) {
   if (intervalMs && intervalMs > 0) flushIntervalMs = intervalMs;
   void ensureInit();
 
+  // Pull configured interval from app_settings (best-effort)
+  void (async () => {
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "action_flush_interval_ms")
+        .maybeSingle();
+      const ms = typeof data?.value === "number" ? data.value : null;
+      if (ms && ms >= 60_000 && ms <= 60 * 60_000) setFlushInterval(ms);
+    } catch {
+      /* ignore */
+    }
+  })();
+
   if (flushTimer) clearInterval(flushTimer);
   flushTimer = setInterval(() => void flushNow(), flushIntervalMs);
 
