@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 
 import { listSuggestedVideos } from "@/lib/library.functions";
 import { VideoCard, type VideoCardData } from "@/components/video-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useInView } from "@/hooks/use-in-view";
+
+const PAGE_SIZE = 24;
 
 export const Route = createFileRoute("/_authenticated/suggest")({
   head: () => ({
@@ -22,11 +25,23 @@ export const Route = createFileRoute("/_authenticated/suggest")({
 
 function SuggestPage() {
   const fn = useServerFn(listSuggestedVideos);
-  const { data, isLoading } = useQuery({
+  const q = useInfiniteQuery({
     queryKey: ["suggested-feed"],
-    queryFn: () => fn({ data: { limit: 36 } }),
+    initialPageParam: 0 as number,
+    queryFn: ({ pageParam }) =>
+      fn({ data: { limit: PAGE_SIZE, offset: pageParam as number } }),
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
     staleTime: 5 * 60 * 1000,
   });
+
+  const sentinelRef = useInView(
+    () => {
+      if (q.hasNextPage && !q.isFetchingNextPage) q.fetchNextPage();
+    },
+    { enabled: !!q.hasNextPage && !q.isFetchingNextPage },
+  );
+
+  const videos = q.data?.pages.flatMap((p) => p.videos) ?? [];
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -41,26 +56,39 @@ function SuggestPage() {
         </div>
       </header>
 
-      {isLoading ? (
-        <SkeletonGrid />
-      ) : (data?.videos.length ?? 0) === 0 ? (
+      {q.isLoading ? (
+        <SkeletonGrid count={PAGE_SIZE} />
+      ) : videos.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {data!.videos.map((v) => (
-            <VideoCard key={v.id} video={v as VideoCardData} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {videos.map((v, i) => (
+              <VideoCard key={v.id} video={v as VideoCardData} priority={i < 4} />
+            ))}
+          </div>
+          <div ref={sentinelRef} className="flex justify-center py-6">
+            {q.isFetchingNextPage ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : !q.hasNextPage ? (
+              <span className="text-xs text-muted-foreground">End of feed</span>
+            ) : null}
+          </div>
+        </>
       )}
     </div>
   );
 }
 
-function SkeletonGrid() {
+function SkeletonGrid({ count }: { count: number }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <Skeleton key={i} className="aspect-video w-full" />
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="aspect-video w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
       ))}
     </div>
   );

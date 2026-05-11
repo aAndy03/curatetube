@@ -436,20 +436,21 @@ export const getCreatorDetail = createServerFn({ method: "GET" })
 // ============ BROWSE: SUGGESTED / TRENDING / CATEGORIES ============
 
 export const listSuggestedVideos = createServerFn({ method: "GET" })
-  .inputValidator((d: { limit?: number } | undefined) => d ?? {})
+  .inputValidator((d: { limit?: number; offset?: number } | undefined) => d ?? {})
   .handler(async ({ data }) => {
     setResponseHeaders(PUBLIC_BROWSE_CACHE);
     const limit = Math.min(data.limit ?? 36, 60);
+    const offset = Math.max(0, data.offset ?? 0);
     // Read pre-ranked ids from materialized view
     const { data: ranked, error: rErr } = await supabaseAdmin
       .from("mv_suggested_feed" as never)
       .select("video_id, suggest_count, first_submitted_at")
       .order("suggest_count", { ascending: false })
       .order("first_submitted_at", { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
     if (rErr) throw new Error(rErr.message);
     const ids = ((ranked ?? []) as Array<{ video_id: string }>).map((r) => r.video_id);
-    if (ids.length === 0) return { videos: [] };
+    if (ids.length === 0) return { videos: [], nextOffset: null as number | null };
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
@@ -458,14 +459,18 @@ export const listSuggestedVideos = createServerFn({ method: "GET" })
       .in("id", ids);
     if (error) throw new Error(error.message);
     const byId = new Map((rows ?? []).map((v) => [v.id as string, v]));
-    return { videos: ids.map((id) => byId.get(id)).filter((v): v is NonNullable<typeof v> => Boolean(v)) };
+    return {
+      videos: ids.map((id) => byId.get(id)).filter((v): v is NonNullable<typeof v> => Boolean(v)),
+      nextOffset: ids.length < limit ? null : offset + limit,
+    };
   });
 
 export const listTrendingVideos = createServerFn({ method: "GET" })
-  .inputValidator((d: { windowHours?: number; limit?: number } | undefined) => d ?? {})
+  .inputValidator((d: { windowHours?: number; limit?: number; offset?: number } | undefined) => d ?? {})
   .handler(async ({ data }) => {
     setResponseHeaders(PUBLIC_BROWSE_CACHE);
     const limit = Math.min(data.limit ?? 36, 60);
+    const offset = Math.max(0, data.offset ?? 0);
     const windowHours = data.windowHours === 72 ? 72 : 24;
     const orderCol = windowHours === 72 ? "trending_score_72h" : "trending_score_24h";
 
@@ -474,10 +479,10 @@ export const listTrendingVideos = createServerFn({ method: "GET" })
       .select(`video_id, ${orderCol}`)
       .gt(orderCol, 0)
       .order(orderCol, { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
     if (rErr) throw new Error(rErr.message);
     const ids = ((ranked ?? []) as Array<{ video_id: string }>).map((r) => r.video_id);
-    if (ids.length === 0) return { videos: [], windowHours };
+    if (ids.length === 0) return { videos: [], windowHours, nextOffset: null as number | null };
 
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
@@ -488,7 +493,11 @@ export const listTrendingVideos = createServerFn({ method: "GET" })
       .eq("status", "approved");
     if (error) throw new Error(error.message);
     const byId = new Map((rows ?? []).map((v) => [v.id as string, v]));
-    return { videos: ids.map((id) => byId.get(id)).filter((v): v is NonNullable<typeof v> => Boolean(v)), windowHours };
+    return {
+      videos: ids.map((id) => byId.get(id)).filter((v): v is NonNullable<typeof v> => Boolean(v)),
+      windowHours,
+      nextOffset: ids.length < limit ? null : offset + limit,
+    };
   });
 
 export const listCategoriesWithStats = createServerFn({ method: "GET" })
