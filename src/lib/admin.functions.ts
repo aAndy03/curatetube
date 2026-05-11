@@ -291,3 +291,45 @@ export const forceRefreshMv = createServerFn({ method: "POST" })
     });
     return result as { ok: boolean; rows?: number; error?: string };
   });
+
+// ============ SYNC HEALTH (action queue batch flushes) ============
+
+export const getSyncHealth = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requirePerm(context.userId, "settings.edit");
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: rows, error } = await supabaseAdmin
+      .from("batch_flush_log" as never)
+      .select("action_count, success_count, fail_count, duration_ms, created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (error) throw new Error(error.message);
+
+    const list = (rows ?? []) as Array<{
+      action_count: number;
+      success_count: number;
+      fail_count: number;
+      duration_ms: number;
+      created_at: string;
+    }>;
+
+    const flushes = list.length;
+    const totalActions = list.reduce((a, r) => a + r.action_count, 0);
+    const totalFailed = list.reduce((a, r) => a + r.fail_count, 0);
+    const avgLatency =
+      flushes > 0
+        ? Math.round(list.reduce((a, r) => a + r.duration_ms, 0) / flushes)
+        : 0;
+    const lastFlush = list[0]?.created_at ?? null;
+
+    return {
+      flushes,
+      totalActions,
+      totalFailed,
+      avgLatencyMs: avgLatency,
+      lastFlush,
+      recent: list.slice(0, 20),
+    };
+  });
