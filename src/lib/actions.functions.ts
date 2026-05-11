@@ -182,8 +182,8 @@ export const processBatchActions = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context;
     void ({} as Ctx);
+    const t0 = Date.now();
 
-    // Group by type for fewer round-trips on hot paths (status, suggest)
     const results: BatchResult[] = [];
 
     for (const a of data.actions) {
@@ -214,5 +214,18 @@ export const processBatchActions = createServerFn({ method: "POST" })
         });
       }
     }
+
+    // Log sync health (best-effort; don't fail the batch on log errors)
+    const successCount = results.filter((r) => r.ok).length;
+    void supabaseAdmin
+      .from("batch_flush_log" as never)
+      .insert({
+        user_id: userId,
+        action_count: data.actions.length,
+        success_count: successCount,
+        fail_count: results.length - successCount,
+        duration_ms: Date.now() - t0,
+      } as never);
+
     return { results };
   });
