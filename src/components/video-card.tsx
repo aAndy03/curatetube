@@ -38,12 +38,19 @@ function relativeTime(iso: string | null): string {
   return `${Math.floor(diff / (day * 365))}y ago`;
 }
 
-export function VideoCard({ video }: { video: VideoCardData }) {
+export function VideoCard({
+  video,
+  priority = false,
+}: {
+  video: VideoCardData;
+  /** First few above-the-fold cards: skip lazy loading and hint a high fetch priority. */
+  priority?: boolean;
+}) {
   return (
     <Link
       to="/v/$id"
       params={{ id: video.id }}
-      className="group block focus:outline-none"
+      className="group block focus:outline-none [content-visibility:auto] [contain-intrinsic-size:1px_320px]"
     >
       <div className="relative overflow-hidden rounded-md border bg-card transition group-hover:border-foreground/30 group-focus-visible:ring-2 group-focus-visible:ring-ring">
         <AspectRatio ratio={16 / 9}>
@@ -51,7 +58,9 @@ export function VideoCard({ video }: { video: VideoCardData }) {
             <img
               src={video.thumbnail_url}
               alt=""
-              loading="lazy"
+              loading={priority ? "eager" : "lazy"}
+              decoding="async"
+              {...(priority ? { fetchPriority: "high" as const } : {})}
               className="h-full w-full object-cover"
             />
           ) : (
