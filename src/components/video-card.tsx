@@ -4,6 +4,7 @@ import { Users, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { VideoActions } from "@/components/video-actions";
+import { useHydratedSuggestCount } from "@/hooks/use-hydrated-status";
 
 export type VideoCardData = {
   id: string;
@@ -46,6 +47,7 @@ export function VideoCard({
   /** First few above-the-fold cards: skip lazy loading and hint a high fetch priority. */
   priority?: boolean;
 }) {
+  const liveSuggestCount = useHydratedSuggestCount(video.id, video.suggest_count);
   return (
     <Link
       to="/v/$id"
@@ -107,12 +109,12 @@ export function VideoCard({
             <TooltipTrigger asChild>
               <span className="inline-flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
-                {video.suggest_count}
+                {liveSuggestCount}
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              Suggested by {video.suggest_count}{" "}
-              {video.suggest_count === 1 ? "user" : "users"}
+              Suggested by {liveSuggestCount}{" "}
+              {liveSuggestCount === 1 ? "user" : "users"}
             </TooltipContent>
           </Tooltip>
         </div>

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { VideoActions } from "@/components/video-actions";
+import { useHydratedSuggestCount } from "@/hooks/use-hydrated-status";
 
 export const Route = createFileRoute("/_authenticated/v/$id")({
   component: VideoDetailPage,
@@ -48,6 +49,7 @@ function VideoDetailPage() {
   }
 
   const video = data?.video;
+  const liveSuggestCount = useHydratedSuggestCount(video?.id ?? "", video?.suggest_count ?? 0);
   if (!video) throw notFound();
 
   return (
@@ -95,7 +97,7 @@ function VideoDetailPage() {
               <Users className="h-4 w-4" /> {video.submission_count} submitters
             </span>
             <span className="inline-flex items-center gap-1">
-              <Sparkles className="h-4 w-4" /> {video.suggest_count} suggests
+              <Sparkles className="h-4 w-4" /> {liveSuggestCount} suggests
             </span>
             <Button variant="ghost" size="sm" asChild>
               <a
