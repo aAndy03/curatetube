@@ -31,6 +31,7 @@ import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminRecommendationsRouteImport } from './routes/_authenticated/admin.recommendations'
 import { Route as AuthenticatedAdminBroadcastRouteImport } from './routes/_authenticated/admin.broadcast'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as ApiPublicCronSessionExpiryWarnRouteImport } from './routes/api/public/cron/session-expiry-warn'
 import { Route as ApiPublicCronRefreshMvsRouteImport } from './routes/api/public/cron/refresh-mvs'
 import { Route as ApiPublicCronLeaderboardRouteImport } from './routes/api/public/cron/leaderboard'
 
@@ -149,6 +150,12 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/admin/audit',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const ApiPublicCronSessionExpiryWarnRoute =
+  ApiPublicCronSessionExpiryWarnRouteImport.update({
+    id: '/api/public/cron/session-expiry-warn',
+    path: '/api/public/cron/session-expiry-warn',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronRefreshMvsRoute = ApiPublicCronRefreshMvsRouteImport.update({
   id: '/api/public/cron/refresh-mvs',
   path: '/api/public/cron/refresh-mvs',
@@ -185,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/v/$id': typeof AuthenticatedVIdRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
+  '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -210,6 +218,7 @@ export interface FileRoutesByTo {
   '/v/$id': typeof AuthenticatedVIdRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
+  '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -237,6 +246,7 @@ export interface FileRoutesById {
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
+  '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/v/$id'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
+    | '/api/public/cron/session-expiry-warn'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/v/$id'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
+    | '/api/public/cron/session-expiry-warn'
   id:
     | '__root__'
     | '/'
@@ -315,6 +327,7 @@ export interface FileRouteTypes {
     | '/_authenticated/v/$id'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
+    | '/api/public/cron/session-expiry-warn'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -325,6 +338,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiPublicCronLeaderboardRoute: typeof ApiPublicCronLeaderboardRoute
   ApiPublicCronRefreshMvsRoute: typeof ApiPublicCronRefreshMvsRoute
+  ApiPublicCronSessionExpiryWarnRoute: typeof ApiPublicCronSessionExpiryWarnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -483,6 +497,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/cron/session-expiry-warn': {
+      id: '/api/public/cron/session-expiry-warn'
+      path: '/api/public/cron/session-expiry-warn'
+      fullPath: '/api/public/cron/session-expiry-warn'
+      preLoaderRoute: typeof ApiPublicCronSessionExpiryWarnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/refresh-mvs': {
       id: '/api/public/cron/refresh-mvs'
       path: '/api/public/cron/refresh-mvs'
@@ -588,6 +609,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiPublicCronLeaderboardRoute: ApiPublicCronLeaderboardRoute,
   ApiPublicCronRefreshMvsRoute: ApiPublicCronRefreshMvsRoute,
+  ApiPublicCronSessionExpiryWarnRoute: ApiPublicCronSessionExpiryWarnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
