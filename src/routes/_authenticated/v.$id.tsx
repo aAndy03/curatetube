@@ -37,6 +37,7 @@ function VideoDetailPage() {
     queryKey: ["video-attribution", id],
     queryFn: () => fetchAttribution({ data: { videoId: id } }),
   });
+  const liveSuggestCount = useHydratedSuggestCount(id, data?.video?.suggest_count ?? 0);
 
   if (isLoading) {
     return (
@@ -49,7 +50,6 @@ function VideoDetailPage() {
   }
 
   const video = data?.video;
-  const liveSuggestCount = useHydratedSuggestCount(video?.id ?? "", video?.suggest_count ?? 0);
   if (!video) throw notFound();
 
   return (
