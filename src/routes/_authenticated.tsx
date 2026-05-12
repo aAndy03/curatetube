@@ -21,7 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listNotifications } from "@/lib/lists.functions";
 import { useAuth } from "@/lib/auth-context";
-import { initActionQueue, subscribeQueue, flushNow } from "@/lib/action-queue";
+import { initActionQueue, subscribeQueue, flushNow, clearQueue } from "@/lib/action-queue";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -78,6 +78,7 @@ function AuthNotFound() {
 }
 
 function AuthenticatedLayout() {
+  const navigate = Route.useNavigate();
   React.useEffect(() => {
     const teardown = initActionQueue();
     let lastErr: string | null = null;
@@ -87,13 +88,22 @@ function AuthenticatedLayout() {
       }
       lastErr = lastError;
     });
-    // Initial drain on mount
     void flushNow();
+
+    // Plan 3 Phase 2: single root auth listener.
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        void clearQueue();
+        void navigate({ to: "/login" });
+      }
+    });
+
     return () => {
       teardown();
       unsub();
+      sub.subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <TooltipProvider delayDuration={200}>

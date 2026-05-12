@@ -89,6 +89,10 @@ function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
+          Your session stays active for 10 days. After that you'll be asked to sign in again.
+        </p>
+
+        <p className="text-center text-xs text-muted-foreground">
           By continuing you agree to our{" "}
           <Link to="/terms" className="underline underline-offset-2">
             Terms

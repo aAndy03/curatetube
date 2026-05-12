@@ -156,7 +156,7 @@ export function AppSidebar() {
         ) : null}
       </SidebarContent>
       <SidebarFooter>
-        <p className="px-2 text-[10px] text-muted-foreground">alpha0.2.6 · Phase 6</p>
+        <p className="px-2 text-[10px] text-muted-foreground">alpha0.3.2 · Plan 3 · Phase 2</p>
       </SidebarFooter>
     </Sidebar>
   );

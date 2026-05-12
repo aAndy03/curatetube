@@ -58,8 +58,13 @@ function PrivacyPage() {
           actor set to "Deleted user" so curation history remains accurate.
         </p>
 
-        <h2>Cookies</h2>
-        <p>We use only the cookies required to keep you signed in.</p>
+        <h2>Sessions & cookies</h2>
+        <p>
+          Sign-in cookies last for 10 days of inactivity. Visiting any page while
+          signed in silently extends the session. After 10 days without activity
+          you will be asked to sign in again. We use only the cookies required to
+          keep you signed in.
+        </p>
 
         <h2>Contact</h2>
         <p>Questions? Reach out to the site owner.</p>
