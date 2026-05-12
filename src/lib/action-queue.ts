@@ -18,6 +18,8 @@ export type QueuedAction = QueuedActionPayload & {
   id: string;
   created_at: number;
   attempts: number;
+  /** Plan 3 Phase 1: server confirmed the write; entry kept until next refetch confirms it. */
+  acknowledged?: boolean;
 };
 
 // ---------- IndexedDB helpers ----------
@@ -73,6 +75,17 @@ async function idbDelete(ids: string[]): Promise<void> {
   });
 }
 
+async function idbClear(): Promise<void> {
+  if (!isBrowser()) return;
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // ---------- In-memory state + coalescing ----------
 let memQueue: QueuedAction[] = [];
 let initialized = false;
@@ -90,14 +103,15 @@ function coalesceKey(a: QueuedActionPayload): string {
     case "status":
       return `status:${a.videoId}:${a.status}`;
     case "notif_read":
-      return "notif_read"; // single coalesced bucket
+      return "notif_read";
     case "feed_reorder":
       return "feed_reorder";
   }
 }
 
 function notify() {
-  const state = { pending: memQueue.length, lastError };
+  const pending = memQueue.filter((q) => !q.acknowledged).length;
+  const state = { pending, lastError };
   listeners.forEach((l) => l(state));
 }
 
@@ -105,23 +119,24 @@ export function subscribeQueue(
   fn: (state: { pending: number; lastError: string | null }) => void,
 ): () => void {
   listeners.add(fn);
-  fn({ pending: memQueue.length, lastError });
-  return () => listeners.delete(fn);
+  fn({ pending: memQueue.filter((q) => !q.acknowledged).length, lastError });
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 export async function enqueue(action: QueuedActionPayload): Promise<void> {
   await ensureInit();
   const key = coalesceKey(action);
 
-  // Coalesce: replace existing same-key entry
-  const existingIdx = memQueue.findIndex((q) => coalesceKey(q) === key);
+  // Coalesce: replace existing same-key (un-acknowledged) entry
+  const existingIdx = memQueue.findIndex((q) => !q.acknowledged && coalesceKey(q) === key);
   let merged: QueuedAction;
 
   if (action.type === "notif_read" && existingIdx >= 0) {
     const prev = memQueue[existingIdx] as Extract<QueuedAction, { type: "notif_read" }>;
     const prevIds = prev.ids ?? null;
     const nextIds = action.ids ?? null;
-    // null = mark-all; null wins
     const ids = prevIds === null || nextIds === null ? null : Array.from(new Set([...prevIds, ...nextIds]));
     merged = { ...prev, ids, created_at: Date.now() };
   } else {
@@ -154,6 +169,52 @@ async function ensureInit() {
   notify();
 }
 
+// ---------- Phase 1: hydration helpers ----------
+function getVideoId(a: QueuedAction): string | null {
+  if (a.type === "suggest" || a.type === "status" || a.type === "progress") return a.videoId;
+  return null;
+}
+
+/** Live (un-acknowledged) actions targeting this video. Read from in-memory cache. */
+export function getPendingForVideo(videoId: string): QueuedAction[] {
+  return memQueue.filter((a) => !a.acknowledged && getVideoId(a) === videoId);
+}
+
+/** Mark queue entries as confirmed by the server; they linger until purgeConfirmed. */
+export function markAcknowledged(ids: string[]) {
+  if (!ids.length) return;
+  let touched = false;
+  for (const id of ids) {
+    const m = memQueue.find((q) => q.id === id);
+    if (m && !m.acknowledged) {
+      m.acknowledged = true;
+      void idbPut(m);
+      touched = true;
+    }
+  }
+  if (touched) notify();
+}
+
+/** After a fresh server refetch confirms state, drop the acknowledged entries for that video. */
+export function purgeConfirmed(videoId: string) {
+  const drop: string[] = [];
+  for (const a of memQueue) {
+    if (a.acknowledged && getVideoId(a) === videoId) drop.push(a.id);
+  }
+  if (drop.length) {
+    memQueue = memQueue.filter((a) => !drop.includes(a.id));
+    void idbDelete(drop);
+    notify();
+  }
+}
+
+/** SIGNED_OUT cleanup. */
+export async function clearQueue() {
+  memQueue = [];
+  await idbClear();
+  notify();
+}
+
 // ---------- Flush ----------
 const MAX_ATTEMPTS = 3;
 
@@ -161,14 +222,16 @@ export async function flushNow(): Promise<void> {
   if (!isBrowser()) return;
   if (flushing) return flushing;
   await ensureInit();
-  if (memQueue.length === 0) return;
+  const live = memQueue.filter((q) => !q.acknowledged);
+  if (live.length === 0) return;
 
   flushing = (async () => {
-    const batch = memQueue.slice(0, 100);
+    const batch = live.slice(0, 100);
     const actions: BatchAction[] = batch.map((a) => {
-      const { id, attempts, created_at, ...payload } = a;
+      const { id, attempts, created_at, acknowledged, ...payload } = a;
       void attempts;
       void created_at;
+      void acknowledged;
       return { id, ...payload } as BatchAction;
     });
     try {
@@ -179,9 +242,9 @@ export async function flushNow(): Promise<void> {
         if (r.ok) okIds.push(r.id);
         else failedIds.push(r.id);
       }
-      // Drop successful
-      memQueue = memQueue.filter((q) => !okIds.includes(q.id));
-      await idbDelete(okIds);
+      // Plan 3 Phase 1: mark acknowledged (don't delete) so consumers can still
+      // see the in-flight value until a fresh server refetch confirms it.
+      markAcknowledged(okIds);
 
       // Bump attempts on failed; drop after MAX_ATTEMPTS
       const drop: string[] = [];
@@ -201,7 +264,6 @@ export async function flushNow(): Promise<void> {
       }
     } catch (e) {
       lastError = e instanceof Error ? e.message : "Sync failed";
-      // Bump attempts on transport failure
       const drop: string[] = [];
       for (const q of batch) {
         const m = memQueue.find((x) => x.id === q.id);
@@ -257,7 +319,7 @@ export function initActionQueue(intervalMs?: number) {
   };
   const onPageHide = () => void flushNow();
   const onIdle = () => {
-    if (memQueue.length > 0) void flushNow();
+    if (memQueue.some((q) => !q.acknowledged)) void flushNow();
   };
 
   document.addEventListener("visibilitychange", onVisibility);
@@ -291,5 +353,5 @@ export function setFlushInterval(ms: number) {
 }
 
 export function getPending() {
-  return memQueue.length;
+  return memQueue.filter((q) => !q.acknowledged).length;
 }
