@@ -1,15 +1,12 @@
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { Bookmark, Heart, ThumbsDown, Eye, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { getMyVideoState } from "@/lib/lists.functions";
 import { enqueue } from "@/lib/action-queue";
-
-type ListStatus = "wishlist" | "liked" | "disliked" | "watched";
+import { useHydratedStatus, type ListStatus } from "@/hooks/use-hydrated-status";
 
 const ACTIONS: { key: ListStatus; icon: typeof Bookmark; label: string }[] = [
   { key: "wishlist", icon: Bookmark, label: "Wishlist" },
@@ -30,28 +27,19 @@ export function VideoActions({
   className?: string;
 }) {
   const qc = useQueryClient();
-  const fetchState = useServerFn(getMyVideoState);
-
-  const stateQ = useQuery({
-    queryKey: ["video-state", videoId],
-    queryFn: () => fetchState({ data: { videoId } }),
-  });
-
-  const data: VideoState = stateQ.data ?? { statuses: [], suggested: false };
-  const has = (s: ListStatus) => data.statuses.includes(s);
-  const suggested = data.suggested;
+  const { statuses, suggested } = useHydratedStatus(videoId);
+  const has = (s: ListStatus) => statuses.includes(s);
 
   const optimisticStatus = (status: ListStatus, on: boolean) => {
     qc.setQueryData<VideoState>(["video-state", videoId], (prev) => {
       const base = prev ?? { statuses: [], suggested: false };
-      let statuses = base.statuses.filter((s) => s !== status);
+      let next = base.statuses.filter((s) => s !== status);
       if (on) {
-        statuses.push(status);
-        // Mutually exclusive like/dislike
-        if (status === "liked") statuses = statuses.filter((s) => s !== "disliked");
-        if (status === "disliked") statuses = statuses.filter((s) => s !== "liked");
+        next.push(status);
+        if (status === "liked") next = next.filter((s) => s !== "disliked");
+        if (status === "disliked") next = next.filter((s) => s !== "liked");
       }
-      return { ...base, statuses };
+      return { ...base, statuses: next };
     });
   };
 
@@ -65,7 +53,6 @@ export function VideoActions({
       ...(prev ?? { statuses: [], suggested: false }),
       suggested: !suggested,
     }));
-    // Also reflect in the cached video card suggest_count if present
     qc.setQueriesData<{ suggest_count?: number } | undefined>(
       { queryKey: ["video", videoId] },
       (prev) =>
