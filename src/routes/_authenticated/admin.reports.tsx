@@ -24,11 +24,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
