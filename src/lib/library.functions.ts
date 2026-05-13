@@ -413,8 +413,15 @@ export const listCreators = createServerFn({ method: "GET" })
     return { creators: rows ?? [] };
   });
 
+const CreatorDetailInput = z.object({
+  id: z.string().uuid(),
+  page: z.number().int().min(0).max(100).default(0),
+  pageSize: z.number().int().min(1).max(48).default(24),
+  sort: z.enum(["recent", "top_suggested", "oldest"]).default("recent"),
+});
+
 export const getCreatorDetail = createServerFn({ method: "GET" })
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => CreatorDetailInput.parse(d))
   .handler(async ({ data }) => {
     const { data: creator, error } = await supabaseAdmin
       .from("creators")
@@ -422,15 +429,109 @@ export const getCreatorDetail = createServerFn({ method: "GET" })
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!creator) return { creator: null, videos: [] };
-    const { data: videos } = await supabaseAdmin
+    if (!creator) {
+      return { creator: null, videos: [], totalVideos: 0, avgSuggestCount: 0, page: 0, pageSize: data.pageSize };
+    }
+
+    const { count: totalVideos } = await supabaseAdmin
       .from("videos")
-      .select("id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count")
+      .select("id", { count: "exact", head: true })
       .eq("creator_id", creator.id)
-      .eq("status", "approved")
-      .order("published_at", { ascending: false })
-      .limit(60);
-    return { creator, videos: videos ?? [] };
+      .eq("status", "approved");
+
+    const { data: aggRows } = await supabaseAdmin
+      .from("videos")
+      .select("suggest_count")
+      .eq("creator_id", creator.id)
+      .eq("status", "approved");
+    const avgSuggestCount =
+      aggRows && aggRows.length
+        ? Math.round(
+            (aggRows.reduce((s, r) => s + (r.suggest_count ?? 0), 0) / aggRows.length) * 10,
+          ) / 10
+        : 0;
+
+    const from = data.page * data.pageSize;
+    const to = from + data.pageSize - 1;
+    let q = supabaseAdmin
+      .from("videos")
+      .select(
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count",
+      )
+      .eq("creator_id", creator.id)
+      .eq("status", "approved");
+    if (data.sort === "top_suggested") {
+      q = q.order("suggest_count", { ascending: false }).order("published_at", { ascending: false });
+    } else if (data.sort === "oldest") {
+      q = q.order("published_at", { ascending: true });
+    } else {
+      q = q.order("published_at", { ascending: false });
+    }
+    const { data: videos } = await q.range(from, to);
+
+    return {
+      creator,
+      videos: videos ?? [],
+      totalVideos: totalVideos ?? 0,
+      avgSuggestCount,
+      page: data.page,
+      pageSize: data.pageSize,
+    };
+  });
+
+// Public-mode contributors for a creator's library; gated by app_settings toggle.
+export const getCreatorContributors = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        creatorId: z.string().uuid(),
+        limit: z.number().int().min(1).max(100).default(20),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { data: setting } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "attribution.creator_contributors")
+      .maybeSingle();
+    const enabled = setting?.value === true;
+    if (!enabled) return { enabled: false, contributors: [] as Array<{ user_id: string; name: string; count: number }> };
+
+    const { data: vids } = await supabaseAdmin
+      .from("videos")
+      .select("id")
+      .eq("creator_id", data.creatorId)
+      .eq("status", "approved");
+    const videoIds = (vids ?? []).map((v) => v.id);
+    if (!videoIds.length) return { enabled: true, contributors: [] };
+
+    const { data: subs } = await supabaseAdmin
+      .from("video_submitters")
+      .select("user_id, anonymous")
+      .in("video_id", videoIds)
+      .eq("anonymous", false);
+    const counts = new Map<string, number>();
+    for (const s of subs ?? []) counts.set(s.user_id, (counts.get(s.user_id) ?? 0) + 1);
+    const userIds = Array.from(counts.keys());
+    if (!userIds.length) return { enabled: true, contributors: [] };
+
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id, display_name, username, audit_privacy_mode")
+      .in("id", userIds)
+      .eq("audit_privacy_mode", "public");
+
+    const contributors = (profiles ?? [])
+      .map((p) => ({
+        user_id: p.id,
+        name: p.display_name ?? p.username ?? "Unknown",
+        count: counts.get(p.id) ?? 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, data.limit);
+
+    return { enabled: true, contributors };
   });
 
 // ============ BROWSE: SUGGESTED / TRENDING / CATEGORIES ============
