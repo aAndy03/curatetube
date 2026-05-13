@@ -229,16 +229,17 @@ export const updateReportStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await requirePerm(context.userId, "report.review");
-    const patch: Record<string, unknown> = {
+    const patch = {
       status: data.status,
       reviewed_by: context.userId,
       reviewed_at: new Date().toISOString(),
+      ...(data.reviewNote !== undefined ? { review_note: data.reviewNote } : {}),
     };
-    if (data.reviewNote !== undefined) patch.review_note = data.reviewNote;
     const { error } = await supabaseAdmin
       .from("reports")
       .update(patch)
       .in("id", data.ids);
+    if (error) throw new Error(error.message);
     if (error) throw new Error(error.message);
 
     await writeAudit(supabaseAdmin, {
