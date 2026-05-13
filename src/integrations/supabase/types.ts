@@ -590,6 +590,45 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          created_at: string
+          id: string
+          reason_text: string
+          reporter_id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["report_status"]
+          updated_at: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason_text: string
+          reporter_id: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          updated_at?: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason_text?: string
+          reporter_id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          updated_at?: string
+          video_id?: string
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           permission_key: string
@@ -1175,6 +1214,7 @@ export type Database = {
         | "admin_broadcast"
         | "audit_mode_ack"
         | "deletion_grace_reminder"
+      report_status: "open" | "reviewed" | "dismissed"
       submission_status:
         | "pending"
         | "approved"
@@ -1323,6 +1363,7 @@ export const Constants = {
         "audit_mode_ack",
         "deletion_grace_reminder",
       ],
+      report_status: ["open", "reviewed", "dismissed"],
       submission_status: [
         "pending",
         "approved",
