@@ -114,6 +114,7 @@ export function VideoActions({
           {suggested ? "Remove your suggestion" : "Suggest this video to the community"}
         </TooltipContent>
       </Tooltip>
+      <ReportButton videoId={videoId} size={size} />
     </div>
   );
 }
