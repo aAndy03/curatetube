@@ -240,7 +240,6 @@ export const updateReportStatus = createServerFn({ method: "POST" })
       .update(patch)
       .in("id", data.ids);
     if (error) throw new Error(error.message);
-    if (error) throw new Error(error.message);
 
     await writeAudit(supabaseAdmin, {
       actorId: context.userId,
