@@ -267,8 +267,8 @@ function AdminReportsPage() {
               </ScrollArea>
             </div>
           )}
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        </div>
+      </div>
     </div>
   );
 }
