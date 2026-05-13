@@ -1,31 +1,63 @@
+import * as React from "react";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Sparkles } from "lucide-react";
 
-import { getCreatorDetail } from "@/lib/library.functions";
+import { getCreatorContributors, getCreatorDetail } from "@/lib/library.functions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { VideoCard } from "@/components/video-card";
 
+type SortKey = "recent" | "top_suggested" | "oldest";
+const PAGE_SIZE = 24;
+
 export const Route = createFileRoute("/_authenticated/creators/$id")({
+  head: ({ params }) => ({
+    meta: [{ title: "Creator — CurateTube" }],
+  }),
   component: CreatorDetailPage,
 });
 
 function CreatorDetailPage() {
   const { id } = Route.useParams();
   const fetchDetail = useServerFn(getCreatorDetail);
+  const fetchContribs = useServerFn(getCreatorContributors);
+
+  const [sort, setSort] = React.useState<SortKey>("recent");
+  const [page, setPage] = React.useState(0);
+
+  // Reset to page 0 whenever the sort changes.
+  React.useEffect(() => {
+    setPage(0);
+  }, [sort]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["creator", id],
-    queryFn: () => fetchDetail({ data: { id } }),
+    queryKey: ["creator", id, sort, page],
+    queryFn: () => fetchDetail({ data: { id, page, sort, pageSize: PAGE_SIZE } }),
+  });
+  const contribsQ = useQuery({
+    queryKey: ["creator-contributors", id],
+    queryFn: () => fetchContribs({ data: { creatorId: id } }),
   });
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return <Skeleton className="h-32 w-full max-w-3xl" />;
   }
   const creator = data?.creator;
   if (!creator) throw notFound();
+
+  const totalPages = Math.max(1, Math.ceil((data?.totalVideos ?? 0) / PAGE_SIZE));
+  const contributors = contribsQ.data?.contributors ?? [];
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -46,7 +78,14 @@ function CreatorDetailPage() {
                 subscribers
               </span>
             ) : null}
-            {creator.video_count ? <span>{creator.video_count} videos on YouTube</span> : null}
+            <span>
+              {data?.totalVideos ?? 0} in library
+              {creator.video_count ? ` · ${creator.video_count} on YouTube` : ""}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              avg {data?.avgSuggestCount ?? 0} suggestions
+            </span>
             {creator.country ? <span>{creator.country}</span> : null}
           </div>
           {creator.description ? (
@@ -64,24 +103,85 @@ function CreatorDetailPage() {
         ) : null}
       </header>
 
+      {contribsQ.data?.enabled && contributors.length > 0 ? (
+        <section className="space-y-2 rounded-lg border bg-card p-4">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Contributors ({contributors.length})
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {contributors.map((c) => (
+              <Badge key={c.user_id} variant="secondary" className="gap-1">
+                <span>{c.name}</span>
+                <span className="text-muted-foreground">· {c.count}</span>
+              </Badge>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="space-y-3">
-        <h2 className="text-lg font-medium">In the library</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-medium">In the library</h2>
+          <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Most recent</SelectItem>
+              <SelectItem value="top_suggested">Most suggested</SelectItem>
+              <SelectItem value="oldest">Oldest</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {(data?.videos.length ?? 0) === 0 ? (
           <p className="rounded-md border bg-card p-6 text-sm text-muted-foreground">
             No approved videos for this creator yet.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {data!.videos.map((v) => (
-              <VideoCard
-                key={v.id}
-                video={{
-                  ...v,
-                  creator: { id: creator.id, title: creator.title, handle: creator.handle, thumbnail_url: creator.thumbnail_url },
-                }}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-x-4 gap-y-6 [content-visibility:auto] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {data!.videos.map((v, i) => (
+                <VideoCard
+                  key={v.id}
+                  priority={i < 4}
+                  video={{
+                    ...v,
+                    creator: {
+                      id: creator.id,
+                      title: creator.title,
+                      handle: creator.handle,
+                      thumbnail_url: creator.thumbnail_url,
+                    },
+                  }}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 ? (
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                >
+                  <ChevronLeft className="h-4 w-4" /> Prev
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                >
+                  Next <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
       </section>
     </div>
