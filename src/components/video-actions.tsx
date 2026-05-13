@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { enqueue } from "@/lib/action-queue";
 import { useHydratedStatus, type ListStatus } from "@/hooks/use-hydrated-status";
+import { ReportButton } from "@/components/report-button";
 
 const ACTIONS: { key: ListStatus; icon: typeof Bookmark; label: string }[] = [
   { key: "wishlist", icon: Bookmark, label: "Wishlist" },
@@ -113,6 +114,7 @@ export function VideoActions({
           {suggested ? "Remove your suggestion" : "Suggest this video to the community"}
         </TooltipContent>
       </Tooltip>
+      <ReportButton videoId={videoId} size={size} />
     </div>
   );
 }
