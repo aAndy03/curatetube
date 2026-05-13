@@ -6,7 +6,7 @@ import { listCreators } from "@/lib/library.functions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const Route = createFileRoute("/_authenticated/creators")({
+export const Route = createFileRoute("/_authenticated/creators/")({
   head: () => ({ meta: [{ title: "Creators — CurateTube" }] }),
   component: CreatorsPage,
 });
