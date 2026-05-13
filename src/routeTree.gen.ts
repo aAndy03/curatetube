@@ -19,8 +19,8 @@ import { Route as AuthenticatedSuggestRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedModerationRouteImport } from './routes/_authenticated/moderation'
 import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
-import { Route as AuthenticatedCreatorsRouteImport } from './routes/_authenticated/creators'
 import { Route as AuthenticatedCategoriesRouteImport } from './routes/_authenticated/categories'
+import { Route as AuthenticatedCreatorsIndexRouteImport } from './routes/_authenticated/creators.index'
 import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
 import { Route as AuthenticatedMeTabRouteImport } from './routes/_authenticated/me.$tab'
 import { Route as AuthenticatedLeaderboardArchiveRouteImport } from './routes/_authenticated/leaderboard.archive'
@@ -85,16 +85,17 @@ const AuthenticatedFeedRoute = AuthenticatedFeedRouteImport.update({
   path: '/feed',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedCreatorsRoute = AuthenticatedCreatorsRouteImport.update({
-  id: '/creators',
-  path: '/creators',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedCategoriesRoute = AuthenticatedCategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedCreatorsIndexRoute =
+  AuthenticatedCreatorsIndexRouteImport.update({
+    id: '/creators/',
+    path: '/creators/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedVIdRoute = AuthenticatedVIdRouteImport.update({
   id: '/v/$id',
   path: '/v/$id',
@@ -112,9 +113,9 @@ const AuthenticatedLeaderboardArchiveRoute =
     getParentRoute: () => AuthenticatedLeaderboardRoute,
   } as any)
 const AuthenticatedCreatorsIdRoute = AuthenticatedCreatorsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AuthenticatedCreatorsRoute,
+  id: '/creators/$id',
+  path: '/creators/$id',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedCategoriesSlugRoute =
   AuthenticatedCategoriesSlugRouteImport.update({
@@ -174,7 +175,6 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/categories': typeof AuthenticatedCategoriesRouteWithChildren
-  '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
@@ -190,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
+  '/creators/': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
@@ -200,7 +201,6 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/categories': typeof AuthenticatedCategoriesRouteWithChildren
-  '/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
@@ -216,6 +216,7 @@ export interface FileRoutesByTo {
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/v/$id': typeof AuthenticatedVIdRoute
+  '/creators': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
@@ -228,7 +229,6 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/_authenticated/categories': typeof AuthenticatedCategoriesRouteWithChildren
-  '/_authenticated/creators': typeof AuthenticatedCreatorsRouteWithChildren
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
   '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/_authenticated/moderation': typeof AuthenticatedModerationRoute
@@ -244,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/_authenticated/me/$tab': typeof AuthenticatedMeTabRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
+  '/_authenticated/creators/': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
@@ -256,7 +257,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/categories'
-    | '/creators'
     | '/feed'
     | '/leaderboard'
     | '/moderation'
@@ -272,6 +272,7 @@ export interface FileRouteTypes {
     | '/leaderboard/archive'
     | '/me/$tab'
     | '/v/$id'
+    | '/creators/'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
@@ -282,7 +283,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/categories'
-    | '/creators'
     | '/feed'
     | '/leaderboard'
     | '/moderation'
@@ -298,6 +298,7 @@ export interface FileRouteTypes {
     | '/leaderboard/archive'
     | '/me/$tab'
     | '/v/$id'
+    | '/creators'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
@@ -309,7 +310,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/_authenticated/categories'
-    | '/_authenticated/creators'
     | '/_authenticated/feed'
     | '/_authenticated/leaderboard'
     | '/_authenticated/moderation'
@@ -325,6 +325,7 @@ export interface FileRouteTypes {
     | '/_authenticated/leaderboard/archive'
     | '/_authenticated/me/$tab'
     | '/_authenticated/v/$id'
+    | '/_authenticated/creators/'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
@@ -413,18 +414,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFeedRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/creators': {
-      id: '/_authenticated/creators'
-      path: '/creators'
-      fullPath: '/creators'
-      preLoaderRoute: typeof AuthenticatedCreatorsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/categories': {
       id: '/_authenticated/categories'
       path: '/categories'
       fullPath: '/categories'
       preLoaderRoute: typeof AuthenticatedCategoriesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/creators/': {
+      id: '/_authenticated/creators/'
+      path: '/creators'
+      fullPath: '/creators/'
+      preLoaderRoute: typeof AuthenticatedCreatorsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/v/$id': {
@@ -450,10 +451,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/creators/$id': {
       id: '/_authenticated/creators/$id'
-      path: '/$id'
+      path: '/creators/$id'
       fullPath: '/creators/$id'
       preLoaderRoute: typeof AuthenticatedCreatorsIdRouteImport
-      parentRoute: typeof AuthenticatedCreatorsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/categories/$slug': {
       id: '/_authenticated/categories/$slug'
@@ -535,19 +536,6 @@ const AuthenticatedCategoriesRouteWithChildren =
     AuthenticatedCategoriesRouteChildren,
   )
 
-interface AuthenticatedCreatorsRouteChildren {
-  AuthenticatedCreatorsIdRoute: typeof AuthenticatedCreatorsIdRoute
-}
-
-const AuthenticatedCreatorsRouteChildren: AuthenticatedCreatorsRouteChildren = {
-  AuthenticatedCreatorsIdRoute: AuthenticatedCreatorsIdRoute,
-}
-
-const AuthenticatedCreatorsRouteWithChildren =
-  AuthenticatedCreatorsRoute._addFileChildren(
-    AuthenticatedCreatorsRouteChildren,
-  )
-
 interface AuthenticatedLeaderboardRouteChildren {
   AuthenticatedLeaderboardArchiveRoute: typeof AuthenticatedLeaderboardArchiveRoute
 }
@@ -564,7 +552,6 @@ const AuthenticatedLeaderboardRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedCategoriesRoute: typeof AuthenticatedCategoriesRouteWithChildren
-  AuthenticatedCreatorsRoute: typeof AuthenticatedCreatorsRouteWithChildren
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRouteWithChildren
   AuthenticatedModerationRoute: typeof AuthenticatedModerationRoute
@@ -575,13 +562,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminRecommendationsRoute: typeof AuthenticatedAdminRecommendationsRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
+  AuthenticatedCreatorsIdRoute: typeof AuthenticatedCreatorsIdRoute
   AuthenticatedMeTabRoute: typeof AuthenticatedMeTabRoute
   AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
+  AuthenticatedCreatorsIndexRoute: typeof AuthenticatedCreatorsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCategoriesRoute: AuthenticatedCategoriesRouteWithChildren,
-  AuthenticatedCreatorsRoute: AuthenticatedCreatorsRouteWithChildren,
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
   AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRouteWithChildren,
   AuthenticatedModerationRoute: AuthenticatedModerationRoute,
@@ -593,8 +581,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedAdminRecommendationsRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
+  AuthenticatedCreatorsIdRoute: AuthenticatedCreatorsIdRoute,
   AuthenticatedMeTabRoute: AuthenticatedMeTabRoute,
   AuthenticatedVIdRoute: AuthenticatedVIdRoute,
+  AuthenticatedCreatorsIndexRoute: AuthenticatedCreatorsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -614,3 +604,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
