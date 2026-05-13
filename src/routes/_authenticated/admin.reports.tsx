@@ -176,9 +176,8 @@ function AdminReportsPage() {
               )}
             </div>
           </ScrollArea>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={64} minSize={40}>
+        </div>
+        <div>
           {!selectedVideoId ? (
             <p className="p-6 text-sm text-muted-foreground">
               Select a video to view its reports.
