@@ -126,16 +126,33 @@ export const listReportedVideos = createServerFn({ method: "GET" })
     await requirePerm(context.userId, "report.view");
     let q = supabaseAdmin
       .from("reports")
-      .select("id, video_id, status, created_at, video:videos(id, title, thumbnail_url, youtube_id, status)");
+      .select("id, video_id, status, created_at");
     if (data.status !== "all") q = q.eq("status", data.status);
     if (data.from) q = q.gte("created_at", data.from);
     if (data.to) q = q.lte("created_at", data.to);
     const { data: rows, error } = await q.order("created_at", { ascending: false }).limit(1000);
     if (error) throw new Error(error.message);
 
+    const videoIds = Array.from(new Set((rows ?? []).map((r) => r.video_id)));
+    const videosById = new Map<string, ReportedVideoSummary["video"]>();
+    if (videoIds.length) {
+      const { data: vids } = await supabaseAdmin
+        .from("videos")
+        .select("id, title, thumbnail_url, youtube_id, status")
+        .in("id", videoIds);
+      for (const v of vids ?? [])
+        videosById.set(v.id, {
+          id: v.id,
+          title: v.title,
+          thumbnail_url: v.thumbnail_url,
+          youtube_id: v.youtube_id,
+          status: v.status as string,
+        });
+    }
+
     const byVideo = new Map<string, ReportedVideoSummary>();
     for (const r of rows ?? []) {
-      const v = (r as { video: ReportedVideoSummary["video"] | null }).video;
+      const v = videosById.get(r.video_id);
       if (!v) continue;
       const existing = byVideo.get(v.id);
       if (existing) {
