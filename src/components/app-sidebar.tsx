@@ -112,16 +112,23 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive("/moderation")}
-                  >
+                  <SidebarMenuButton asChild isActive={isActive("/moderation")}>
                     <Link to="/moderation">
                       <ShieldCheck />
                       <span>Queue</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                {(perms?.has("report.view") || perms?.isOwner) ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/admin/reports")}>
+                      <Link to="/admin/reports">
+                        <Flag />
+                        <span>Reports</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
