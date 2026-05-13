@@ -153,11 +153,8 @@ function AdminReportsPage() {
         </Select>
       </header>
 
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="rounded-lg border bg-card"
-      >
-        <ResizablePanel defaultSize={36} minSize={25}>
+      <div className="grid grid-cols-1 gap-0 rounded-lg border bg-card md:grid-cols-[minmax(280px,36%)_1fr]">
+        <div className="border-r">
           <ScrollArea className="h-[calc(100vh-12rem)]">
             <div className="divide-y">
               {list.isLoading ? (
