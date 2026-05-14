@@ -5,13 +5,14 @@ import { Flag } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { hasReportedVideo, submitReport } from "@/lib/reports.functions";
 import { cn } from "@/lib/utils";
 
 const MAX = 1500;
+const MIN = 5;
 
 export function ReportButton({
   videoId,
@@ -47,19 +48,29 @@ export function ReportButton({
   });
 
   const reported = q.data?.reported;
-  const stop = (e: React.MouseEvent) => {
+
+  // Critical: preventDefault stops parent <Link> navigation, stopPropagation
+  // stops the click bubbling. We toggle open ourselves (not via Radix trigger)
+  // because Radix's composeEventHandlers skips its handler when defaultPrevented.
+  const handleTriggerClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!reported) setOpen((o) => !o);
   };
+
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   const trigger = (
     <Button
+      type="button"
       size="icon"
-      variant={reported ? "default" : "ghost"}
+      variant={reported ? "default" : open ? "default" : "ghost"}
       className={cn(size === "sm" ? "h-7 w-7" : "h-9 w-9", "shrink-0", className)}
       disabled={reported}
-      onClick={stop}
-      aria-label={reported ? "Already reported" : "Report"}
+      onClick={handleTriggerClick}
+      onPointerDown={(e) => e.stopPropagation()}
+      aria-label={reported ? "Already reported" : "Report this video"}
+      aria-pressed={open}
     >
       <Flag className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
     </Button>
@@ -76,17 +87,18 @@ export function ReportButton({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Report this video</TooltipContent>
-      </Tooltip>
+      <PopoverAnchor asChild>
+        <Tooltip>
+          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+          <TooltipContent>Report this video</TooltipContent>
+        </Tooltip>
+      </PopoverAnchor>
       <PopoverContent
         className="w-80 space-y-2"
         onClick={stop}
-        onPointerDown={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={stop}
+        onMouseDown={stop}
+        onKeyDown={stop}
       >
         <div className="space-y-1">
           <p className="text-sm font-medium">Report this video</p>
@@ -97,7 +109,7 @@ export function ReportButton({
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, MAX))}
-          placeholder="Reason (5–1500 characters)…"
+          placeholder={`Reason (${MIN}–${MAX} characters)…`}
           rows={4}
           autoFocus
         />
@@ -106,13 +118,25 @@ export function ReportButton({
             {text.trim().length} / {MAX}
           </span>
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                stop(e);
+                setOpen(false);
+              }}
+            >
               Cancel
             </Button>
             <Button
+              type="button"
               size="sm"
-              onClick={() => mutation.mutate()}
-              disabled={text.trim().length < 5 || mutation.isPending}
+              onClick={(e) => {
+                stop(e);
+                mutation.mutate();
+              }}
+              disabled={text.trim().length < MIN || mutation.isPending}
             >
               {mutation.isPending ? "Sending…" : "Submit"}
             </Button>
