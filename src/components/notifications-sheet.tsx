@@ -371,8 +371,8 @@ function NotifItem({
               {timeLabel(n.created_at)}
             </span>
             {n.link ? (
-              <Link
-                to={n.link}
+              <a
+                href={n.link}
                 onClick={() => {
                   if (unread) onMarkRead(n.id);
                   onClose();
@@ -380,7 +380,7 @@ function NotifItem({
                 className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
               >
                 View <ExternalLink className="h-3 w-3" />
-              </Link>
+              </a>
             ) : null}
             {unread ? (
               <button
