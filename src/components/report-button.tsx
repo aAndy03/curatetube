@@ -29,6 +29,8 @@ export function ReportButton({
 
   const [open, setOpen] = React.useState(false);
   const [text, setText] = React.useState("");
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const q = useQuery({
     queryKey: ["report-status", videoId],
@@ -50,8 +52,8 @@ export function ReportButton({
   const reported = q.data?.reported;
 
   // Critical: preventDefault stops parent <Link> navigation, stopPropagation
-  // stops the click bubbling. We toggle open ourselves (not via Radix trigger)
-  // because Radix's composeEventHandlers skips its handler when defaultPrevented.
+  // stops the click bubbling. This stays controlled instead of using
+  // PopoverTrigger so defaultPrevented clicks inside VideoCard links still open.
   const handleTriggerClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -62,6 +64,7 @@ export function ReportButton({
 
   const trigger = (
     <Button
+      ref={triggerRef}
       type="button"
       size="icon"
       variant={reported ? "default" : open ? "default" : "ghost"}
@@ -79,7 +82,9 @@ export function ReportButton({
   if (reported) {
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+        <TooltipTrigger asChild>
+          <span className="inline-flex">{trigger}</span>
+        </TooltipTrigger>
         <TooltipContent>Already reported</TooltipContent>
       </Tooltip>
     );
@@ -87,18 +92,20 @@ export function ReportButton({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverAnchor asChild>
-        <Tooltip>
-          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-          <TooltipContent>Report this video</TooltipContent>
-        </Tooltip>
-      </PopoverAnchor>
+      <PopoverAnchor asChild>{trigger}</PopoverAnchor>
       <PopoverContent
         className="w-80 space-y-2"
         onClick={stop}
         onPointerDown={stop}
         onMouseDown={stop}
-        onKeyDown={stop}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          window.requestAnimationFrame(() => textareaRef.current?.focus());
+        }}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        onInteractOutside={(e) => {
+          if (triggerRef.current?.contains(e.target as Node)) e.preventDefault();
+        }}
       >
         <div className="space-y-1">
           <p className="text-sm font-medium">Report this video</p>
@@ -107,6 +114,7 @@ export function ReportButton({
           </p>
         </div>
         <Textarea
+          ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, MAX))}
           placeholder={`Reason (${MIN}–${MAX} characters)…`}
