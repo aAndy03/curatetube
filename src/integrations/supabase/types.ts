@@ -137,6 +137,51 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcast_notifications: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          body: string | null
+          category: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          link: string | null
+          recipient_count: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          body?: string | null
+          category?: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          link?: string | null
+          recipient_count?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          body?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          link?: string | null
+          recipient_count?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -788,6 +833,32 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      user_broadcast_reads: {
+        Row: {
+          broadcast_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          broadcast_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          broadcast_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_broadcast_reads_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "broadcast_notifications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_feed_state: {
         Row: {
