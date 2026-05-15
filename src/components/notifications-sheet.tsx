@@ -41,7 +41,7 @@ import {
 import { listNotifications, markNotificationsRead } from "@/lib/lists.functions";
 import {
   listActiveBroadcasts,
-  listBroadcasts,
+  listBroadcastHistory,
   markBroadcastRead,
   getBroadcastCategories,
 } from "@/lib/broadcasts.functions";
