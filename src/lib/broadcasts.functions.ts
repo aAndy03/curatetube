@@ -165,6 +165,48 @@ export const listActiveBroadcasts = createServerFn({ method: "GET" })
     };
   });
 
+// Public history (any authenticated user) — excludes archived
+const HistoryInput = z.object({
+  category: z.string().min(1).max(64).optional(),
+  search: z.string().max(200).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
+export const listBroadcastHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => HistoryInput.parse(d ?? {}))
+  .handler(async ({ data }) => {
+    let q = supabaseAdmin
+      .from("broadcast_notifications" as never)
+      .select("id, title, body, link, category, expires_at, archived_at, created_at")
+      .is("archived_at", null)
+      .order("created_at", { ascending: false })
+      .limit(data.limit ?? 50);
+    if (data.category) q = q.eq("category", data.category);
+    if (data.search) {
+      const esc = data.search.replace(/[%_]/g, "\\$&");
+      q = q.or(`title.ilike.%${esc}%,body.ilike.%${esc}%`);
+    }
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const list = (rows ?? []) as Array<{
+      id: string;
+      title: string;
+      body: string | null;
+      link: string | null;
+      category: string;
+      expires_at: string | null;
+      archived_at: string | null;
+      created_at: string;
+    }>;
+    return {
+      entries: list.map((r) => ({
+        ...r,
+        computed_status: computeStatus(r) as "active" | "expired" | "archived",
+      })),
+    };
+  });
+
 export const markBroadcastRead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) =>
