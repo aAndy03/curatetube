@@ -417,7 +417,7 @@ function BroadcastFooter({
 }
 
 function BroadcastHistoryView({ onBack }: { onBack: () => void }) {
-  const listFn = useServerFn(listBroadcasts);
+  const listFn = useServerFn(listBroadcastHistory);
   const catsFn = useServerFn(getBroadcastCategories);
   const [category, setCategory] = React.useState<string>("__all");
   const [search, setSearch] = React.useState("");
@@ -438,8 +438,7 @@ function BroadcastHistoryView({ onBack }: { onBack: () => void }) {
     queryFn: () =>
       listFn({
         data: {
-          status: "all",
-          categories: category !== "__all" ? [category] : undefined,
+          category: category !== "__all" ? category : undefined,
           search: debounced || undefined,
           limit: 100,
         },
