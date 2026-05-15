@@ -448,7 +448,14 @@ function BroadcastHistoryView({ onBack }: { onBack: () => void }) {
     retry: false,
   });
 
-  const rows = list.data?.entries ?? [];
+  const rows = (list.data?.entries ?? []) as Array<{
+    id: string;
+    title: string;
+    body: string | null;
+    category: string;
+    created_at: string;
+    computed_status: "active" | "expired" | "archived";
+  }>;
 
   return (
     <div className="flex h-full flex-col">
