@@ -122,3 +122,6 @@ function VideoCardImpl({
     </Link>
   );
 }
+
+export const VideoCard = React.memo(VideoCardImpl);
+
