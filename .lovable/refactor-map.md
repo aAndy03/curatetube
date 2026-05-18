@@ -103,3 +103,34 @@ When you change one of the surfaces in the left column, you MUST audit (and usua
 2. Open every file in the right column and confirm whether it needs a real edit or just verification.
 3. Bundle related migrations + code edits in the same change so the schema and the code never diverge.
 4. Update this file when you discover a touch-set that wasn't captured.
+
+## 9. `reports` column change
+
+| Touch                                              | Why                                            |
+| -------------------------------------------------- | ---------------------------------------------- |
+| `src/routes/_authenticated/admin.reports.tsx`      | Admin list + detail columns                    |
+| `src/components/report-button.tsx`                 | Submit popover fields                          |
+| `src/lib/reports.functions.ts`                     | Server fn `select(...)`, validators            |
+| GDPR export script (when added)                    | Include report fields                          |
+| `audit_log.action` enum                            | Add audit actions if a new status / decision   |
+
+## 10. `broadcast_notifications` category enum
+
+| Touch                                              | Why                                            |
+| -------------------------------------------------- | ---------------------------------------------- |
+| `app_settings['broadcast_categories']` seed        | Default category list                          |
+| `src/routes/_authenticated/admin.broadcast.tsx`    | Compose + Archive category select / filter     |
+| `src/components/notifications-sheet.tsx`           | User-side category filter, badge color         |
+| `src/lib/broadcasts.functions.ts`                  | Validators, `select(...)`                      |
+| Seed migration                                     | Insert new value                               |
+
+## 11. Hydrated hooks (status + suggest_count)
+
+| Touch                                              | Why                                            |
+| -------------------------------------------------- | ---------------------------------------------- |
+| Any new status-bearing component                   | Read via `useHydratedStatus` /                 |
+|                                                    | `useHydratedSuggestCount` — NEVER read         |
+|                                                    | `["video-state", videoId]` directly            |
+| `src/hooks/use-hydrated-status.ts`                 | Only place that subscribes to the raw query    |
+| `src/lib/action-queue.ts` `getPendingForVideo`     | The pending-merge source for the hooks         |
+
