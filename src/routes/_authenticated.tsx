@@ -116,9 +116,9 @@ function AuthenticatedLayout() {
         <SidebarProvider>
           <div className="flex min-h-screen w-full bg-background text-foreground">
             <AppSidebar />
-            <SidebarInset>
+            <SidebarInset className="min-w-0">
               <Header />
-              <main className="min-h-[calc(100vh-3.5rem)] p-4 md:p-6">
+              <main className="min-w-0 min-h-[calc(100vh-3.5rem)] overflow-x-hidden p-4 md:p-6">
                 <Outlet />
               </main>
             </SidebarInset>
