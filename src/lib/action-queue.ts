@@ -244,6 +244,7 @@ export async function flushNow(): Promise<void> {
   if (!isBrowser()) return;
   if (flushing) return flushing;
   await ensureInit();
+  evictStaleAcknowledged();
   const live = memQueue.filter((q) => !q.acknowledged);
   if (live.length === 0) return;
 
