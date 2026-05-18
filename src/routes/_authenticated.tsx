@@ -26,6 +26,11 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
+    // SSR has no access to the browser's localStorage-persisted session, so
+    // getSession() resolves to null on the server and we'd wrongly redirect
+    // an authenticated user to /login on every refresh. Only gate on the
+    // client; the loaders inside protected routes are themselves auth-aware.
+    if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
       throw redirect({
