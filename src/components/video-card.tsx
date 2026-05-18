@@ -39,7 +39,7 @@ function relativeTime(iso: string | null): string {
   return `${Math.floor(diff / (day * 365))}y ago`;
 }
 
-export function VideoCard({
+function VideoCardImpl({
   video,
   priority = false,
 }: {
