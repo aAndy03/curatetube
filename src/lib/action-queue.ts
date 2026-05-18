@@ -125,6 +125,10 @@ export function subscribeQueue(
   };
 }
 
+/** Plan 3 Phase 7: cap queue size to bound IndexedDB growth. */
+const MAX_QUEUE_SIZE = 500;
+const ACK_TTL_MS = 24 * 60 * 60 * 1000;
+
 export async function enqueue(action: QueuedActionPayload): Promise<void> {
   await ensureInit();
   const key = coalesceKey(action);
@@ -153,6 +157,24 @@ export async function enqueue(action: QueuedActionPayload): Promise<void> {
 
   await idbPut(merged);
   notify();
+
+  // Plan 3 Phase 7: if we overflow the cap, flush immediately regardless of interval.
+  if (memQueue.length > MAX_QUEUE_SIZE) {
+    void flushNow();
+  }
+}
+
+/** Plan 3 Phase 7: evict acknowledged entries older than 24h on each flush cycle. */
+function evictStaleAcknowledged() {
+  const cutoff = Date.now() - ACK_TTL_MS;
+  const drop: string[] = [];
+  for (const a of memQueue) {
+    if (a.acknowledged && a.created_at < cutoff) drop.push(a.id);
+  }
+  if (drop.length) {
+    memQueue = memQueue.filter((a) => !drop.includes(a.id));
+    void idbDelete(drop);
+  }
 }
 
 async function ensureInit() {
@@ -222,6 +244,7 @@ export async function flushNow(): Promise<void> {
   if (!isBrowser()) return;
   if (flushing) return flushing;
   await ensureInit();
+  evictStaleAcknowledged();
   const live = memQueue.filter((q) => !q.acknowledged);
   if (live.length === 0) return;
 
