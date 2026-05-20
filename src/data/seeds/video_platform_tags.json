@@ -1,0 +1,350 @@
+{
+  "languages": {
+    "description": "Major languages by continent",
+    "tags": {
+      "Africa": [
+        "Arabic", "Swahili", "Hausa", "Yoruba", "Amharic",
+        "Oromo", "Zulu", "Igbo", "French", "English",
+        "Portuguese", "Somali", "Berber", "Malagasy", "Wolof"
+      ],
+      "Asia": [
+        "Mandarin Chinese", "Hindi", "Arabic", "Bengali", "Japanese",
+        "Korean", "Vietnamese", "Thai", "Turkish", "Indonesian",
+        "Malay", "Tagalog", "Urdu", "Persian", "Tamil",
+        "Telugu", "Cantonese", "Burmese", "Khmer", "Hebrew",
+        "Kazakh", "Uzbek", "Nepali", "Sinhala", "Pashto"
+      ],
+      "Europe": [
+        "English", "Spanish", "French", "German", "Italian",
+        "Portuguese", "Russian", "Polish", "Dutch", "Greek",
+        "Swedish", "Norwegian", "Danish", "Finnish", "Czech",
+        "Romanian", "Hungarian", "Ukrainian", "Catalan", "Bulgarian",
+        "Serbian", "Croatian", "Slovak", "Lithuanian", "Latvian"
+      ],
+      "North America": [
+        "English", "Spanish", "French", "Nahuatl", "Maya",
+        "Greenlandic", "Haitian Creole", "Quechua"
+      ],
+      "South America": [
+        "Spanish", "Portuguese", "Quechua", "Guarani", "Aymara",
+        "Mapuche", "Wayuu", "Dutch", "English", "French"
+      ],
+      "Oceania": [
+        "English", "Maori", "Samoan", "Fijian", "Tongan",
+        "Tok Pisin", "Hiri Motu", "Bislama", "Hawaiian", "Tahitian"
+      ]
+    }
+  },
+
+  "videoQuality": {
+    "description": "Video resolution and quality tiers",
+    "tags": [
+      "4320p (8K UHD)",
+      "2160p (4K UHD)",
+      "1440p (2K QHD)",
+      "1080p (Full HD)",
+      "720p (HD)",
+      "480p (SD)",
+      "360p",
+      "240p",
+      "HDR10",
+      "HDR10+",
+      "Dolby Vision",
+      "HLG",
+      "SDR"
+    ]
+  },
+
+  "videoFormat": {
+    "description": "Format and style of video content",
+    "tags": {
+      "production_style": [
+        "Short-Form",
+        "Long-Form",
+        "Documentary",
+        "Tutorial",
+        "Vlog",
+        "Interview",
+        "Talk Show",
+        "Podcast Video",
+        "Live Stream",
+        "Webinar",
+        "Lecture",
+        "Presentation",
+        "Animation",
+        "Stop Motion",
+        "Motion Graphics",
+        "Screen Recording"
+      ],
+      "narrative_style": [
+        "Narrative",
+        "Explainer",
+        "Review",
+        "Unboxing",
+        "Commentary",
+        "Reaction",
+        "Behind the Scenes",
+        "Bloopers",
+        "Montage",
+        "Time-Lapse",
+        "Slow Motion",
+        "ASMR",
+        "Silent Film",
+        "Voice-Over",
+        "Hosted"
+      ],
+      "content_category": [
+        "News",
+        "Sports",
+        "Music Video",
+        "Film",
+        "TV Episode",
+        "Trailer",
+        "Teaser",
+        "Featurette",
+        "Clip",
+        "Highlight",
+        "Compilation",
+        "Mashup",
+        "Remix",
+        "Parody",
+        "Satire"
+      ]
+    }
+  },
+
+  "duration": {
+    "description": "Video running time brackets",
+    "tags": [
+      "Ultra-Short (< 1 min)",
+      "Short (1 - 5 min)",
+      "Medium (5 - 15 min)",
+      "Long (15 - 60 min)",
+      "Extended (1 - 2 hr)",
+      "Feature (2 - 3 hr)",
+      "Epic (> 3 hr)"
+    ]
+  },
+
+  "aspectRatio": {
+    "description": "Video aspect ratios",
+    "tags": [
+      "16:9 (Widescreen)",
+      "9:16 (Vertical/Mobile)",
+      "1:1 (Square)",
+      "4:3 (Classic)",
+      "21:9 (Ultrawide)",
+      "2.35:1 (CinemaScope)",
+      "2.39:1 (Anamorphic)"
+    ]
+  },
+
+  "framerate": {
+    "description": "Frames per second",
+    "tags": [
+      "24 fps",
+      "25 fps",
+      "30 fps",
+      "48 fps",
+      "50 fps",
+      "60 fps",
+      "120 fps",
+      "240 fps"
+    ]
+  },
+
+  "videoCodec": {
+    "description": "Video encoding format",
+    "tags": [
+      "H.264 / AVC",
+      "H.265 / HEVC",
+      "H.266 / VVC",
+      "AV1",
+      "VP9",
+      "VP8",
+      "ProRes",
+      "DNxHR",
+      "RAW"
+    ]
+  },
+
+  "audioType": {
+    "description": "Audio channel configuration",
+    "tags": [
+      "Mono",
+      "Stereo",
+      "5.1 Surround",
+      "7.1 Surround",
+      "Dolby Atmos",
+      "DTS:X",
+      "Auro-3D",
+      "Binaural",
+      "Silent / No Audio"
+    ]
+  },
+
+  "audioLanguageTrack": {
+    "description": "Audio dubbing and subtitle options",
+    "tags": [
+      "Original Audio",
+      "Dubbed",
+      "Dual Audio",
+      "Multi Audio",
+      "Subtitled",
+      "Closed Captions",
+      "Open Captions",
+      "SDH (Subtitles for Deaf/Hard of Hearing)",
+      "Audio Description",
+      "Sign Language Overlay",
+      "Burn-In Subtitles"
+    ]
+  },
+
+  "contentRating": {
+    "description": "Age/content suitability",
+    "tags": [
+      "All Ages",
+      "Children (0-6)",
+      "Kids (7-12)",
+      "Teens (13-17)",
+      "Young Adults (18-24)",
+      "Adults (25+)",
+      "General Audience (G)",
+      "Parental Guidance (PG)",
+      "Teen (PG-13 / TV-14)",
+      "Mature (R / TV-MA)",
+      "Explicit (18+)",
+      "Educational",
+      "Professional / Industry"
+    ]
+  },
+
+  "productionType": {
+    "description": "Production quality and source",
+    "tags": [
+      "User-Generated",
+      "Amateur",
+      "Semi-Professional",
+      "Professional",
+      "Studio Production",
+      "Independent / Indie",
+      "Broadcast TV",
+      "Streaming Original",
+      "Corporate / Enterprise",
+      "Academic / Institutional",
+      "Government / Public Sector"
+    ]
+  },
+
+  "licenseType": {
+    "description": "Content licensing and usage rights",
+    "tags": [
+      "All Rights Reserved",
+      "CC0 (Public Domain)",
+      "CC BY (Attribution)",
+      "CC BY-SA (ShareAlike)",
+      "CC BY-NC (NonCommercial)",
+      "CC BY-ND (NoDerivatives)",
+      "CC BY-NC-SA",
+      "CC BY-NC-ND",
+      "Royalty-Free",
+      "Editorial Use Only",
+      "Fair Use"
+    ]
+  },
+
+  "seriesType": {
+    "description": "Relationship to a series or collection",
+    "tags": [
+      "Standalone",
+      "Series",
+      "Season",
+      "Episode",
+      "Pilot",
+      "Finale",
+      "Special",
+      "Bonus Content",
+      "Deleted Scene",
+      "Director's Cut",
+      "Extended Edition",
+      "Prequel",
+      "Sequel"
+    ]
+  },
+
+  "skillLevel": {
+    "description": "Intended expertise level of the viewer",
+    "tags": [
+      "Beginner",
+      "Intermediate",
+      "Advanced",
+      "Expert",
+      "All Levels"
+    ]
+  },
+
+  "productionEra": {
+    "description": "Decade of production",
+    "tags": [
+      "Pre-1950s",
+      "1950s",
+      "1960s",
+      "1970s",
+      "1980s",
+      "1990s",
+      "2000s",
+      "2010s",
+      "2020s"
+    ]
+  },
+
+  "colorProfile": {
+    "description": "Color space and grading",
+    "tags": [
+      "Color",
+      "Black and White",
+      "Sepia",
+      "Technicolor",
+      "Rec.709",
+      "Rec.2020",
+      "DCI-P3",
+      "Log / Flat",
+      "Graded"
+    ]
+  },
+
+  "cameraMovement": {
+    "description": "Predominant camera style",
+    "tags": [
+      "Static / Tripod",
+      "Handheld",
+      "Gimbal / Stabilizer",
+      "Drone / Aerial",
+      "Dolly / Track",
+      "Crane / Jib",
+      "POV (Point of View)",
+      "360-degree",
+      "VR / Stereoscopic"
+    ]
+  },
+
+  "platformSoruce": {
+    "description": "Intended platform for consumption",
+    "tags": [
+      "YouTube",
+      "Vimeo",
+      "TikTok",
+      "Instagram Reels",
+      "Facebook",
+      "Twitter / X",
+      "Twitch",
+      "Kick",
+      "LinkedIn",
+      "Website Embed",
+      "OTT / CTV",
+      "Mobile App",
+      "Cinema / Theater",
+      "Broadcast TV"
+    ]
+  }
+}
