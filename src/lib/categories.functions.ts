@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type CategoryNode = {
   id: string;
@@ -25,10 +26,7 @@ function slugify(input: string): string {
 // ============ READ: full tree (cached on client with staleTime: Infinity) ============
 export const getCategoryTree = createServerFn({ method: "GET" }).handler(
   async () => {
-    const { supabase } = await import("@/integrations/supabase/client.server").then(
-      (m) => ({ supabase: m.supabaseAdmin })
-    );
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("categories")
       .select("id, slug, name, parent_id, depth, sort_order, video_count")
       .order("sort_order", { ascending: true })
