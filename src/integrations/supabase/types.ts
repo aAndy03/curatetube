@@ -185,30 +185,42 @@ export type Database = {
       categories: {
         Row: {
           created_at: string
+          created_by: string | null
+          depth: number
           description: string | null
           id: string
           name: string
           parent_id: string | null
           slug: string
+          sort_order: number
           updated_at: string
+          video_count: number
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
+          depth?: number
           description?: string | null
           id?: string
           name: string
           parent_id?: string | null
           slug: string
+          sort_order?: number
           updated_at?: string
+          video_count?: number
         }
         Update: {
           created_at?: string
+          created_by?: string | null
+          depth?: number
           description?: string | null
           id?: string
           name?: string
           parent_id?: string | null
           slug?: string
+          sort_order?: number
           updated_at?: string
+          video_count?: number
         }
         Relationships: [
           {
@@ -221,6 +233,53 @@ export type Database = {
           {
             foreignKeyName: "categories_parent_id_fkey"
             columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_stats"
+            referencedColumns: ["category_id"]
+          },
+        ]
+      }
+      category_ancestors: {
+        Row: {
+          ancestor_id: string
+          depth: number
+          descendant_id: string
+        }
+        Insert: {
+          ancestor_id: string
+          depth: number
+          descendant_id: string
+        }
+        Update: {
+          ancestor_id?: string
+          depth?: number
+          descendant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_ancestors_ancestor_id_fkey"
+            columns: ["ancestor_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_ancestors_ancestor_id_fkey"
+            columns: ["ancestor_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_stats"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "category_ancestors_descendant_id_fkey"
+            columns: ["descendant_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_ancestors_descendant_id_fkey"
+            columns: ["descendant_id"]
             isOneToOne: false
             referencedRelation: "mv_category_stats"
             referencedColumns: ["category_id"]
@@ -741,6 +800,8 @@ export type Database = {
           decision_reason: string | null
           id: string
           note: string | null
+          proposed_category_ids: string[]
+          proposed_tag_ids: string[]
           status: Database["public"]["Enums"]["submission_status"]
           submitter_id: string
           suggested_categories: string[]
@@ -759,6 +820,8 @@ export type Database = {
           decision_reason?: string | null
           id?: string
           note?: string | null
+          proposed_category_ids?: string[]
+          proposed_tag_ids?: string[]
           status?: Database["public"]["Enums"]["submission_status"]
           submitter_id: string
           suggested_categories?: string[]
@@ -777,6 +840,8 @@ export type Database = {
           decision_reason?: string | null
           id?: string
           note?: string | null
+          proposed_category_ids?: string[]
+          proposed_tag_ids?: string[]
           status?: Database["public"]["Enums"]["submission_status"]
           submitter_id?: string
           suggested_categories?: string[]
@@ -815,22 +880,34 @@ export type Database = {
           approved: boolean
           created_at: string
           id: string
+          is_platform_tag: boolean
           name: string
           slug: string
+          source: Database["public"]["Enums"]["tag_source"]
+          tier: Database["public"]["Enums"]["tag_tier"]
+          usage_count: number
         }
         Insert: {
           approved?: boolean
           created_at?: string
           id?: string
+          is_platform_tag?: boolean
           name: string
           slug: string
+          source?: Database["public"]["Enums"]["tag_source"]
+          tier?: Database["public"]["Enums"]["tag_tier"]
+          usage_count?: number
         }
         Update: {
           approved?: boolean
           created_at?: string
           id?: string
+          is_platform_tag?: boolean
           name?: string
           slug?: string
+          source?: Database["public"]["Enums"]["tag_source"]
+          tier?: Database["public"]["Enums"]["tag_tier"]
+          usage_count?: number
         }
         Relationships: []
       }
@@ -857,6 +934,42 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "broadcast_notifications"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_category_pins: {
+        Row: {
+          category_id: string
+          pinned_at: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          pinned_at?: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          pinned_at?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_category_pins_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_category_pins_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_stats"
+            referencedColumns: ["category_id"]
           },
         ]
       }
@@ -963,14 +1076,20 @@ export type Database = {
       }
       video_categories: {
         Row: {
+          assigned_at: string
+          assigned_by: string | null
           category_id: string
           video_id: string
         }
         Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
           category_id: string
           video_id: string
         }
         Update: {
+          assigned_at?: string
+          assigned_by?: string | null
           category_id?: string
           video_id?: string
         }
@@ -1100,14 +1219,20 @@ export type Database = {
       }
       video_tags: {
         Row: {
+          assigned_by: Database["public"]["Enums"]["tag_assigned_by"]
+          rank: number
           tag_id: string
           video_id: string
         }
         Insert: {
+          assigned_by?: Database["public"]["Enums"]["tag_assigned_by"]
+          rank?: number
           tag_id: string
           video_id: string
         }
         Update: {
+          assigned_by?: Database["public"]["Enums"]["tag_assigned_by"]
+          rank?: number
           tag_id?: string
           video_id?: string
         }
@@ -1159,6 +1284,7 @@ export type Database = {
           language: string | null
           last_metadata_fetch: string | null
           like_count: number | null
+          primary_tag_ids: string[]
           published_at: string | null
           status: Database["public"]["Enums"]["video_status"]
           submission_count: number
@@ -1185,6 +1311,7 @@ export type Database = {
           language?: string | null
           last_metadata_fetch?: string | null
           like_count?: number | null
+          primary_tag_ids?: string[]
           published_at?: string | null
           status?: Database["public"]["Enums"]["video_status"]
           submission_count?: number
@@ -1211,6 +1338,7 @@ export type Database = {
           language?: string | null
           last_metadata_fetch?: string | null
           like_count?: number | null
+          primary_tag_ids?: string[]
           published_at?: string | null
           status?: Database["public"]["Enums"]["video_status"]
           submission_count?: number
@@ -1265,6 +1393,10 @@ export type Database = {
       }
     }
     Functions: {
+      categories_compute_depth: {
+        Args: { _parent_id: string }
+        Returns: number
+      }
       has_permission: {
         Args: { _key: string; _user_id: string }
         Returns: boolean
@@ -1292,6 +1424,9 @@ export type Database = {
         | "rejected"
         | "duplicate"
         | "invalid"
+      tag_assigned_by: "system" | "user" | "admin"
+      tag_source: "platform" | "sciencedirect" | "youtube_api" | "user"
+      tag_tier: "primary" | "secondary" | "internal"
       user_list_status: "wishlist" | "liked" | "disliked" | "watched"
       video_status: "pending" | "approved" | "rejected" | "removed"
     }
@@ -1442,6 +1577,9 @@ export const Constants = {
         "duplicate",
         "invalid",
       ],
+      tag_assigned_by: ["system", "user", "admin"],
+      tag_source: ["platform", "sciencedirect", "youtube_api", "user"],
+      tag_tier: ["primary", "secondary", "internal"],
       user_list_status: ["wishlist", "liked", "disliked", "watched"],
       video_status: ["pending", "approved", "rejected", "removed"],
     },

@@ -1,162 +1,128 @@
-# CurateTube — Plan 3 (builds on `.lovable/plan.md` + Plan 2)
+# CurateTube — Plan 4 (v0.4.0 → v0.4.11)
 
-Plan 1 shipped the surface. Plan 2 added missing routes, a client action queue, server caching, and admin sync visibility. Plan 3 closes the trust + reliability gaps the user keeps hitting (state vanishing on refresh, login loops, blank creator pages) and lays a moderation/notifications spine on top.
+Builds on Plans 1–3. Introduces a deep category tree, a three-tier tag system, a video manager, submit quotas, and category-aware feed/suggest/trending/creators surfaces. Versions: **0.4.0 → 0.4.11**, one phase per minor bump.
 
-Versions: alpha **0.3.1 → 0.3.8** (one phase per minor bump, P7 = 0.3.7, refactor-map sync = 0.3.8). Mirror this file to `.lovable/plan3.md` once approved.
-
-This plan **assumes** Plan 2's `action-queue.ts`, `actions.functions.ts`, `batch_flush_log`, `mv_*` views, and refactor-map are in place.
+> **Note on uploaded files**: `sciencedirect_tags_grouped.json` and `video_platform_tags.json` will be checked into `src/data/seeds/` and seeded into Supabase via Phase 1 migration. `cateogries.json` came up empty — categories will be admin-built from scratch unless you re-upload. Files remain the source of truth in the repo; Supabase rows are the editable runtime copy, kept in sync by a one-way `import-seeds` admin action.
 
 ---
 
-## Phase 1 — Hydration merge (queue ⊕ server) — alpha 0.3.1
+## Phase 1 — Schema foundation (categories + tags + quotas) — 0.4.0
 
-**Problem.** On refresh, components only read Supabase. Pending writes in IndexedDB are invisible until the next flush, so optimistic suggest/like state appears to vanish.
+- `categories` (UUID, slug, name, `parent_id` self-FK, generated `depth`, `sort_order`, `video_count`, audit cols) + `category_ancestors(ancestor_id, descendant_id, depth)` closure table maintained by trigger. Depth-cap trigger ≤ 6 levels.
+- `video_categories(video_id, category_id, assigned_by, assigned_at)` + trigger for `video_count` and "≤5 categories per video".
+- `tags` extended: `source enum('platform','sciencedirect','youtube_api','user')`, `tier enum('primary','secondary','internal')`, `is_platform_tag`, `usage_count`.
+- `video_tags` extended: `rank int`, `assigned_by enum('system','user','admin')` + count triggers.
+- `videos.primary_tag_ids uuid[3]` (denorm for card render).
+- `submissions.proposed_category_ids uuid[]`, `proposed_tag_ids uuid[]`.
+- `user_category_pins(user_id, category_id, sort_order)`.
+- `app_settings` seeds: `submit_limit_default` (`{default:3, per_role:{curator:10, admin:0}}`), `max_tags_per_video` (1000), `trending_min_video_count` (3), `trending_viral_cap_pct` (0.4).
+- Permissions: `taxonomy.manage`, `library.manage` (seed + owner/admin grants).
+- Seed migration imports `src/data/seeds/*.json` into `tags`. Reparent / delete-with-children logic lives in server fns (not DB triggers), wrapped in a single transaction with depth recheck.
 
-**Approach: merged source of truth.**
-- `useHydratedStatus(videoId)` and `useHydratedSuggestCount(videoId)` hooks merge `["video-state", videoId]` (TanStack Query) with `getPendingForVideo(videoId)` from IndexedDB. Pending wins for status booleans; suggest_count is `server + (pending_on - pending_off)`.
-- Use **React 19 `use(promise)`** for the IDB read inside the hook so we suspend instead of flashing the server-only value through `useEffect`.
-- **Acknowledgement, not deletion.** On batch success, mark queue entries `acknowledged: true` (don't drop). Purge acknowledged entries only after the next successful server refetch confirms the value matches — avoids double-count between flush and refetch.
+## Phase 2 — `/categories` public browse + inline admin editor — 0.4.1
 
-**Refactor-map row 2 (user_video_status touch-set):**
-- `src/lib/action-queue.ts` — add `acknowledged` field, `getPendingForVideo(videoId)`, `markAcknowledged(ids[])`, `purgeConfirmed(videoId, serverState)`.
-- `src/lib/actions.functions.ts` — return `acknowledged_ids` in batch result; client calls `markAcknowledged`.
-- `src/hooks/use-hydrated-status.ts` (new), `src/hooks/use-hydrated-suggest-count.ts` (new).
-- Swap reads in: `video-actions.tsx`, `video-card.tsx`, `routes/_authenticated/v.$id.tsx`, `routes/_authenticated/me.$tab.tsx`.
+- Public `src/routes/categories.tsx` (tree-cards from `mv_category_stats`, client-side name search, lazy expand).
+- Public `src/routes/categories.$slug.tsx` — closure-join videos in slug + descendants, dedup, full action row.
+- Edit-mode toggle gated by `taxonomy.manage` on the same routes: inline rename, "+" add child, drag reorder/reparent (depth-6 guard, red drop on violation), trash-with-guard delete. First-time dismissible banner. Optimistic insert with spinner badge.
+- Refactor-map rows updated: sidebar entry "Categories", Cmd-K "Browse / Edit categories", `mv_category_stats` gains `depth`, `parent_id`, `child_count`.
 
----
+## Phase 3 — `/admin/videos` video manager — 0.4.2
 
-## Phase 2 — Persistent 10-day session — alpha 0.3.2
+- New route `_authenticated/admin.videos.tsx`, gated `library.manage`, sidebar under Admin.
+- DataTable (sticky header, resizable, sortable, 50/page + IO infinite scroll): thumb, title, creator, categories chips, primary tag chips, total tag count, submission_count, suggest_count, approved_at.
+- Inline category Combobox (Command + Popover, ≤5, full indented tree, immediate write, "uncategorized" warning).
+- Inline tag Combobox (grouped Platform → ScienceDirect → YouTube API → User, search, auto-rank; expand-row drag for rank reorder).
+- Checkbox column + batch toolbar (Add/Remove category, Add tag) — server-capped at 50/batch, Sonner reports skipped.
+- Filter panel (category tree-picker w/ "Uncategorized", tag, creator, date range, has/lacks primary tags) — URL-synced.
 
-**Problem to confirm first (audit step).** Likely cause: Supabase browser client without `persistSession: true`, or refresh token TTL too short. Confirm before changing config.
+## Phase 4 — Tag display surfaces — 0.4.3
 
-**Fix.**
-- Browser client (`src/integrations/supabase/client.ts` is auto-generated — do not edit; verify it already enables `persistSession: true` + `storageKey: "ct_session"`. If not, file a follow-up; do not hand-edit). Server client must keep `persistSession: false`.
-- Auth settings via `configure_auth`: JWT 3600s, refresh token 864000s (10 d). Works uniformly for email+password, magic link, and Google OAuth (TTL applies to the Supabase session, not Google's token).
-- **Inline disclosure** under the login form: "Your session stays active for 10 days. After that you'll be asked to sign in again." Mirror in privacy page.
-- **D-1 expiry notification** via existing notifications system: scheduled by a daily cron (`/api/public/cron/session-expiry-warn`, HMAC-shared with leaderboard cron) that finds users whose refresh token expires within 24 h and inserts one notification. Any authenticated request silently rotates the refresh token.
-- **Single root listener**: `_authenticated.tsx` subscribes once to `onAuthStateChange`. `TOKEN_REFRESHED` → no-op (Query auth context already reads from session). `SIGNED_OUT` → clear IDB queue, `router.navigate({ to: "/login" })`. Replaces ad-hoc polling.
+- `VideoCard` gets a 2nd metadata row: up to 3 chip links from `primary_tag_ids` (resolved from in-memory tag cache, no join, no row if empty — no layout shift).
+- `v.$id.tsx` adds grouped tag block ("Key tags" = rank 1–9; internal hidden from users).
+- New public route `src/routes/tags.$slug.tsx` (filtered library by tag, suggest_count sort).
+- Search server fn joins `tags` (incl. internal) so admin-seeded scientific tags remain findable even if not displayed.
 
----
+## Phase 5 — Submit Sheet upgrade (quota + suggestions) — 0.4.4
 
-## Phase 3 — Creator detail page — alpha 0.3.3
+- Sheet header: "X of Y submits used this week · resets &nbsp;" — immediate server read on open; admins/unlimited see nothing; quota=0 disables submit with reset-date message.
+- Multi-URL: each URL costs 1; pre-submit warning if N > remaining; partial-submit fallback option.
+- Per-URL: server-side keyword-match against video title/description suggests top-3 categories + top-3 platform tags as chips; user can toggle / Combobox-override (≤3 each). Written into `submissions.proposed_*_ids`.
+- Moderation queue panel adds "Proposed categories" + "Proposed primary tags" checkbox sections; approval is one transaction (video + checked categories + checked tags).
+- Duplicate detection (Plan 1): new proposals on an existing video appear as "Category/Tag suggestion from &nbsp;" section, not a new video.
+- Rate-limit server fn: 7-day rolling window, 429 with `{remaining, resets_at}`.
 
-**Problem.** `/creators/<uuid>` is blank — the dynamic route file is missing or empty.
+## Phase 6 — Feed category sections — 0.4.5
 
-**Build.**
-- `src/routes/_authenticated/creators.$creatorId.tsx` with a server-fn loader: `getCreator(creatorId)` + `getVideosByCreator(creatorId, { page, sort })`.
-- Header: name, channel link, thumbnail, video count, avg suggest_count. Body: paginated `VideoCard` grid with full action row (uses Phase 1 hydrated hooks).
-- **Contributors block** (gated by `app_settings.show_contributors_on_creator_page`, seeded in Plan 1): joins `video_submitters` → `profiles`, filters `audit_privacy_mode = 'public'` **at render time** (so contributors who later go anonymous disappear). Chips with display name + count, paginated above 10.
-- Hover prefetch (50 ms, Plan 2 D pattern) on creator badges in `VideoCard`.
+- User-pinned category sections (`user_category_pins`) rank above all auto sections.
+- Auto category sections: 2–3 per session, affinity-based when recommendations on, top-by-video_count otherwise.
+- Global dedup: server-side `seen_ids` Set per feed assembly, persisted in `user_feed_state` across cycle window.
+- Underfilled category → render available + "See all in &nbsp;" link, no padding.
 
-**Refactor-map row 4 (new sidebar/route item) + row 8 (app_settings):**
-- New route file, breadcrumb crumb "Creators › [name]", Cmd-K dynamic action "Go to creator: [name]".
-- Add `getCreator`, `getVideosByCreator` to `src/lib/library.functions.ts`.
-- Verify `show_contributors_on_creator_page` toggle exists in `admin.settings.tsx`.
+## Phase 7 — `/suggest` + `mv_category_suggest_score` — 0.4.6
 
----
+- New MV `mv_category_suggest_score` (15-min refresh, same cadence as `mv_trending`):
+`score = sum(suggest_delta_24h)*3 + sum(suggest_delta_72h)*1 + (videos_with_suggests/total_videos)*10`
+- `/suggest` layout: existing "Suggested videos" rail on top + 2–4 "Suggested categories" rails below (top 6 by suggest_count per cat). Dedup via `seen_ids`.
+- Cold-start: if all scores=0, order by `video_count` and flag `is_cold_start` so the page header reads "Most popular" vs "Based on recent activity".
 
-## Phase 4 — Report button + admin reports panel — alpha 0.3.4
+## Phase 8 — `/trending` + `mv_category_trending_score` — 0.4.7
 
-**Schema.** Verify Plan 1's `reports` table; if missing, migration:
-- `id, video_id, reporter_id, reason_text (≤1500 chars), status enum('open','reviewed','dismissed'), created_at, reviewed_by, reviewed_at, review_note`
-- UNIQUE `(reporter_id, video_id)`
-- RLS: reporter insert/select own; staff (`reports.view`) read all; staff (`reports.act`) update status/note. Audit on insert + status change.
+- New MV (15-min refresh):
+`score = suggest_delta_24h*3 + like_delta_24h*2 + watch_delta_24h*1 + new_videos_7d*5 + submission_delta_7d*2 + leaderboard_entries*4 + diversity_bonus`
+`diversity_bonus = +2` if >3 distinct creators contributing. Normalized 0–100 at refresh time.
+- Per-video contribution clamped to **40 %** of its category score (viral-cap from `app_settings`).
+- Categories with `video_count < trending_min_video_count` (default 3) excluded.
+- `/trending` mirrors `/suggest` layout: existing trending rail + "Trending categories" rails, score badge + delta arrow vs previous cycle.
 
-**User-facing button.**
-- Flag icon in `VideoCard` action row. Logged-in only. Disabled with tooltip "Already reported" when a report exists.
-- Click opens a **Popover** (not Sheet — scoped action). Single Textarea with live word count (cap ~300 words / 1500 chars). Submit is **immediate** (`createServerFn`, not queued — moderation signal must be authoritative).
-- "Already reported" check is a TanStack query, `staleTime: 30m`.
+## Phase 9 — `/creators` by-category view — 0.4.8
 
-**Admin reports panel.** New permissions `reports.view`, `reports.act`. New sidebar item under Moderation.
-- `src/routes/_authenticated/admin.reports.tsx` — Resizable split (mirrors moderation queue).
-- Left: list of reported videos sorted by open count desc. Toolbar: Status (All/Open/Reviewed/Dismissed), date range Calendar, sort, all URL-searchParam-synced.
-- Right (selected video): all reports chronologically, reporter name (privacy-aware), inline-editable review note, status badge, inline reason search (client-filter, cap 200/video before paginating).
-- Batch column: Mark reviewed / Dismiss / Export CSV — immediate server actions, audit per row.
+- ToggleGroup at top: "All creators" (unchanged) | "By category".
+- New MV `mv_creator_categories` (daily refresh) — creator belongs to category if ≥1 of their videos sits in it.
+- "By category" view: section per top-level category, creators repeated across categories (intentional, no dedup here).
 
-**Refactor-map adds:** row 3 (perms `reports.view`, `reports.act`), row 4 (sidebar), row 6 (new immediate batch action — no coalescing).
+## Phase 10 — Refactor-map sync + admin reshuffle — 0.4.9
 
----
+- Append rows **9 (categories tree change)**, **10 (tags table change)**, **11 (submit rate limit config)** to `.lovable/refactor-map.md` with the touch-sets specified above.
+- Update row 1 (`videos`) to add `primary_tag_ids` consumers; row 7 (new MV) to list the three new MVs.
+- Admin → Taxonomy page: strip category UI (moved to `/categories` edit mode); keep tag-only management (tier toggle, `is_platform_tag` toggle, delete unused).
+- Admin → Settings page: add "Submission limits" (per-role JSON DataTable), "Trending thresholds", "Tag limits" — all inline auto-save.
+- Admin → Roles matrix: surface `taxonomy.manage`, `library.manage`.
 
-## Phase 5 — Notifications panel redesign — alpha 0.3.5
+## Phase 11 — Performance pass — 0.4.10
 
-**Bug.** "Mark all as read" doesn't persist because the bell badge re-reads from server on next mount and the mark-all path is queued/local-only.
+- DB indexes: `category_ancestors(ancestor_id)`, `(descendant_id)`; GIN on `tags(to_tsvector('english', name||' '||slug))`; `video_categories(category_id)`, `video_tags(tag_id)`, partial index `video_tags(video_id) WHERE rank<=3`.
+- Client caches: full category tree `staleTime: Infinity` (invalidated only on `taxonomy.manage` writes); all tags `staleTime: 10m`; both shared by every Combobox + VideoCard.
+- Dedup pushed to Postgres: `WHERE video_id != ALL($seen_ids::uuid[])` on every section query, `seen_ids` loaded once from `user_feed_state`.
+- Trending normalization done at MV-refresh time (no per-request math).
+- All new MVs expose `last_refreshed_at` for the existing Plan 2 admin health widget.
 
-**Fix.** Promote mark-all to an **immediate** server action (not queued): `UPDATE notifications SET read_at = now() WHERE user_id = me AND read_at IS NULL` plus inserts into `user_broadcast_reads` for every active broadcast. Optimistically set bell `count = 0`, then invalidate `["notifications"]` so badge confirms from server. Sonner: "All caught up."
+## v0.4.11 — Buffer / QA
 
-**Panel structure.**
-- (a) **My notifications** — scrollable. Time groups: Today / Yesterday / Last 3 days as flat lists, then a `<Collapsible>` "Past" grouped by week. Unread = subtle left-border accent. Per-row mark-as-read + inline action (e.g. "View video").
-- (b) **Broadcasts** — sticky footer inside the same Sheet. Horizontal carousel if >1 active, prev/next arrows, category badge + message + timestamp + "View all broadcasts" link. Non-dismissible per-item.
-- **Broadcast history** opens as a nested panel that widens the existing Sheet leftward (not a stacked Sheet). Category Select + text search above a reverse-chronological list.
-
-**Optimizations.**
-- Bell badge: TanStack Query `staleTime 2m`, `refetchOnWindowFocus: true`. No WebSocket yet (defer to a future plan).
-- List: virtualized via `@tanstack/react-virtual` for section (a). Past loads lazily on expand. Page size 20, IO sentinel pagination (Plan 2 D).
-
----
-
-## Phase 6 — Broadcast archive (admin) — alpha 0.3.6
-
-**Schema additions** to `broadcast_notifications`: `category text`, `expires_at timestamptz null`, `archived_at timestamptz null`, `archived_by uuid null`. Add `user_broadcast_reads(user_id, broadcast_id, read_at)` if absent.
-
-**Admin → Broadcasts page** gets a second `Tabs` panel: **Archive**.
-- DataTable: category, title (inline-editable), sent date, expires_at (Calendar Popover inline edit), status (active/archived/expired), read count / total recipients, actions.
-- Filters (URL-synced): date range, category multi-select Combobox, status Select, text search.
-- Batch (checkbox column): Archive / Restore / Delete (AlertDialog — counts toward the ≤5 dialog budget) / Export CSV. All immediate, all audited.
-- **Categories** stored as JSON array in `app_settings['broadcast_categories']`, edited inline in the Archive toolbar.
-
-**Refactor-map adds:** row 8 (`broadcast_categories`), row 3 (perms `broadcasts.archive`, `broadcasts.delete`). Read counts computed via `count(user_broadcast_reads)` per row — no MV until table exceeds ~100k rows.
+Reserved for cross-phase bug-fixes surfaced during build (depth-cap edge cases, seed re-import idempotency, dedup interaction with cycle policy).
 
 ---
 
-## Phase 7 — Cross-cutting performance pass — alpha 0.3.7
+## Build order
 
-**React 19.**
-- Replace `useEffect + setState` async-fetch patterns with `use(promise)` under existing Suspense/Skeleton boundaries — applies to IDB hydration, query reads, and direct server-fn calls.
-- Wrap route navigations in `startTransition` so the current page stays interactive while the next loader runs.
 
-**Server actions.** Standardize immediate writes (moderation, auth, report submit, mark-all-read) on `createServerFn` so they share the SSR process when triggered server-side.
+| Version | Phase | Scope                                                         |
+| ------- | ----- | ------------------------------------------------------------- |
+| 0.4.0   | 1     | Schema + seeds + permissions + quotas                         |
+| 0.4.1   | 2     | `/categories` browse + inline editor                          |
+| 0.4.2   | 3     | `/admin/videos` manager                                       |
+| 0.4.3   | 4     | Tag chips on cards + `/tags/:slug`                            |
+| 0.4.4   | 5     | Submit Sheet quota + per-URL suggestions + mod-queue approval |
+| 0.4.5   | 6     | Feed category sections + dedup                                |
+| 0.4.6   | 7     | `/suggest` + `mv_category_suggest_score`                      |
+| 0.4.7   | 8     | `/trending` + `mv_category_trending_score`                    |
+| 0.4.8   | 9     | `/creators` by-category + `mv_creator_categories`             |
+| 0.4.9   | 10    | Refactor-map sync + admin reshuffle                           |
+| 0.4.10  | 11    | Indexes + caches + Postgres dedup                             |
+| 0.4.11  | —     | QA buffer                                                     |
 
-**Component-level.**
-- `content-visibility: auto` + `contain-intrinsic-size` on every card-grid container (feed, library, suggest, trending, creator detail, profile tabs).
-- `React.memo` on `VideoCard`; lift action callbacks to `useCallback` at the feed/grid level so refs are stable.
-- Virtualize the notification list (Phase 5 already lands this; mentioned here for completeness).
-
-**Server queries.**
-- Audit `src/lib/library.functions.ts` and `lists.functions.ts`: replace every `select('*')` with explicit column lists. Feed/grid endpoints drop `description`, `tags`, `submission_count`.
-- Fold the bell unread count into the session bootstrap query so root layout makes one round-trip on mount, not two.
-
-**IndexedDB queue.**
-- Cap at 500 entries; on overflow flush immediately regardless of interval.
-- On every flush cycle, evict `acknowledged` entries older than 24 h.
-
----
-
-## Phase 8 — Refactor-map sync — alpha 0.3.8
-
-Append rows to `.lovable/refactor-map.md`:
-- **(9) `reports` column change** → touch-set: `admin.reports.tsx`, `video-actions.tsx`, GDPR export, `audit_log` action enum.
-- **(10) `broadcast_notifications` category enum** → touch-set: `broadcast_categories` app_setting, user notification category filter, admin archive filter, seed migration.
-- **(11) Hydrated hooks** → any new status-bearing component must read via `useHydratedStatus` / `useHydratedSuggestCount`, not raw queries.
-
-Then a sweep: grep for direct `["video-state", ...]` reads outside the hooks and refactor.
-
----
-
-## Build order (one phase per version)
-
-| Version | Phase | Scope |
-|---------|-------|-------|
-| 0.3.1 | 1 | Hydration merge + ack flag |
-| 0.3.2 | 2 | Persistent session + D-1 warn |
-| 0.3.3 | 3 | Creator detail route |
-| 0.3.4 | 4 | Reports (button + admin panel) |
-| 0.3.5 | 5 | Notifications redesign + mark-all fix |
-| 0.3.6 | 6 | Broadcast archive |
-| 0.3.7 | 7 | Performance pass (React 19, MV-free) |
-| 0.3.8 | 8 | Refactor-map sync + sweep |
 
 ## Open questions
 
-1. **Reports unique constraint** — one report per `(user, video)` ever, or per video per 30 days (allowing repeat reports if a video reappears after being approved)? Default: ever (simpler, matches "already reported" UX).
-2. **Session D-1 warning** — in-app notification only, or also email? Default: in-app only (no email infra wired yet).
-3. **Broadcast `expires_at`** — when expired, should it auto-archive on read, or stay visible-but-greyed until an admin archives it? Default: auto-flag as `expired` status (computed), archive remains an explicit admin action.
+1. **Empty `cateogries.json**` — re-upload, or proceed with admin-built tree from scratch? (Plan currently assumes the latter.)
+2. **Tag seeds at scale** — `sciencedirect_tags_grouped.json` is 350k lines. Import all (~22k+ per category) or cap per category (e.g. top 2000 by usage)? Default: import all, mark `tier=secondary`, rely on Phase 11 GIN index.
+3. **Pinned categories vs feed templates** — if a user pins 10 categories, do we cap at top N or render all 10 above templates? Default: render all pinned, ordered by `user_category_pins.sort_order`.
