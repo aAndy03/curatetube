@@ -112,47 +112,16 @@ const ReparentInput = z.object({
 export const reparentCategory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ReparentInput.parse(d))
-  .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    if (data.new_parent_id === data.id) {
-      throw new Error("Cannot reparent a category to itself");
-    }
-    // Cycle guard: new parent must not be a descendant
-    if (data.new_parent_id) {
-      const { data: desc } = await supabase
-        .from("category_ancestors")
-        .select("descendant_id")
-        .eq("ancestor_id", data.id)
-        .eq("descendant_id", data.new_parent_id)
-        .maybeSingle();
-      if (desc) throw new Error("Cannot reparent under own descendant");
-    }
-    // Depth check
-    const newParentDepth = data.new_parent_id
-      ? (
-          await supabase
-            .from("categories")
-            .select("depth")
-            .eq("id", data.new_parent_id)
-            .single()
-        ).data?.depth ?? -1
-      : -1;
-    const { data: subtreeMax } = await supabase
-      .from("category_ancestors")
-      .select("depth")
-      .eq("ancestor_id", data.id)
-      .order("depth", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const subtreeHeight = (subtreeMax?.depth ?? 0);
-    if (newParentDepth + 1 + subtreeHeight > 6) {
-      throw new Error("Reparent would exceed max depth of 6");
-    }
-    // Update parent + recompute subtree depths/closure via raw RPC fallback
-    const { error } = await supabase
-      .from("categories")
-      .update({ parent_id: data.new_parent_id, depth: newParentDepth + 1 })
-      .eq("id", data.id);
+  .handler(async ({ data }) => {
+    // Atomic reparent + closure rebuild + depth recompute on the subtree.
+    // Function enforces self-loop, cycle, and depth-6 guards and raises on violation.
+    const { error } = await (supabaseAdmin.rpc as unknown as (
+      name: string,
+      params: Record<string, unknown>,
+    ) => Promise<{ error: { message: string } | null }>)(
+      "categories_reparent",
+      { _id: data.id, _new_parent_id: data.new_parent_id },
+    );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
