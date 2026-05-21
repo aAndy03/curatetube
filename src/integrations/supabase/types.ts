@@ -1397,6 +1397,10 @@ export type Database = {
         Args: { _parent_id: string }
         Returns: number
       }
+      categories_reparent: {
+        Args: { _id: string; _new_parent_id: string }
+        Returns: undefined
+      }
       has_permission: {
         Args: { _key: string; _user_id: string }
         Returns: boolean

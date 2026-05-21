@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.categories_reparent(uuid, uuid) FROM PUBLIC, anon, authenticated;

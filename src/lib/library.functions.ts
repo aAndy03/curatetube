@@ -640,11 +640,20 @@ export const listVideosByCategorySlug = createServerFn({ method: "GET" })
       .maybeSingle();
     if (!cat) return { category: null, videos: [] };
 
+    // Include the category and all its descendants via the closure table.
+    const { data: descRows } = await supabaseAdmin
+      .from("category_ancestors")
+      .select("descendant_id")
+      .eq("ancestor_id", cat.id as string);
+    const catIds = Array.from(
+      new Set([(cat.id as string), ...((descRows ?? []).map((r) => r.descendant_id as string))]),
+    );
+
     const { data: links } = await supabaseAdmin
       .from("video_categories")
       .select("video_id")
-      .eq("category_id", cat.id as string);
-    const ids = (links ?? []).map((l) => l.video_id as string);
+      .in("category_id", catIds);
+    const ids = Array.from(new Set((links ?? []).map((l) => l.video_id as string)));
     if (ids.length === 0) return { category: cat, videos: [] };
 
     const { data: vids, error } = await supabaseAdmin
