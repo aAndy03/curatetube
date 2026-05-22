@@ -15,6 +15,7 @@ import {
   ScrollText,
   SlidersHorizontal,
   Megaphone,
+  Film,
 } from "lucide-react";
 
 import {
@@ -140,6 +141,7 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {[
+                  { url: "/admin/videos", icon: Film, title: "Videos", perm: "library.manage" },
                   { url: "/admin/roles", icon: Settings, title: "Roles & Permissions" },
                   { url: "/admin/audit", icon: ScrollText, title: "Audit log", perm: "audit.view" },
                   { url: "/admin/recommendations", icon: SlidersHorizontal, title: "Recommendations", perm: "settings.edit" },
@@ -163,7 +165,7 @@ export function AppSidebar() {
         ) : null}
       </SidebarContent>
       <SidebarFooter>
-        <p className="px-2 text-[10px] text-muted-foreground">alpha0.4.1 · Plan 4 · Phase 2</p>
+        <p className="px-2 text-[10px] text-muted-foreground">alpha0.4.2 · Plan 4 · Phase 3</p>
       </SidebarFooter>
     </Sidebar>
   );
