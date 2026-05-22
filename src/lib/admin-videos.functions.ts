@@ -62,9 +62,9 @@ export const listAdminVideos = createServerFn({ method: "POST" })
     if (data.date_from) q = q.gte("published_at", data.date_from);
     if (data.date_to) q = q.lte("published_at", data.date_to);
     if (data.has_primary_tags === true) {
-      q = q.not("primary_tag_ids", "eq", "{}");
+      q = q.not("primary_tag_ids", "eq", [] as unknown as string[]);
     } else if (data.has_primary_tags === false) {
-      q = q.eq("primary_tag_ids", "{}");
+      q = q.eq("primary_tag_ids", [] as unknown as string[]);
     }
 
     // Category filter via descendants
