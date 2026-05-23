@@ -377,7 +377,7 @@ export const listApprovedVideos = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
-        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)",
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, primary_tag_ids, creator:creators(id, title, handle, thumbnail_url)",
       )
       .eq("status", "approved")
       .order("first_submitted_at", { ascending: false })
@@ -456,7 +456,7 @@ export const getCreatorDetail = createServerFn({ method: "GET" })
     let q = supabaseAdmin
       .from("videos")
       .select(
-        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count",
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count, primary_tag_ids",
       )
       .eq("creator_id", creator.id)
       .eq("status", "approved");
@@ -555,7 +555,7 @@ export const listSuggestedVideos = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
-        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)",
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, primary_tag_ids, creator:creators(id, title, handle, thumbnail_url)",
       )
       .in("id", ids);
     if (error) throw new Error(error.message);
@@ -588,7 +588,7 @@ export const listTrendingVideos = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
-        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)",
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, primary_tag_ids, creator:creators(id, title, handle, thumbnail_url)",
       )
       .in("id", ids)
       .eq("status", "approved");
@@ -659,7 +659,7 @@ export const listVideosByCategorySlug = createServerFn({ method: "GET" })
     const { data: vids, error } = await supabaseAdmin
       .from("videos")
       .select(
-        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)",
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, view_count, submission_count, suggest_count, primary_tag_ids, creator:creators(id, title, handle, thumbnail_url)",
       )
       .in("id", ids)
       .eq("status", "approved")

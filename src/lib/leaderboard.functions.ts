@@ -86,7 +86,7 @@ export const getCurrentLeaderboard = createServerFn({ method: "GET" })
     const { data: entries } = await supabaseAdmin
       .from("leaderboard_entries")
       .select(
-        "rank, prev_rank, score, suggest_count, submission_count, video:videos(id, youtube_id, title, thumbnail_url, duration_seconds, creator:creators(id, title, handle))",
+        "rank, prev_rank, score, suggest_count, submission_count, video:videos(id, youtube_id, title, thumbnail_url, duration_seconds, primary_tag_ids, creator:creators(id, title, handle))",
       )
       .eq("snapshot_id", snap.id)
       .order("rank", { ascending: true });
@@ -135,7 +135,7 @@ export const getSnapshotEntries = createServerFn({ method: "GET" })
     const { data: entries, error } = await supabaseAdmin
       .from("leaderboard_entries")
       .select(
-        "rank, prev_rank, score, suggest_count, submission_count, video:videos(id, youtube_id, title, thumbnail_url, duration_seconds, creator:creators(id, title, handle))",
+        "rank, prev_rank, score, suggest_count, submission_count, video:videos(id, youtube_id, title, thumbnail_url, duration_seconds, primary_tag_ids, creator:creators(id, title, handle))",
       )
       .eq("snapshot_id", data.snapshotId)
       .order("rank", { ascending: true });
