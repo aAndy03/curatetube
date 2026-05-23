@@ -1,9 +1,10 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users, Sparkles, ExternalLink, AlertTriangle } from "lucide-react";
+import { Users, Sparkles, ExternalLink, AlertTriangle, Tag as TagIcon } from "lucide-react";
 
 import { getVideoDetail } from "@/lib/library.functions";
+import { getVideoTags } from "@/lib/tags.functions";
 import { getVideoAttribution } from "@/lib/admin.functions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -29,6 +30,7 @@ function VideoDetailPage() {
   const { id } = Route.useParams();
   const fetchDetail = useServerFn(getVideoDetail);
   const fetchAttribution = useServerFn(getVideoAttribution);
+  const fetchTags = useServerFn(getVideoTags);
   const { data, isLoading } = useQuery({
     queryKey: ["video", id],
     queryFn: () => fetchDetail({ data: { id } }),
@@ -36,6 +38,11 @@ function VideoDetailPage() {
   const attrQ = useQuery({
     queryKey: ["video-attribution", id],
     queryFn: () => fetchAttribution({ data: { videoId: id } }),
+  });
+  const tagsQ = useQuery({
+    queryKey: ["video-tags", id],
+    queryFn: () => fetchTags({ data: { videoId: id } }),
+    staleTime: 60_000,
   });
   const liveSuggestCount = useHydratedSuggestCount(id, data?.video?.suggest_count ?? 0);
 
