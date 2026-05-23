@@ -172,7 +172,7 @@ export const deleteSection = createServerFn({ method: "POST" })
 // ------ resolve videos for one section ------
 
 const VIDEO_FIELDS =
-  "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count, creator:creators(id, title, handle, thumbnail_url)";
+  "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count, primary_tag_ids, creator:creators(id, title, handle, thumbnail_url)";
 
 export const getSectionVideos = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) =>

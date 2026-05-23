@@ -1,9 +1,10 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users, Sparkles, ExternalLink, AlertTriangle } from "lucide-react";
+import { Users, Sparkles, ExternalLink, AlertTriangle, Tag as TagIcon } from "lucide-react";
 
 import { getVideoDetail } from "@/lib/library.functions";
+import { getVideoTags } from "@/lib/tags.functions";
 import { getVideoAttribution } from "@/lib/admin.functions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -29,6 +30,7 @@ function VideoDetailPage() {
   const { id } = Route.useParams();
   const fetchDetail = useServerFn(getVideoDetail);
   const fetchAttribution = useServerFn(getVideoAttribution);
+  const fetchTags = useServerFn(getVideoTags);
   const { data, isLoading } = useQuery({
     queryKey: ["video", id],
     queryFn: () => fetchDetail({ data: { id } }),
@@ -36,6 +38,11 @@ function VideoDetailPage() {
   const attrQ = useQuery({
     queryKey: ["video-attribution", id],
     queryFn: () => fetchAttribution({ data: { videoId: id } }),
+  });
+  const tagsQ = useQuery({
+    queryKey: ["video-tags", id],
+    queryFn: () => fetchTags({ data: { videoId: id } }),
+    staleTime: 60_000,
   });
   const liveSuggestCount = useHydratedSuggestCount(id, data?.video?.suggest_count ?? 0);
 
@@ -146,6 +153,49 @@ function VideoDetailPage() {
           <div className="rounded-md border bg-card p-3 text-sm">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Curator note</p>
             <p className="mt-1 whitespace-pre-line">{video.curator_note}</p>
+          </div>
+        ) : null}
+
+        {tagsQ.data && tagsQ.data.tags.length > 0 ? (
+          <div className="rounded-md border bg-card p-3">
+            <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+              <TagIcon className="h-3.5 w-3.5" /> Key tags
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {tagsQ.data.tags
+                .filter((t) => t.rank <= 9)
+                .map((t) => (
+                  <Link
+                    key={t.id}
+                    to="/tags/$slug"
+                    params={{ slug: t.slug }}
+                    className="inline-flex items-center rounded border border-border bg-background px-2 py-0.5 text-xs hover:border-foreground/40"
+                  >
+                    {t.name}
+                  </Link>
+                ))}
+            </div>
+            {tagsQ.data.tags.filter((t) => t.rank > 9).length > 0 ? (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                  + {tagsQ.data.tags.filter((t) => t.rank > 9).length} more tags
+                </summary>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {tagsQ.data.tags
+                    .filter((t) => t.rank > 9)
+                    .map((t) => (
+                      <Link
+                        key={t.id}
+                        to="/tags/$slug"
+                        params={{ slug: t.slug }}
+                        className="inline-flex items-center rounded border border-border/60 bg-background px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground"
+                      >
+                        {t.name}
+                      </Link>
+                    ))}
+                </div>
+              </details>
+            ) : null}
           </div>
         ) : null}
 

@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { VideoActions } from "@/components/video-actions";
 import { useHydratedSuggestCount } from "@/hooks/use-hydrated-status";
+import { useTagsCache } from "@/hooks/use-tags-cache";
 
 export type VideoCardData = {
   id: string;
@@ -15,6 +16,7 @@ export type VideoCardData = {
   published_at: string | null;
   submission_count: number;
   suggest_count: number;
+  primary_tag_ids?: string[] | null;
   creator?: { id: string; title: string; handle: string | null; thumbnail_url: string | null } | null;
 };
 
@@ -48,6 +50,15 @@ function VideoCardImpl({
   priority?: boolean;
 }) {
   const liveSuggestCount = useHydratedSuggestCount(video.id, video.suggest_count);
+  const { byId: tagById } = useTagsCache();
+  const primaryTags = React.useMemo(() => {
+    const ids = video.primary_tag_ids ?? [];
+    if (!ids.length) return [] as Array<{ id: string; name: string; slug: string }>;
+    return ids
+      .map((id) => tagById.get(id))
+      .filter((t): t is NonNullable<typeof t> => !!t)
+      .slice(0, 3);
+  }, [video.primary_tag_ids, tagById]);
   return (
     <Link
       to="/v/$id"
@@ -118,6 +129,32 @@ function VideoCardImpl({
             </TooltipContent>
           </Tooltip>
         </div>
+        {primaryTags.length > 0 ? (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {primaryTags.map((t) => (
+              <span
+                key={t.id}
+                role="link"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.href = `/tags/${t.slug}`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.location.href = `/tags/${t.slug}`;
+                  }
+                }}
+                className="cursor-pointer rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+              >
+                {t.name}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
     </Link>
   );

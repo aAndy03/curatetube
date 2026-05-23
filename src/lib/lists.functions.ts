@@ -167,7 +167,7 @@ export const getMyList = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabase
       .from("user_video_status")
       .select(
-        "created_at, video:videos(id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count, status, creator:creators(id, title, handle, thumbnail_url))",
+        "created_at, video:videos(id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count, primary_tag_ids, status, creator:creators(id, title, handle, thumbnail_url))",
       )
       .eq("user_id", userId)
       .eq("status", data.status)
@@ -188,7 +188,7 @@ export const getMySuggestedList = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabase
       .from("video_suggestions")
       .select(
-        "created_at, video:videos(id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count, status, creator:creators(id, title, handle, thumbnail_url))",
+        "created_at, video:videos(id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count, primary_tag_ids, status, creator:creators(id, title, handle, thumbnail_url))",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
