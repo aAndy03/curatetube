@@ -22,6 +22,7 @@ import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/f
 import { Route as AuthenticatedCategoriesRouteImport } from './routes/_authenticated/categories'
 import { Route as AuthenticatedCreatorsIndexRouteImport } from './routes/_authenticated/creators.index'
 import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
+import { Route as AuthenticatedTagsSlugRouteImport } from './routes/_authenticated/tags.$slug'
 import { Route as AuthenticatedMeTabRouteImport } from './routes/_authenticated/me.$tab'
 import { Route as AuthenticatedLeaderboardArchiveRouteImport } from './routes/_authenticated/leaderboard.archive'
 import { Route as AuthenticatedCreatorsIdRouteImport } from './routes/_authenticated/creators.$id'
@@ -101,6 +102,11 @@ const AuthenticatedCreatorsIndexRoute =
 const AuthenticatedVIdRoute = AuthenticatedVIdRouteImport.update({
   id: '/v/$id',
   path: '/v/$id',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedTagsSlugRoute = AuthenticatedTagsSlugRouteImport.update({
+  id: '/tags/$slug',
+  path: '/tags/$slug',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedMeTabRoute = AuthenticatedMeTabRouteImport.update({
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
+  '/tags/$slug': typeof AuthenticatedTagsSlugRoute
   '/v/$id': typeof AuthenticatedVIdRoute
   '/creators/': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByTo {
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/me/$tab': typeof AuthenticatedMeTabRoute
+  '/tags/$slug': typeof AuthenticatedTagsSlugRoute
   '/v/$id': typeof AuthenticatedVIdRoute
   '/creators': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/_authenticated/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
   '/_authenticated/me/$tab': typeof AuthenticatedMeTabRoute
+  '/_authenticated/tags/$slug': typeof AuthenticatedTagsSlugRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
   '/_authenticated/creators/': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
@@ -293,6 +302,7 @@ export interface FileRouteTypes {
     | '/creators/$id'
     | '/leaderboard/archive'
     | '/me/$tab'
+    | '/tags/$slug'
     | '/v/$id'
     | '/creators/'
     | '/api/public/cron/leaderboard'
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/creators/$id'
     | '/leaderboard/archive'
     | '/me/$tab'
+    | '/tags/$slug'
     | '/v/$id'
     | '/creators'
     | '/api/public/cron/leaderboard'
@@ -350,6 +361,7 @@ export interface FileRouteTypes {
     | '/_authenticated/creators/$id'
     | '/_authenticated/leaderboard/archive'
     | '/_authenticated/me/$tab'
+    | '/_authenticated/tags/$slug'
     | '/_authenticated/v/$id'
     | '/_authenticated/creators/'
     | '/api/public/cron/leaderboard'
@@ -459,6 +471,13 @@ declare module '@tanstack/react-router' {
       path: '/v/$id'
       fullPath: '/v/$id'
       preLoaderRoute: typeof AuthenticatedVIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/tags/$slug': {
+      id: '/_authenticated/tags/$slug'
+      path: '/tags/$slug'
+      fullPath: '/tags/$slug'
+      preLoaderRoute: typeof AuthenticatedTagsSlugRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/me/$tab': {
@@ -606,6 +625,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminVideosRoute: typeof AuthenticatedAdminVideosRoute
   AuthenticatedCreatorsIdRoute: typeof AuthenticatedCreatorsIdRoute
   AuthenticatedMeTabRoute: typeof AuthenticatedMeTabRoute
+  AuthenticatedTagsSlugRoute: typeof AuthenticatedTagsSlugRoute
   AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
   AuthenticatedCreatorsIndexRoute: typeof AuthenticatedCreatorsIndexRoute
 }
@@ -627,6 +647,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminVideosRoute: AuthenticatedAdminVideosRoute,
   AuthenticatedCreatorsIdRoute: AuthenticatedCreatorsIdRoute,
   AuthenticatedMeTabRoute: AuthenticatedMeTabRoute,
+  AuthenticatedTagsSlugRoute: AuthenticatedTagsSlugRoute,
   AuthenticatedVIdRoute: AuthenticatedVIdRoute,
   AuthenticatedCreatorsIndexRoute: AuthenticatedCreatorsIndexRoute,
 }
@@ -648,3 +669,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
