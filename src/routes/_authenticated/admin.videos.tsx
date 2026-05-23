@@ -360,8 +360,8 @@ function AdminVideosPage() {
               <th className="px-3 py-2 font-medium">Title</th>
               <th className="w-48 px-3 py-2 font-medium">Creator</th>
               <th className="w-72 px-3 py-2 font-medium">Categories</th>
-              <th className="w-72 px-3 py-2 font-medium">Primary tags</th>
-              <th className="w-16 px-3 py-2 text-right font-medium">Tags</th>
+              <th className="w-[28rem] px-3 py-2 font-medium">Tags</th>
+              <th className="w-16 px-3 py-2 text-right font-medium">#</th>
               <th className="w-16 px-3 py-2 text-right font-medium">Subm</th>
               <th className="w-16 px-3 py-2 text-right font-medium">Sugg</th>
               <th className="w-32 px-3 py-2 font-medium">Approved</th>
@@ -545,28 +545,38 @@ function VideoRow({
       </td>
       <td className="px-3 py-2">
         <div className="flex flex-wrap gap-1">
-          {video.primary_tag_ids.map((tid) => {
-            const t = tagsById.get(tid);
-            return (
-              <Badge key={tid} variant="outline" className="gap-1">
-                {t?.name ?? tid.slice(0, 8)}
-                <button
-                  onClick={() => onRmTag(tid)}
-                  className="hover:text-destructive"
-                  aria-label="Remove"
+          {video.tag_ids.length === 0 ? (
+            <span className="text-xs text-muted-foreground">No tags</span>
+          ) : (
+            video.tag_ids.map((tid) => {
+              const t = tagsById.get(tid);
+              const isPrimary = video.primary_tag_ids.includes(tid);
+              return (
+                <Badge
+                  key={tid}
+                  variant={isPrimary ? "default" : "outline"}
+                  className="gap-1"
+                  title={t ? `${t.source} · ${t.tier}` : tid}
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            );
-          })}
+                  {t?.name ?? tid.slice(0, 8)}
+                  <button
+                    onClick={() => onRmTag(tid)}
+                    className="hover:text-destructive"
+                    aria-label={`Remove tag ${t?.name ?? ""}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              );
+            })
+          )}
           <TagPicker
             tags={allTags}
             value={null}
             onChange={(id) => id && onAddTag(id)}
             placeholder="+"
             compact
-            exclude={video.primary_tag_ids}
+            exclude={video.tag_ids}
           />
         </div>
       </td>
