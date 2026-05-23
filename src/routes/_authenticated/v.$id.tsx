@@ -156,6 +156,49 @@ function VideoDetailPage() {
           </div>
         ) : null}
 
+        {tagsQ.data && tagsQ.data.tags.length > 0 ? (
+          <div className="rounded-md border bg-card p-3">
+            <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+              <TagIcon className="h-3.5 w-3.5" /> Key tags
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {tagsQ.data.tags
+                .filter((t) => t.rank <= 9)
+                .map((t) => (
+                  <Link
+                    key={t.id}
+                    to="/tags/$slug"
+                    params={{ slug: t.slug }}
+                    className="inline-flex items-center rounded border border-border bg-background px-2 py-0.5 text-xs hover:border-foreground/40"
+                  >
+                    {t.name}
+                  </Link>
+                ))}
+            </div>
+            {tagsQ.data.tags.filter((t) => t.rank > 9).length > 0 ? (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                  + {tagsQ.data.tags.filter((t) => t.rank > 9).length} more tags
+                </summary>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {tagsQ.data.tags
+                    .filter((t) => t.rank > 9)
+                    .map((t) => (
+                      <Link
+                        key={t.id}
+                        to="/tags/$slug"
+                        params={{ slug: t.slug }}
+                        className="inline-flex items-center rounded border border-border/60 bg-background px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground"
+                      >
+                        {t.name}
+                      </Link>
+                    ))}
+                </div>
+              </details>
+            ) : null}
+          </div>
+        ) : null}
+
         {video.description ? (
           <details className="rounded-md border bg-card p-3 text-sm">
             <summary className="cursor-pointer text-xs uppercase tracking-wide text-muted-foreground">
