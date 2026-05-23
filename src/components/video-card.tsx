@@ -129,6 +129,32 @@ function VideoCardImpl({
             </TooltipContent>
           </Tooltip>
         </div>
+        {primaryTags.length > 0 ? (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {primaryTags.map((t) => (
+              <span
+                key={t.id}
+                role="link"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.href = `/tags/${t.slug}`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.location.href = `/tags/${t.slug}`;
+                  }
+                }}
+                className="cursor-pointer rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+              >
+                {t.name}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
     </Link>
   );
