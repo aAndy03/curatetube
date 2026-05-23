@@ -37,6 +37,7 @@ export type AdminVideoRow = {
   primary_tag_ids: string[];
   creator: { id: string; title: string } | null;
   category_ids: string[];
+  tag_ids: string[];
   tag_total: number;
 };
 
@@ -106,7 +107,7 @@ export const listAdminVideos = createServerFn({ method: "POST" })
 
     const ids = (rows ?? []).map((r) => r.id);
     let catMap = new Map<string, string[]>();
-    let tagCounts = new Map<string, number>();
+    let tagMap = new Map<string, string[]>();
     if (ids.length) {
       const [{ data: cats }, { data: tags }] = await Promise.all([
         supabaseAdmin
@@ -115,8 +116,9 @@ export const listAdminVideos = createServerFn({ method: "POST" })
           .in("video_id", ids),
         supabaseAdmin
           .from("video_tags")
-          .select("video_id")
-          .in("video_id", ids),
+          .select("video_id, tag_id, rank")
+          .in("video_id", ids)
+          .order("rank", { ascending: true }),
       ]);
       for (const c of cats ?? []) {
         const list = catMap.get(c.video_id) ?? [];
@@ -124,7 +126,9 @@ export const listAdminVideos = createServerFn({ method: "POST" })
         catMap.set(c.video_id, list);
       }
       for (const t of tags ?? []) {
-        tagCounts.set(t.video_id, (tagCounts.get(t.video_id) ?? 0) + 1);
+        const list = tagMap.get(t.video_id) ?? [];
+        list.push(t.tag_id);
+        tagMap.set(t.video_id, list);
       }
     }
 
@@ -142,7 +146,8 @@ export const listAdminVideos = createServerFn({ method: "POST" })
           ? { id: r.creator.id, title: r.creator.title }
           : null,
         category_ids: catMap.get(r.id) ?? [],
-        tag_total: tagCounts.get(r.id) ?? 0,
+        tag_ids: tagMap.get(r.id) ?? [],
+        tag_total: (tagMap.get(r.id) ?? []).length,
       })),
       total: count ?? 0,
     };
