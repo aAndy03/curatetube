@@ -349,6 +349,9 @@ const ModerateInput = z.object({
   submissionId: z.string().uuid(),
   decision: z.enum(["approve", "reject"]),
   reason: z.string().max(2000).optional(),
+  /** Phase 5: ids selected from the proposed lists in the moderation pane. */
+  applyCategoryIds: z.array(z.string().uuid()).max(5).optional(),
+  applyTagIds: z.array(z.string().uuid()).max(3).optional(),
 });
 
 export const moderateSubmission = createServerFn({ method: "POST" })
