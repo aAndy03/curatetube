@@ -394,12 +394,43 @@ export const moderateSubmission = createServerFn({ method: "POST" })
         .select("title")
         .single();
 
+      // Phase 5: on approve, persist the categories/tags the moderator
+      // checked off in the proposal panels. Triggers maintain
+      // videos.video_count / videos.primary_tag_ids automatically.
+      if (data.decision === "approve") {
+        if (data.applyCategoryIds?.length) {
+          const rows = data.applyCategoryIds.slice(0, 5).map((cid) => ({
+            video_id: sub.video_id!,
+            category_id: cid,
+            assigned_by: userId,
+          }));
+          await supabaseAdmin
+            .from("video_categories")
+            .upsert(rows, { onConflict: "video_id,category_id", ignoreDuplicates: true });
+        }
+        if (data.applyTagIds?.length) {
+          const rows = data.applyTagIds.slice(0, 3).map((tid, i) => ({
+            video_id: sub.video_id!,
+            tag_id: tid,
+            rank: i + 1,
+            assigned_by: "admin" as const,
+          }));
+          await supabaseAdmin
+            .from("video_tags")
+            .upsert(rows, { onConflict: "video_id,tag_id", ignoreDuplicates: true });
+        }
+      }
+
       await writeAudit(supabaseAdmin, {
         actorId: userId,
         action: `video.${data.decision}`,
         targetType: "video",
         targetId: sub.video_id,
-        after: { reason: data.reason ?? null },
+        after: {
+          reason: data.reason ?? null,
+          applied_categories: data.applyCategoryIds ?? [],
+          applied_tags: data.applyTagIds ?? [],
+        },
         visibility: "staff",
       });
 
