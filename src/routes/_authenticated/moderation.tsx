@@ -6,12 +6,15 @@ import { Check, X, Loader2, Eye, Users, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { listSubmissionQueue, moderateSubmission } from "@/lib/library.functions";
+import { getCategoryTree } from "@/lib/categories.functions";
+import { useTagsCache } from "@/hooks/use-tags-cache";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 // Resizable temporarily replaced with CSS grid; revisit when ResizablePanelGroup typing is fixed.
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
