@@ -52,11 +52,24 @@ function ModerationPage() {
     if (selected && selected.id !== selectedId) setSelectedId(selected.id);
   }, [selected, selectedId]);
 
+  // Pre-check the proposals carried on each submission whenever we switch rows.
+  React.useEffect(() => {
+    setApplyCatIds(((selected as Submission & { proposed_category_ids?: string[] })?.proposed_category_ids) ?? []);
+    setApplyTagIds(((selected as Submission & { proposed_tag_ids?: string[] })?.proposed_tag_ids) ?? []);
+    setReason("");
+  }, [selected?.id]);
+
   const decide = useMutation({
     mutationFn: async (decision: "approve" | "reject") => {
       if (!selected) throw new Error("Nothing selected");
       return moderateFn({
-        data: { submissionId: selected.id, decision, reason: reason.trim() || undefined },
+        data: {
+          submissionId: selected.id,
+          decision,
+          reason: reason.trim() || undefined,
+          applyCategoryIds: decision === "approve" ? applyCatIds : undefined,
+          applyTagIds: decision === "approve" ? applyTagIds : undefined,
+        },
       });
     },
     onSuccess: (_, decision) => {
