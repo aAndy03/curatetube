@@ -162,7 +162,17 @@ export const submitVideos = createServerFn({ method: "POST" })
 
     const results: SubmitResultItem[] = [];
 
+    // Phase 5: lookup per-URL proposals by URL (first match wins on dupes).
+    const perUrlMap = new Map<string, { proposedCategoryIds?: string[]; proposedTagIds?: string[] }>();
+    for (const p of data.perUrl ?? []) {
+      if (!perUrlMap.has(p.url)) perUrlMap.set(p.url, p);
+    }
+
     for (const p of parsed) {
+      const proposals = perUrlMap.get(p.url);
+      const proposedCategoryIds = proposals?.proposedCategoryIds ?? [];
+      const proposedTagIds = proposals?.proposedTagIds ?? [];
+
       if (!p.youtubeId) {
         // Log invalid submission
         await supabaseAdmin.from("submissions").insert({
