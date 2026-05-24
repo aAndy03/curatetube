@@ -165,6 +165,10 @@ function ModerationPage() {
               onDecide={(d) => decide.mutate(d)}
               pending={decide.isPending}
               readOnly={status !== "pending"}
+              applyCatIds={applyCatIds}
+              setApplyCatIds={setApplyCatIds}
+              applyTagIds={applyTagIds}
+              setApplyTagIds={setApplyTagIds}
             />
           ) : (
             <div className="p-10 text-center text-sm text-muted-foreground">
