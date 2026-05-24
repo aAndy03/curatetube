@@ -188,6 +188,10 @@ function DetailPane({
   onDecide,
   pending,
   readOnly,
+  applyCatIds,
+  setApplyCatIds,
+  applyTagIds,
+  setApplyTagIds,
 }: {
   submission: Submission;
   reason: string;
@@ -195,8 +199,32 @@ function DetailPane({
   onDecide: (d: "approve" | "reject") => void;
   pending: boolean;
   readOnly: boolean;
+  applyCatIds: string[];
+  setApplyCatIds: React.Dispatch<React.SetStateAction<string[]>>;
+  applyTagIds: string[];
+  setApplyTagIds: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   const v = submission.video;
+  const fetchTree = useServerFn(getCategoryTree);
+  const { data: treeData } = useQuery({
+    queryKey: ["category-tree"],
+    queryFn: () => fetchTree(),
+    staleTime: Infinity,
+  });
+  const catById = React.useMemo(() => {
+    const m = new Map<string, { id: string; name: string }>();
+    for (const c of treeData?.categories ?? []) m.set(c.id, { id: c.id, name: c.name });
+    return m;
+  }, [treeData]);
+  const { byId: tagById } = useTagsCache();
+
+  const proposedCats = (submission as Submission & { proposed_category_ids?: string[] }).proposed_category_ids ?? [];
+  const proposedTags = (submission as Submission & { proposed_tag_ids?: string[] }).proposed_tag_ids ?? [];
+
+  const toggle = (arr: string[], setArr: React.Dispatch<React.SetStateAction<string[]>>, id: string, max: number) => {
+    setArr(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id].slice(0, max));
+  };
+
   return (
     <div className="space-y-4 p-5">
       {submission.youtube_id ? (
