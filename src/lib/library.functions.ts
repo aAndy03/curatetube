@@ -12,6 +12,12 @@ const PUBLIC_BROWSE_CACHE = new Headers({
 
 // ============ SUBMIT ============
 
+const PerUrlProposal = z.object({
+  url: z.string().min(1).max(500),
+  proposedCategoryIds: z.array(z.string().uuid()).max(5).optional(),
+  proposedTagIds: z.array(z.string().uuid()).max(3).optional(),
+});
+
 const SubmitInput = z.object({
   urls: z.array(z.string().min(1).max(500)).min(1).max(20),
   note: z.string().max(2000).optional(),
@@ -19,6 +25,8 @@ const SubmitInput = z.object({
   suggestedCategories: z.array(z.string().max(60)).max(10).optional(),
   suggestedTags: z.array(z.string().max(40)).max(20).optional(),
   anonymous: z.boolean().optional(),
+  /** Phase 5: per-URL proposed taxonomy from the SubmitSheet suggestion step. */
+  perUrl: z.array(PerUrlProposal).max(20).optional(),
 });
 
 export type SubmitResultItem = {
