@@ -258,6 +258,8 @@ export const submitVideos = createServerFn({ method: "POST" })
         content_warnings: data.contentWarnings ?? [],
         suggested_categories: data.suggestedCategories ?? [],
         suggested_tags: data.suggestedTags ?? [],
+        proposed_category_ids: proposedCategoryIds,
+        proposed_tag_ids: proposedTagIds,
       });
 
       // Track unique submitter; bump submission_count if newly inserted
