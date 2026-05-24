@@ -203,6 +203,8 @@ export const submitVideos = createServerFn({ method: "POST" })
           content_warnings: data.contentWarnings ?? [],
           suggested_categories: data.suggestedCategories ?? [],
           suggested_tags: data.suggestedTags ?? [],
+          proposed_category_ids: proposedCategoryIds,
+          proposed_tag_ids: proposedTagIds,
         });
         results.push({ url: p.url, status: "invalid", reason: "Video not found on YouTube (may be private or removed)." });
         continue;
