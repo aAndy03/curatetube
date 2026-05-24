@@ -336,7 +336,7 @@ export const listSubmissionQueue = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabase
       .from("submissions")
       .select(
-        "id, status, anonymous, note, content_warnings, created_at, submitter_id, video_id, youtube_id, youtube_url, video:videos(id, title, thumbnail_url, status, submission_count, suggest_count, duration_seconds, published_at, creator:creators(id, title, handle, thumbnail_url))",
+        "id, status, anonymous, note, content_warnings, created_at, submitter_id, video_id, youtube_id, youtube_url, proposed_category_ids, proposed_tag_ids, video:videos(id, title, thumbnail_url, status, submission_count, suggest_count, duration_seconds, published_at, creator:creators(id, title, handle, thumbnail_url))",
       )
       .eq("status", status as never)
       .order("created_at", { ascending: false })
