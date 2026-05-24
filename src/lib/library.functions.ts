@@ -54,16 +54,45 @@ export const submitVideos = createServerFn({ method: "POST" })
       throw new Error("You do not have permission to submit videos.");
     }
 
-    // Rate limit: max 30 submissions / hour / user
-    const oneHourAgo = new Date(Date.now() - 3600 * 1000).toISOString();
-    const { count: recent } = await supabaseAdmin
-      .from("rate_limit_events")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("action", "submission.create")
-      .gte("created_at", oneHourAgo);
-    if ((recent ?? 0) + data.urls.length > 30) {
-      throw new Error("Submission rate limit exceeded (30/hour). Please try again later.");
+    // Phase 5: 7-day rolling quota from app_settings.submit_limit_default.
+    // 0 in per_role (or owner/admin role) = unlimited.
+    const { data: setting } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "submit_limit_default")
+      .maybeSingle();
+    const cfg = (setting?.value ?? { default: 3 }) as {
+      default: number;
+      per_role?: Record<string, number>;
+    };
+    const { data: rolesRows } = await supabaseAdmin
+      .from("user_roles")
+      .select("role:roles(name)")
+      .eq("user_id", userId);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r.role as { name: string } | null)?.name)
+      .filter(Boolean) as string[];
+    let unlimited =
+      roleNames.includes("owner") || roleNames.includes("admin");
+    let limit = cfg.default ?? 3;
+    for (const r of roleNames) {
+      const v = cfg.per_role?.[r];
+      if (v === 0) { unlimited = true; break; }
+      if (typeof v === "number" && v > limit) limit = v;
+    }
+    if (!unlimited) {
+      const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+      const { count: used } = await supabaseAdmin
+        .from("rate_limit_events")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("action", "submission.create")
+        .gte("created_at", since);
+      if ((used ?? 0) + data.urls.length > limit) {
+        throw new Error(
+          `Submission quota exceeded — ${limit} per 7 days. Used ${used ?? 0}, requested ${data.urls.length}.`,
+        );
+      }
     }
 
     // Parse URLs → ids
