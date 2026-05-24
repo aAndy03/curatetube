@@ -2,16 +2,20 @@ import * as React from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+
 import { Check, X, Loader2, Eye, Users, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { listSubmissionQueue, moderateSubmission } from "@/lib/library.functions";
+import { getCategoryTree } from "@/lib/categories.functions";
+import { useTagsCache } from "@/hooks/use-tags-cache";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 // Resizable temporarily replaced with CSS grid; revisit when ResizablePanelGroup typing is fixed.
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -34,6 +38,8 @@ function ModerationPage() {
   const [status, setStatus] = React.useState<"pending" | "approved" | "rejected">("pending");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState("");
+  const [applyCatIds, setApplyCatIds] = React.useState<string[]>([]);
+  const [applyTagIds, setApplyTagIds] = React.useState<string[]>([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["mod-queue", status],
@@ -47,11 +53,24 @@ function ModerationPage() {
     if (selected && selected.id !== selectedId) setSelectedId(selected.id);
   }, [selected, selectedId]);
 
+  // Pre-check the proposals carried on each submission whenever we switch rows.
+  React.useEffect(() => {
+    setApplyCatIds(((selected as Submission & { proposed_category_ids?: string[] })?.proposed_category_ids) ?? []);
+    setApplyTagIds(((selected as Submission & { proposed_tag_ids?: string[] })?.proposed_tag_ids) ?? []);
+    setReason("");
+  }, [selected?.id]);
+
   const decide = useMutation({
     mutationFn: async (decision: "approve" | "reject") => {
       if (!selected) throw new Error("Nothing selected");
       return moderateFn({
-        data: { submissionId: selected.id, decision, reason: reason.trim() || undefined },
+        data: {
+          submissionId: selected.id,
+          decision,
+          reason: reason.trim() || undefined,
+          applyCategoryIds: decision === "approve" ? applyCatIds : undefined,
+          applyTagIds: decision === "approve" ? applyTagIds : undefined,
+        },
       });
     },
     onSuccess: (_, decision) => {
@@ -147,6 +166,10 @@ function ModerationPage() {
               onDecide={(d) => decide.mutate(d)}
               pending={decide.isPending}
               readOnly={status !== "pending"}
+              applyCatIds={applyCatIds}
+              setApplyCatIds={setApplyCatIds}
+              applyTagIds={applyTagIds}
+              setApplyTagIds={setApplyTagIds}
             />
           ) : (
             <div className="p-10 text-center text-sm text-muted-foreground">
@@ -166,6 +189,10 @@ function DetailPane({
   onDecide,
   pending,
   readOnly,
+  applyCatIds,
+  setApplyCatIds,
+  applyTagIds,
+  setApplyTagIds,
 }: {
   submission: Submission;
   reason: string;
@@ -173,8 +200,32 @@ function DetailPane({
   onDecide: (d: "approve" | "reject") => void;
   pending: boolean;
   readOnly: boolean;
+  applyCatIds: string[];
+  setApplyCatIds: React.Dispatch<React.SetStateAction<string[]>>;
+  applyTagIds: string[];
+  setApplyTagIds: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   const v = submission.video;
+  const fetchTree = useServerFn(getCategoryTree);
+  const { data: treeData } = useQuery({
+    queryKey: ["category-tree"],
+    queryFn: () => fetchTree(),
+    staleTime: Infinity,
+  });
+  const catById = React.useMemo(() => {
+    const m = new Map<string, { id: string; name: string }>();
+    for (const c of treeData?.categories ?? []) m.set(c.id, { id: c.id, name: c.name });
+    return m;
+  }, [treeData]);
+  const { byId: tagById } = useTagsCache();
+
+  const proposedCats = (submission as Submission & { proposed_category_ids?: string[] }).proposed_category_ids ?? [];
+  const proposedTags = (submission as Submission & { proposed_tag_ids?: string[] }).proposed_tag_ids ?? [];
+
+  const toggle = (arr: string[], setArr: React.Dispatch<React.SetStateAction<string[]>>, id: string, max: number) => {
+    setArr(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id].slice(0, max));
+  };
+
   return (
     <div className="space-y-4 p-5">
       {submission.youtube_id ? (

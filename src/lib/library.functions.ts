@@ -12,6 +12,12 @@ const PUBLIC_BROWSE_CACHE = new Headers({
 
 // ============ SUBMIT ============
 
+const PerUrlProposal = z.object({
+  url: z.string().min(1).max(500),
+  proposedCategoryIds: z.array(z.string().uuid()).max(5).optional(),
+  proposedTagIds: z.array(z.string().uuid()).max(3).optional(),
+});
+
 const SubmitInput = z.object({
   urls: z.array(z.string().min(1).max(500)).min(1).max(20),
   note: z.string().max(2000).optional(),
@@ -19,6 +25,8 @@ const SubmitInput = z.object({
   suggestedCategories: z.array(z.string().max(60)).max(10).optional(),
   suggestedTags: z.array(z.string().max(40)).max(20).optional(),
   anonymous: z.boolean().optional(),
+  /** Phase 5: per-URL proposed taxonomy from the SubmitSheet suggestion step. */
+  perUrl: z.array(PerUrlProposal).max(20).optional(),
 });
 
 export type SubmitResultItem = {
@@ -46,16 +54,45 @@ export const submitVideos = createServerFn({ method: "POST" })
       throw new Error("You do not have permission to submit videos.");
     }
 
-    // Rate limit: max 30 submissions / hour / user
-    const oneHourAgo = new Date(Date.now() - 3600 * 1000).toISOString();
-    const { count: recent } = await supabaseAdmin
-      .from("rate_limit_events")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("action", "submission.create")
-      .gte("created_at", oneHourAgo);
-    if ((recent ?? 0) + data.urls.length > 30) {
-      throw new Error("Submission rate limit exceeded (30/hour). Please try again later.");
+    // Phase 5: 7-day rolling quota from app_settings.submit_limit_default.
+    // 0 in per_role (or owner/admin role) = unlimited.
+    const { data: setting } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "submit_limit_default")
+      .maybeSingle();
+    const cfg = (setting?.value ?? { default: 3 }) as {
+      default: number;
+      per_role?: Record<string, number>;
+    };
+    const { data: rolesRows } = await supabaseAdmin
+      .from("user_roles")
+      .select("role:roles(name)")
+      .eq("user_id", userId);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r.role as { name: string } | null)?.name)
+      .filter(Boolean) as string[];
+    let unlimited =
+      roleNames.includes("owner") || roleNames.includes("admin");
+    let limit = cfg.default ?? 3;
+    for (const r of roleNames) {
+      const v = cfg.per_role?.[r];
+      if (v === 0) { unlimited = true; break; }
+      if (typeof v === "number" && v > limit) limit = v;
+    }
+    if (!unlimited) {
+      const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+      const { count: used } = await supabaseAdmin
+        .from("rate_limit_events")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("action", "submission.create")
+        .gte("created_at", since);
+      if ((used ?? 0) + data.urls.length > limit) {
+        throw new Error(
+          `Submission quota exceeded — ${limit} per 7 days. Used ${used ?? 0}, requested ${data.urls.length}.`,
+        );
+      }
     }
 
     // Parse URLs → ids
@@ -125,7 +162,17 @@ export const submitVideos = createServerFn({ method: "POST" })
 
     const results: SubmitResultItem[] = [];
 
+    // Phase 5: lookup per-URL proposals by URL (first match wins on dupes).
+    const perUrlMap = new Map<string, { proposedCategoryIds?: string[]; proposedTagIds?: string[] }>();
+    for (const p of data.perUrl ?? []) {
+      if (!perUrlMap.has(p.url)) perUrlMap.set(p.url, p);
+    }
+
     for (const p of parsed) {
+      const proposals = perUrlMap.get(p.url);
+      const proposedCategoryIds = proposals?.proposedCategoryIds ?? [];
+      const proposedTagIds = proposals?.proposedTagIds ?? [];
+
       if (!p.youtubeId) {
         // Log invalid submission
         await supabaseAdmin.from("submissions").insert({
@@ -138,6 +185,8 @@ export const submitVideos = createServerFn({ method: "POST" })
           content_warnings: data.contentWarnings ?? [],
           suggested_categories: data.suggestedCategories ?? [],
           suggested_tags: data.suggestedTags ?? [],
+          proposed_category_ids: proposedCategoryIds,
+          proposed_tag_ids: proposedTagIds,
         });
         results.push({ url: p.url, status: "invalid", reason: "Could not parse a YouTube video ID from URL." });
         continue;
@@ -154,6 +203,8 @@ export const submitVideos = createServerFn({ method: "POST" })
           content_warnings: data.contentWarnings ?? [],
           suggested_categories: data.suggestedCategories ?? [],
           suggested_tags: data.suggestedTags ?? [],
+          proposed_category_ids: proposedCategoryIds,
+          proposed_tag_ids: proposedTagIds,
         });
         results.push({ url: p.url, status: "invalid", reason: "Video not found on YouTube (may be private or removed)." });
         continue;
@@ -207,6 +258,8 @@ export const submitVideos = createServerFn({ method: "POST" })
         content_warnings: data.contentWarnings ?? [],
         suggested_categories: data.suggestedCategories ?? [],
         suggested_tags: data.suggestedTags ?? [],
+        proposed_category_ids: proposedCategoryIds,
+        proposed_tag_ids: proposedTagIds,
       });
 
       // Track unique submitter; bump submission_count if newly inserted
@@ -283,7 +336,7 @@ export const listSubmissionQueue = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabase
       .from("submissions")
       .select(
-        "id, status, anonymous, note, content_warnings, created_at, submitter_id, video_id, youtube_id, youtube_url, video:videos(id, title, thumbnail_url, status, submission_count, suggest_count, duration_seconds, published_at, creator:creators(id, title, handle, thumbnail_url))",
+        "id, status, anonymous, note, content_warnings, created_at, submitter_id, video_id, youtube_id, youtube_url, proposed_category_ids, proposed_tag_ids, video:videos(id, title, thumbnail_url, status, submission_count, suggest_count, duration_seconds, published_at, creator:creators(id, title, handle, thumbnail_url))",
       )
       .eq("status", status as never)
       .order("created_at", { ascending: false })
@@ -296,6 +349,9 @@ const ModerateInput = z.object({
   submissionId: z.string().uuid(),
   decision: z.enum(["approve", "reject"]),
   reason: z.string().max(2000).optional(),
+  /** Phase 5: ids selected from the proposed lists in the moderation pane. */
+  applyCategoryIds: z.array(z.string().uuid()).max(5).optional(),
+  applyTagIds: z.array(z.string().uuid()).max(3).optional(),
 });
 
 export const moderateSubmission = createServerFn({ method: "POST" })
@@ -338,12 +394,43 @@ export const moderateSubmission = createServerFn({ method: "POST" })
         .select("title")
         .single();
 
+      // Phase 5: on approve, persist the categories/tags the moderator
+      // checked off in the proposal panels. Triggers maintain
+      // videos.video_count / videos.primary_tag_ids automatically.
+      if (data.decision === "approve") {
+        if (data.applyCategoryIds?.length) {
+          const rows = data.applyCategoryIds.slice(0, 5).map((cid) => ({
+            video_id: sub.video_id!,
+            category_id: cid,
+            assigned_by: userId,
+          }));
+          await supabaseAdmin
+            .from("video_categories")
+            .upsert(rows, { onConflict: "video_id,category_id", ignoreDuplicates: true });
+        }
+        if (data.applyTagIds?.length) {
+          const rows = data.applyTagIds.slice(0, 3).map((tid, i) => ({
+            video_id: sub.video_id!,
+            tag_id: tid,
+            rank: i + 1,
+            assigned_by: "admin" as const,
+          }));
+          await supabaseAdmin
+            .from("video_tags")
+            .upsert(rows, { onConflict: "video_id,tag_id", ignoreDuplicates: true });
+        }
+      }
+
       await writeAudit(supabaseAdmin, {
         actorId: userId,
         action: `video.${data.decision}`,
         targetType: "video",
         targetId: sub.video_id,
-        after: { reason: data.reason ?? null },
+        after: {
+          reason: data.reason ?? null,
+          applied_categories: data.applyCategoryIds ?? [],
+          applied_tags: data.applyTagIds ?? [],
+        },
         visibility: "staff",
       });
 
