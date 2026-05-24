@@ -37,6 +37,8 @@ function ModerationPage() {
   const [status, setStatus] = React.useState<"pending" | "approved" | "rejected">("pending");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState("");
+  const [applyCatIds, setApplyCatIds] = React.useState<string[]>([]);
+  const [applyTagIds, setApplyTagIds] = React.useState<string[]>([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["mod-queue", status],
