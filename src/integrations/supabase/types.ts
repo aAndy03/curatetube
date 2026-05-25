@@ -244,6 +244,20 @@ export type Database = {
             referencedRelation: "mv_category_suggest_score"
             referencedColumns: ["category_id"]
           },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_trending_score"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mv_creator_categories"
+            referencedColumns: ["category_id"]
+          },
         ]
       }
       category_ancestors: {
@@ -285,6 +299,20 @@ export type Database = {
             referencedColumns: ["category_id"]
           },
           {
+            foreignKeyName: "category_ancestors_ancestor_id_fkey"
+            columns: ["ancestor_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_trending_score"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "category_ancestors_ancestor_id_fkey"
+            columns: ["ancestor_id"]
+            isOneToOne: false
+            referencedRelation: "mv_creator_categories"
+            referencedColumns: ["category_id"]
+          },
+          {
             foreignKeyName: "category_ancestors_descendant_id_fkey"
             columns: ["descendant_id"]
             isOneToOne: false
@@ -303,6 +331,20 @@ export type Database = {
             columns: ["descendant_id"]
             isOneToOne: false
             referencedRelation: "mv_category_suggest_score"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "category_ancestors_descendant_id_fkey"
+            columns: ["descendant_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_trending_score"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "category_ancestors_descendant_id_fkey"
+            columns: ["descendant_id"]
+            isOneToOne: false
+            referencedRelation: "mv_creator_categories"
             referencedColumns: ["category_id"]
           },
         ]
@@ -999,6 +1041,20 @@ export type Database = {
             referencedRelation: "mv_category_suggest_score"
             referencedColumns: ["category_id"]
           },
+          {
+            foreignKeyName: "user_category_pins_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_trending_score"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "user_category_pins_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mv_creator_categories"
+            referencedColumns: ["category_id"]
+          },
         ]
       }
       user_feed_dedup: {
@@ -1162,6 +1218,20 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "mv_category_suggest_score"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "video_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_trending_score"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "video_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mv_creator_categories"
             referencedColumns: ["category_id"]
           },
           {
@@ -1413,6 +1483,13 @@ export type Database = {
             referencedRelation: "creators"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "videos_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "mv_creator_categories"
+            referencedColumns: ["creator_id"]
+          },
         ]
       }
     }
@@ -1464,7 +1541,50 @@ export type Database = {
             referencedRelation: "mv_category_suggest_score"
             referencedColumns: ["category_id"]
           },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_trending_score"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mv_creator_categories"
+            referencedColumns: ["category_id"]
+          },
         ]
+      }
+      mv_category_trending_score: {
+        Row: {
+          active_creators: number | null
+          category_id: string | null
+          name: string | null
+          new_videos_7d: number | null
+          raw_score: number | null
+          refreshed_at: string | null
+          score: number | null
+          slug: string | null
+          video_count: number | null
+        }
+        Relationships: []
+      }
+      mv_creator_categories: {
+        Row: {
+          category_id: string | null
+          category_name: string | null
+          category_slug: string | null
+          category_sort_order: number | null
+          creator_handle: string | null
+          creator_id: string | null
+          creator_thumbnail_url: string | null
+          creator_title: string | null
+          subscriber_count: number | null
+          videos_in_category: number | null
+        }
+        Relationships: []
       }
       mv_suggested_feed: {
         Row: {
