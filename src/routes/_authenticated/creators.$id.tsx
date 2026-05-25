@@ -22,8 +22,20 @@ type SortKey = "recent" | "top_suggested" | "oldest";
 const PAGE_SIZE = 24;
 
 export const Route = createFileRoute("/_authenticated/creators/$id")({
-  head: ({ params }) => ({
-    meta: [{ title: "Creator — CurateTube" }],
+  head: () => ({
+    meta: [
+      { title: "Creator — CurateTube" },
+      {
+        name: "description",
+        content:
+          "Approved videos and community contributors for this YouTube creator on CurateTube.",
+      },
+      { property: "og:title", content: "Creator — CurateTube" },
+      {
+        property: "og:description",
+        content: "Approved videos and contributors for this creator on CurateTube.",
+      },
+    ],
   }),
   component: CreatorDetailPage,
 });
@@ -123,7 +135,8 @@ function CreatorDetailPage() {
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-medium">In the library</h2>
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger aria-label="Sort videos" className="w-44">
+
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>

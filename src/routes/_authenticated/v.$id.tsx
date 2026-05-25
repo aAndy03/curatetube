@@ -16,6 +16,21 @@ import { VideoActions } from "@/components/video-actions";
 import { useHydratedSuggestCount } from "@/hooks/use-hydrated-status";
 
 export const Route = createFileRoute("/_authenticated/v/$id")({
+  head: () => ({
+    meta: [
+      { title: "Video — CurateTube" },
+      {
+        name: "description",
+        content:
+          "Watch and discuss a community-curated YouTube video on CurateTube, with tags, categories, and contributor attribution.",
+      },
+      { property: "og:title", content: "Video — CurateTube" },
+      {
+        property: "og:description",
+        content: "A community-curated YouTube video on CurateTube.",
+      },
+    ],
+  }),
   component: VideoDetailPage,
   notFoundComponent: () => (
     <div className="mx-auto max-w-xl p-10 text-center">

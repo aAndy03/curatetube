@@ -115,6 +115,7 @@ export function ReportButton({
         </div>
         <Textarea
           ref={textareaRef}
+          aria-label="Reason for reporting this video"
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, MAX))}
           placeholder={`Reason (${MIN}–${MAX} characters)…`}
