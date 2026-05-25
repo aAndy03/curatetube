@@ -500,17 +500,23 @@ export const getVideoDetail = createServerFn({ method: "GET" })
       _key: "submission.view_queue",
     });
 
-    const baseCols =
-      "id, youtube_id, title, description, thumbnail_url, duration_seconds, published_at, view_count, like_count, language, status, submission_count, suggest_count, content_warnings, is_featured, creator:creators(id, title, handle, thumbnail_url, description, channel_url, subscriber_count)";
-    const cols = isStaff ? `${baseCols}, curator_note` : baseCols;
-
-    let q = supabaseAdmin.from("videos").select(cols).eq("id", data.id);
+    let q = supabaseAdmin
+      .from("videos")
+      .select(
+        "id, youtube_id, title, description, thumbnail_url, duration_seconds, published_at, view_count, like_count, language, status, submission_count, suggest_count, content_warnings, curator_note, is_featured, creator:creators(id, title, handle, thumbnail_url, description, channel_url, subscriber_count)",
+      )
+      .eq("id", data.id);
     if (!isStaff) q = q.eq("status", "approved");
 
     const { data: video, error } = await q.maybeSingle();
     if (error) throw new Error(error.message);
+    if (video && !isStaff) {
+      // Never leak internal moderation notes to non-staff.
+      (video as { curator_note: string | null }).curator_note = null;
+    }
     return { video };
   });
+
 
 
 export const listCreators = createServerFn({ method: "GET" })
