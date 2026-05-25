@@ -23,7 +23,8 @@ export function CategoryFeedRails() {
   const { data, isLoading } = useQuery({
     queryKey: ["category-feed"],
     queryFn: () => fetchFeed(),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const unpin = useMutation({
@@ -95,7 +96,9 @@ function CategoryRail({ rail, onUnpin }: { rail: CategoryFeedRail; onUnpin: () =
 
       {rail.videos.length === 0 ? (
         <div className="rounded-md border bg-card p-6 text-sm text-muted-foreground">
-          Nothing new in {rail.category.name} right now.{" "}
+          {rail.total_in_category === 0
+            ? `No approved videos in ${rail.category.name} yet.`
+            : `Nothing new in ${rail.category.name} right now.`}{" "}
           <Link
             to="/categories/$slug"
             params={{ slug: rail.category.slug }}

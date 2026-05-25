@@ -58,6 +58,7 @@ function CategoryDetailPage() {
       toast.success("Pinned to your feed");
       qc.invalidateQueries({ queryKey: ["pinned-categories"] });
       qc.invalidateQueries({ queryKey: ["category-feed"] });
+      qc.invalidateQueries({ queryKey: ["my-sections"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -67,6 +68,7 @@ function CategoryDetailPage() {
       toast.success("Unpinned");
       qc.invalidateQueries({ queryKey: ["pinned-categories"] });
       qc.invalidateQueries({ queryKey: ["category-feed"] });
+      qc.invalidateQueries({ queryKey: ["my-sections"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
