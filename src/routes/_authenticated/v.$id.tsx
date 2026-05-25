@@ -1,11 +1,12 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users, Sparkles, ExternalLink, AlertTriangle, Tag as TagIcon } from "lucide-react";
+import { Users, Sparkles, ExternalLink, AlertTriangle, Tag as TagIcon, ChevronRight, FolderTree } from "lucide-react";
 
 import { getVideoDetail } from "@/lib/library.functions";
 import { getVideoTags } from "@/lib/tags.functions";
 import { getVideoAttribution } from "@/lib/admin.functions";
+import { getVideoCategoryPaths } from "@/lib/category-feed.functions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
