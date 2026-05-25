@@ -3,8 +3,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { writeAudit } from "./audit.server";
+import { deleteAccountDataNow } from "./account-deletion.server";
 
 const ListStatus = z.enum(["wishlist", "liked", "disliked", "watched"]);
+const DeleteAccountInput = z.object({
+  reason: z.string().trim().max(500).optional(),
+  reauthAt: z.number().int().positive().optional(),
+});
 type ListStatus = z.infer<typeof ListStatus>;
 
 // ============ TOGGLE LIST ============
