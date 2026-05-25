@@ -29,12 +29,16 @@ export type PublicTag = {
 export const listPublicTags = createServerFn({ method: "GET" })
   .handler(async () => {
     setResponseHeaders(TAG_CACHE_HEADERS);
+    // Only primary-tier tags are ever shown on cards/moderation chips.
+    // Secondary tier (sciencedirect, ~200k rows) would blow past Postgrest's
+    // default 1000-row cap and starve primary tags out of the response,
+    // causing moderation to fall back to UUIDs.
     const { data, error } = await supabaseAdmin
       .from("tags")
       .select("id, name, slug, source, tier")
-      .neq("tier", "internal")
+      .eq("tier", "primary")
       .order("name")
-      .limit(50000);
+      .limit(5000);
     if (error) throw new Error(error.message);
     return { tags: (data ?? []) as PublicTag[] };
   });
