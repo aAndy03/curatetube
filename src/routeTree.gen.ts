@@ -38,6 +38,7 @@ import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authentic
 import { Route as ApiPublicCronSessionExpiryWarnRouteImport } from './routes/api/public/cron/session-expiry-warn'
 import { Route as ApiPublicCronRefreshMvsRouteImport } from './routes/api/public/cron/refresh-mvs'
 import { Route as ApiPublicCronLeaderboardRouteImport } from './routes/api/public/cron/leaderboard'
+import { Route as ApiPublicCronAccountDeletionsRouteImport } from './routes/api/public/cron/account-deletions'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -195,6 +196,12 @@ const ApiPublicCronLeaderboardRoute =
     path: '/api/public/cron/leaderboard',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronAccountDeletionsRoute =
+  ApiPublicCronAccountDeletionsRouteImport.update({
+    id: '/api/public/cron/account-deletions',
+    path: '/api/public/cron/account-deletions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -222,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/v/$id': typeof AuthenticatedVIdRoute
   '/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/creators/': typeof AuthenticatedCreatorsIndexRoute
+  '/api/public/cron/account-deletions': typeof ApiPublicCronAccountDeletionsRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
@@ -252,6 +260,7 @@ export interface FileRoutesByTo {
   '/v/$id': typeof AuthenticatedVIdRoute
   '/categories': typeof AuthenticatedCategoriesIndexRoute
   '/creators': typeof AuthenticatedCreatorsIndexRoute
+  '/api/public/cron/account-deletions': typeof ApiPublicCronAccountDeletionsRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
@@ -284,6 +293,7 @@ export interface FileRoutesById {
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
   '/_authenticated/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/_authenticated/creators/': typeof AuthenticatedCreatorsIndexRoute
+  '/api/public/cron/account-deletions': typeof ApiPublicCronAccountDeletionsRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/v/$id'
     | '/categories/'
     | '/creators/'
+    | '/api/public/cron/account-deletions'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
@@ -346,6 +357,7 @@ export interface FileRouteTypes {
     | '/v/$id'
     | '/categories'
     | '/creators'
+    | '/api/public/cron/account-deletions'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
@@ -377,6 +389,7 @@ export interface FileRouteTypes {
     | '/_authenticated/v/$id'
     | '/_authenticated/categories/'
     | '/_authenticated/creators/'
+    | '/api/public/cron/account-deletions'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
@@ -389,6 +402,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicCronAccountDeletionsRoute: typeof ApiPublicCronAccountDeletionsRoute
   ApiPublicCronLeaderboardRoute: typeof ApiPublicCronLeaderboardRoute
   ApiPublicCronRefreshMvsRoute: typeof ApiPublicCronRefreshMvsRoute
   ApiPublicCronSessionExpiryWarnRoute: typeof ApiPublicCronSessionExpiryWarnRoute
@@ -599,6 +613,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronLeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/account-deletions': {
+      id: '/api/public/cron/account-deletions'
+      path: '/api/public/cron/account-deletions'
+      fullPath: '/api/public/cron/account-deletions'
+      preLoaderRoute: typeof ApiPublicCronAccountDeletionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -672,6 +693,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  ApiPublicCronAccountDeletionsRoute: ApiPublicCronAccountDeletionsRoute,
   ApiPublicCronLeaderboardRoute: ApiPublicCronLeaderboardRoute,
   ApiPublicCronRefreshMvsRoute: ApiPublicCronRefreshMvsRoute,
   ApiPublicCronSessionExpiryWarnRoute: ApiPublicCronSessionExpiryWarnRoute,
