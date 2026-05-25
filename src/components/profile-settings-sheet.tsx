@@ -437,10 +437,15 @@ function DeleteAccountPanel() {
         return null;
       }
       if (instant) {
-        await instantDel({ data: { reason: reason || undefined, reauthAt: Date.now() } });
+        try {
+          await instantDel({ data: { reason: reason || undefined, reauthAt: Date.now() } });
+        } catch (err) {
+          console.warn("instant delete error", err);
+        }
         toast.success("Account deleted.");
-        await supabase.auth.signOut();
-        window.location.href = "/";
+        try { await supabase.auth.signOut({ scope: "local" }); } catch {}
+        try { qc.clear(); } catch {}
+        window.location.replace("/");
         return null;
       }
       return requestDel({ data: { reason: reason || undefined, reauthAt: Date.now() } });
