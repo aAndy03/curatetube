@@ -112,7 +112,16 @@ const ReparentInput = z.object({
 export const reparentCategory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ReparentInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    // Permission check — RPC below uses admin client which bypasses RLS,
+    // so we must explicitly verify the caller may manage the taxonomy.
+    const { data: ok, error: permErr } = await supabaseAdmin.rpc("has_permission", {
+      _user_id: context.userId,
+      _key: "taxonomy.manage",
+    });
+    if (permErr) throw new Error(permErr.message);
+    if (!ok) throw new Error("Forbidden: taxonomy.manage permission required");
+
     // Atomic reparent + closure rebuild + depth recompute on the subtree.
     // Function enforces self-loop, cycle, and depth-6 guards and raises on violation.
     const { error } = await (supabaseAdmin.rpc as unknown as (
@@ -125,6 +134,7 @@ export const reparentCategory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 // ============ DELETE (with guards) ============
 const DeleteInput = z.object({
