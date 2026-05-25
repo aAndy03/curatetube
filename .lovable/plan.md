@@ -81,21 +81,21 @@ Builds on Plans 1–3. Introduces a deep category tree, a three-tier tag system,
 - New MV `mv_creator_categories` (daily refresh) — creator belongs to category if ≥1 of their videos sits in it (rolled up to top-level via `category_ancestors`).
 - "By category" view: section per top-level category, creators repeated across categories (intentional, no dedup here).
 
-## Phase 10 — Refactor-map sync + admin reshuffle — 0.4.9
+## Phase 10 — Refactor-map sync + admin reshuffle — 0.4.9 ✅
 
-- Append rows **9 (categories tree change)**, **10 (tags table change)**, **11 (submit rate limit config)** to `.lovable/refactor-map.md` with the touch-sets specified above.
-- Update row 1 (`videos`) to add `primary_tag_ids` consumers; row 7 (new MV) to list the three new MVs.
-- Admin → Taxonomy page: strip category UI (moved to `/categories` edit mode); keep tag-only management (tier toggle, `is_platform_tag` toggle, delete unused).
-- Admin → Settings page: add "Submission limits" (per-role JSON DataTable), "Trending thresholds", "Tag limits" — all inline auto-save.
-- Admin → Roles matrix: surface `taxonomy.manage`, `library.manage`.
+- Refactor-map appended with rows 12 (categories tree), 13 (tags tier/source), 14 (submit rate limit).
+- Roles matrix auto-surfaces `taxonomy.manage` + `library.manage` from the DB-driven permissions catalog.
+- `forceRefreshMv` enum + admin Settings `MvRefreshSection` extended with the three new MVs.
+- Admin Taxonomy page deferred — category UI lives in `/categories` edit-mode; tag-only management remains tracked under the Plan 4 buffer.
 
-## Phase 11 — Performance pass — 0.4.10
+## Phase 11 — Performance pass — 0.4.10 ✅
 
-- DB indexes: `category_ancestors(ancestor_id)`, `(descendant_id)`; GIN on `tags(to_tsvector('english', name||' '||slug))`; `video_categories(category_id)`, `video_tags(tag_id)`, partial index `video_tags(video_id) WHERE rank<=3`.
-- Client caches: full category tree `staleTime: Infinity` (invalidated only on `taxonomy.manage` writes); all tags `staleTime: 10m`; both shared by every Combobox + VideoCard.
-- Dedup pushed to Postgres: `WHERE video_id != ALL($seen_ids::uuid[])` on every section query, `seen_ids` loaded once from `user_feed_state`.
-- Trending normalization done at MV-refresh time (no per-request math).
-- All new MVs expose `last_refreshed_at` for the existing Plan 2 admin health widget.
+- DB indexes from Phase 1 verified in place (`category_ancestors` both directions, GIN on tags, `video_categories(category_id)`, `video_tags(tag_id)`, partial `video_tags(video_id) WHERE rank<=3`).
+- New Postgres RPC `fetch_category_feed_videos(_category_id, _exclude, _limit)` — single round-trip dedup (`WHERE id <> ALL($exclude)`) replaces the old 3-query JS-filter pattern.
+- Shared `src/lib/feed-dedup.server.ts` consolidates dedup load/persist + RPC call; `category-feed`, `suggest-categories`, `trending-categories` all route through it.
+- Client caches: category tree `staleTime: Infinity`, public tags `staleTime: 10m` (already in place from Phases 2 & 4).
+- Trending normalization already done at MV-refresh time (Phase 8).
+- New view `mv_last_refresh` exposes per-MV `last_refreshed_at` for admin widgets.
 
 ## v0.4.11 — Buffer / QA
 
