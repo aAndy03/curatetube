@@ -32,6 +32,7 @@ function VideoDetailPage() {
   const fetchDetail = useServerFn(getVideoDetail);
   const fetchAttribution = useServerFn(getVideoAttribution);
   const fetchTags = useServerFn(getVideoTags);
+  const fetchPaths = useServerFn(getVideoCategoryPaths);
   const { data, isLoading } = useQuery({
     queryKey: ["video", id],
     queryFn: () => fetchDetail({ data: { id } }),
@@ -44,6 +45,11 @@ function VideoDetailPage() {
     queryKey: ["video-tags", id],
     queryFn: () => fetchTags({ data: { videoId: id } }),
     staleTime: 60_000,
+  });
+  const pathsQ = useQuery({
+    queryKey: ["video-category-paths", id],
+    queryFn: () => fetchPaths({ data: { videoId: id } }),
+    staleTime: 5 * 60_000,
   });
   const liveSuggestCount = useHydratedSuggestCount(id, data?.video?.suggest_count ?? 0);
 
