@@ -188,6 +188,10 @@ export function ProfileSettingsSheet({
     }
     toast.success("Saved");
     qc.invalidateQueries({ queryKey: ["profile", user?.id] });
+    if ("audit_privacy_mode" in patch) {
+      qc.invalidateQueries({ queryKey: ["video-attribution"] });
+      qc.invalidateQueries({ queryKey: ["creator-contributors"] });
+    }
   };
 
   return (
@@ -321,11 +325,19 @@ export function ProfileSettingsSheet({
 }
 
 function BulkRewriteButtons() {
+  const qc = useQueryClient();
   const rewrite = useServerFn(rewriteAuditIdentity);
   const m = useMutation({
     mutationFn: (mode: "anonymize" | "attribute") =>
       rewrite({ data: { mode } }),
-    onSuccess: (r) => toast.success(`Rewrote ${r.rewritten} audit entries`),
+    onSuccess: (r) => {
+      toast.success(`Rewrote ${r.rewritten} audit entries`);
+      // Public attribution surfaces read from video_submitters / profiles;
+      // drop their caches so the UI reflects the rewrite immediately.
+      qc.invalidateQueries({ queryKey: ["video-attribution"] });
+      qc.invalidateQueries({ queryKey: ["creator-contributors"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   return (
@@ -347,11 +359,13 @@ function BulkRewriteButtons() {
         Attribute my past actions
       </Button>
       <p className="text-[11px] text-muted-foreground">
-        Each rewrite is itself recorded in the audit log.
+        Updates past submissions, suggestions, and audit entries. Each rewrite
+        is itself recorded in the audit log.
       </p>
     </div>
   );
 }
+
 
 function DeleteAccountPanel() {
   const { user, signOut } = useAuth();
