@@ -21,6 +21,22 @@ export type FeedRailVideo = {
     | null;
 };
 
+type DirectRow = {
+  id: string;
+  youtube_id: string;
+  title: string;
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
+  published_at: string | null;
+  submission_count: number;
+  suggest_count: number;
+  primary_tag_ids: string[] | null;
+  creator:
+    | { id: string; title: string; handle: string | null; thumbnail_url: string | null }
+    | { id: string; title: string; handle: string | null; thumbnail_url: string | null }[]
+    | null;
+};
+
 export async function loadOrResetDedup(userId: string): Promise<Set<string>> {
   const { data } = await supabaseAdmin
     .from("user_feed_dedup")
@@ -84,7 +100,49 @@ export async function fetchCategoryFeedVideos(
   categoryId: string,
   excludeIds: string[],
   limit: number,
+  includeDescendants = true,
 ): Promise<{ videos: FeedRailVideo[]; total: number }> {
+  if (!includeDescendants) {
+    const { data: vcRows, error: vcError } = await supabaseAdmin
+      .from("video_categories")
+      .select("video_id")
+      .eq("category_id", categoryId);
+    if (vcError) throw new Error(vcError.message);
+
+    const ids = Array.from(new Set((vcRows ?? []).map((row) => row.video_id as string)));
+    if (ids.length === 0) return { videos: [], total: 0 };
+
+    const { data: videoRows, error: videosError } = await supabaseAdmin
+      .from("videos")
+      .select(
+        "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count, primary_tag_ids, creator:creators(id, title, handle, thumbnail_url)",
+      )
+      .eq("status", "approved")
+      .in("id", ids)
+      .order("suggest_count", { ascending: false })
+      .order("first_submitted_at", { ascending: false });
+    if (videosError) throw new Error(videosError.message);
+
+    const allRows = (videoRows ?? []) as unknown as DirectRow[];
+    const exclude = new Set(excludeIds);
+    const rows = allRows.filter((row) => !exclude.has(row.id)).slice(0, Math.max(limit, 0));
+
+    const videos: FeedRailVideo[] = rows.map((row) => ({
+      id: row.id,
+      youtube_id: row.youtube_id,
+      title: row.title,
+      thumbnail_url: row.thumbnail_url,
+      duration_seconds: row.duration_seconds,
+      published_at: row.published_at,
+      submission_count: row.submission_count,
+      suggest_count: row.suggest_count,
+      primary_tag_ids: row.primary_tag_ids,
+      creator: Array.isArray(row.creator) ? (row.creator[0] ?? null) : row.creator,
+    }));
+
+    return { videos, total: allRows.length };
+  }
+
   const { data, error } = await supabaseAdmin.rpc(
     "fetch_category_feed_videos" as never,
     {
