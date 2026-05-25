@@ -81,6 +81,32 @@ function VideoDetailPage() {
       </div>
 
       <header className="space-y-3">
+        {pathsQ.data && pathsQ.data.paths.length > 0 ? (
+          <nav aria-label="Category breadcrumb" className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-muted-foreground">
+            <FolderTree className="h-3.5 w-3.5" />
+            {pathsQ.data.paths.map((chain, idx) => (
+              <span key={idx} className="flex items-center gap-1">
+                {idx > 0 ? <span className="mx-1 opacity-50">·</span> : null}
+                {chain.map((c, i) => (
+                  <span key={c.id} className="flex items-center gap-1">
+                    {i > 0 ? <ChevronRight className="h-3 w-3 opacity-50" /> : null}
+                    <Link
+                      to="/categories/$slug"
+                      params={{ slug: c.slug }}
+                      className={
+                        i === chain.length - 1
+                          ? "font-medium text-foreground hover:underline"
+                          : "hover:text-foreground hover:underline"
+                      }
+                    >
+                      {c.name}
+                    </Link>
+                  </span>
+                ))}
+              </span>
+            ))}
+          </nav>
+        ) : null}
         <h1 className="text-xl font-semibold leading-snug sm:text-2xl">{video.title}</h1>
         <div className="flex flex-wrap items-center justify-between gap-3">
           {video.creator ? (
