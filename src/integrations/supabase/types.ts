@@ -973,6 +973,27 @@ export type Database = {
           },
         ]
       }
+      user_feed_dedup: {
+        Row: {
+          cycle_started_at: string
+          seen_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cycle_started_at?: string
+          seen_ids?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cycle_started_at?: string
+          seen_ids?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_feed_state: {
         Row: {
           last_cycled_at: string
