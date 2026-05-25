@@ -10,6 +10,18 @@ const DeleteAccountInput = z.object({
   reason: z.string().trim().max(500).optional(),
   reauthAt: z.number().int().positive().optional(),
 });
+
+function assertRecentlyAuthenticated(claims: unknown, message: string) {
+  const payload = claims && typeof claims === "object" ? claims as Record<string, unknown> : {};
+  const issuedAt = typeof payload.auth_time === "number"
+    ? payload.auth_time
+    : typeof payload.iat === "number"
+      ? payload.iat
+      : null;
+  if (!issuedAt || Date.now() - issuedAt * 1000 > 10 * 60_000) {
+    throw new Error(message);
+  }
+}
 type ListStatus = z.infer<typeof ListStatus>;
 
 // ============ TOGGLE LIST ============
