@@ -134,3 +134,39 @@ When you change one of the surfaces in the left column, you MUST audit (and usua
 | `src/hooks/use-hydrated-status.ts`                 | Only place that subscribes to the raw query    |
 | `src/lib/action-queue.ts` `getPendingForVideo`     | The pending-merge source for the hooks         |
 
+
+## 12. Categories tree change (add/remove/rename/reparent)
+
+| Touch                                              | Why                                            |
+| -------------------------------------------------- | ---------------------------------------------- |
+| `src/lib/categories.functions.ts`                  | Tree fetch, reparent / delete-with-children    |
+| `src/lib/category-feed.functions.ts`               | Pinned + auto rails consumer                   |
+| `src/lib/suggest-categories.functions.ts`          | Suggested category rails                       |
+| `src/lib/trending-categories.functions.ts`         | Trending category rails                        |
+| `src/lib/creator-categories.functions.ts`          | `mv_creator_categories` rollup                 |
+| `src/lib/feed-dedup.server.ts` (`fetch_category_feed_videos` RPC) | Closure-table descendants lookup |
+| `category_ancestors` closure trigger               | Maintains depth + lineage on parent change     |
+| `src/routes/_authenticated/categories*.tsx`        | Browse + edit-mode UIs                         |
+| `mv_category_stats`, `mv_category_suggest_score`, `mv_category_trending_score` | Re-aggregate on next refresh |
+| Client `["category-tree"]` query (`staleTime: Infinity`) | Invalidate on `taxonomy.manage` writes    |
+
+## 13. Tags table change (tier / source / is_platform_tag)
+
+| Touch                                              | Why                                            |
+| -------------------------------------------------- | ---------------------------------------------- |
+| `src/lib/tags.functions.ts` (`listPublicTags`, `getVideoTags`) | Filter / projection                |
+| `src/hooks/use-tags-cache.ts`                      | In-memory chip cache (`staleTime: 10m`)        |
+| `src/components/video-card.tsx`                    | Primary-tag chip render                        |
+| `src/routes/_authenticated/v.$id.tsx`              | Grouped key-tags block                         |
+| `src/routes/_authenticated/admin.videos.tsx`       | Tag Combobox grouping                          |
+| `src/routes/_authenticated/tags.$slug.tsx`         | Public per-tag library                         |
+| `videos.primary_tag_ids` sync trigger              | Top-3 ranked tags denormalization              |
+
+## 14. Submit rate limit config (`submit_limit_default` / per-role)
+
+| Touch                                              | Why                                            |
+| -------------------------------------------------- | ---------------------------------------------- |
+| `app_settings['submit_limit_default']` seed        | Default + per-role override JSON               |
+| `src/lib/submit.functions.ts`                      | 7-day rolling window check                     |
+| `src/components/submit-sheet.tsx`                  | Header "X of Y" + warning banner               |
+| `src/routes/_authenticated/admin.settings.tsx`     | Inline auto-save editor (future)               |
