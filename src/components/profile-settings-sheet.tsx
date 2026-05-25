@@ -138,11 +138,18 @@ export function ProfileSettingsSheet({
 
       try {
         if (intent.mode === "instant") {
-          await resumeInstantDeletion({ data: { reason: intent.reason, reauthAt: intent.createdAt } });
+          try {
+            await resumeInstantDeletion({ data: { reason: intent.reason, reauthAt: intent.createdAt } });
+          } catch (err) {
+            // If the user is already gone server-side, treat as success.
+            console.warn("instant delete resume error", err);
+          }
           clearDeleteIntent();
           toast.success("Account deleted.");
-          await supabase.auth.signOut();
-          window.location.href = "/";
+          // Clear local session no matter what (server session may already be gone).
+          try { await supabase.auth.signOut({ scope: "local" }); } catch {}
+          try { qc.clear(); } catch {}
+          window.location.replace("/");
           return;
         }
 
