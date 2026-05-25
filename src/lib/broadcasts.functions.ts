@@ -319,7 +319,7 @@ const UpdateInput = z.object({
     .object({
       title: z.string().min(1).max(140).optional(),
       body: z.string().max(1000).nullable().optional(),
-      link: z.string().max(500).nullable().optional(),
+      link: SafeLink.nullable().optional(),
       category: z
         .string()
         .min(1)
