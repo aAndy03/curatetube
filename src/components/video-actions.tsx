@@ -70,24 +70,25 @@ export function VideoActions({
   };
 
   // Container-query responsive: the overlay shrinks with the card thumbnail.
+  // The `@container/card` ancestor lives on VideoCard's thumbnail wrapper.
   // - Buttons start at h-6/w-6 at the smallest card size (the min point).
   // - "Suggest" label only appears when there's room (~card ≥ 260px wide).
   // - On the video detail page, size="md" keeps the comfortable hit targets.
   const baseBtn =
     size === "md"
       ? "h-9 w-9"
-      : "h-6 w-6 @[180px]:h-7 @[180px]:w-7";
+      : "h-6 w-6 @[180px]/card:h-7 @[180px]/card:w-7";
   const baseIcon =
-    size === "md" ? "h-4 w-4" : "h-3 w-3 @[180px]:h-3.5 @[180px]:w-3.5";
+    size === "md" ? "h-4 w-4" : "h-3 w-3 @[180px]/card:h-3.5 @[180px]/card:w-3.5";
   const suggestBtn =
     size === "md"
       ? "h-9 px-3"
-      : "h-6 px-1.5 @[180px]:h-7 @[180px]:px-2";
+      : "h-6 px-1.5 @[180px]/card:h-7 @[180px]/card:px-2";
 
   return (
     <div
       className={cn(
-        "@container/actions flex items-center gap-0.5 @[180px]/actions:gap-1",
+        "flex items-center gap-0.5 @[180px]/card:gap-1",
         className,
       )}
     >
@@ -128,7 +129,7 @@ export function VideoActions({
             aria-label={suggested ? "Remove suggestion" : "Suggest"}
           >
             <Sparkles className={baseIcon} />
-            <span className="ml-1 hidden text-xs @[260px]/actions:inline">
+            <span className="ml-1 hidden text-xs @[260px]/card:inline">
               {suggested ? "Suggested" : "Suggest"}
             </span>
           </Button>
