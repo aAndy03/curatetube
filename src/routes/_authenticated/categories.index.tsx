@@ -154,6 +154,8 @@ function CategoriesPage() {
         </Alert>
       )}
 
+      <PinnedTracker />
+
       {editMode && canManage ? (
         <EditorTree search={search} />
       ) : viewMode === "list" ? (
@@ -162,6 +164,102 @@ function CategoriesPage() {
         <BrowseGrid search={search} />
       )}
     </div>
+  );
+}
+
+// ============ Pinned tracker (batch unpin) ============
+function PinnedTracker() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listPinnedCategories);
+  const unpinBatchFn = useServerFn(unpinCategoriesBatch);
+  const { data, isLoading } = useQuery({
+    queryKey: ["pinned-categories"],
+    queryFn: () => listFn(),
+    staleTime: 30_000,
+  });
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const pins = data?.pinned ?? [];
+  const allSelected = pins.length > 0 && pins.every((p) => selected.has(p.category.id));
+
+  const unpinMut = useMutation({
+    mutationFn: (ids: string[]) => unpinBatchFn({ data: { categoryIds: ids } }),
+    onSuccess: (res) => {
+      toast.success(`Unpinned ${res.removed}`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["pinned-categories"] });
+      qc.invalidateQueries({ queryKey: ["category-feed"] });
+      qc.invalidateQueries({ queryKey: ["my-sections"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (isLoading || pins.length === 0) return null;
+
+  return (
+    <section className="rounded-xl border bg-card">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Pin className="h-3.5 w-3.5" /> Pinned to feed
+          <span className="text-xs text-muted-foreground">({pins.length})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setSelected(
+                allSelected ? new Set() : new Set(pins.map((p) => p.category.id)),
+              )
+            }
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            {allSelected ? "Clear" : "Select all"}
+          </button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={selected.size === 0 || unpinMut.isPending}
+            onClick={() => unpinMut.mutate(Array.from(selected))}
+          >
+            Unpin selected ({selected.size})
+          </Button>
+        </div>
+      </header>
+      <ul className="divide-y">
+        {pins.map((p) => {
+          const checked = selected.has(p.category.id);
+          return (
+            <li
+              key={p.category.id}
+              className="flex items-center gap-3 px-4 py-2"
+            >
+              <Checkbox
+                checked={checked}
+                onCheckedChange={(v) =>
+                  setSelected((prev) => {
+                    const next = new Set(prev);
+                    if (v) next.add(p.category.id);
+                    else next.delete(p.category.id);
+                    return next;
+                  })
+                }
+                aria-label={`Select ${p.category.name}`}
+              />
+              <Link
+                to="/categories/$slug"
+                params={{ slug: p.category.slug }}
+                className="flex-1 truncate text-sm hover:underline"
+              >
+                {p.category.name}
+              </Link>
+              <span className="text-xs text-muted-foreground">
+                {p.category.video_count} direct
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
