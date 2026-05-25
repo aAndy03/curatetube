@@ -273,6 +273,28 @@ function BrowseList({ search }: { search: string }) {
   });
 
   const tree = useMemo(() => buildTree(data?.categories ?? []), [data]);
+  // Rollup video_count: sum of self + all descendants (so parents reflect children).
+  const rollup = useMemo(() => {
+    const all = data?.categories ?? [];
+    const byParent = new Map<string | null, CategoryNode[]>();
+    for (const n of all) {
+      const arr = byParent.get(n.parent_id) ?? [];
+      arr.push(n);
+      byParent.set(n.parent_id, arr);
+    }
+    const memo = new Map<string, number>();
+    const sum = (id: string, direct: number): number => {
+      const cached = memo.get(id);
+      if (cached !== undefined) return cached;
+      const kids = byParent.get(id) ?? [];
+      let total = direct;
+      for (const k of kids) total += sum(k.id, k.video_count);
+      memo.set(id, total);
+      return total;
+    };
+    for (const n of all) sum(n.id, n.video_count);
+    return memo;
+  }, [data]);
   const flat = useMemo(() => {
     if (!search.trim()) return null;
     const q = search.toLowerCase();
