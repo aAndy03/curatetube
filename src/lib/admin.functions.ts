@@ -14,8 +14,9 @@ async function requirePerm(userId: string, key: string) {
 
 // ============ APP SETTINGS ============
 
-export const listAppSettings = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const listAppSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
     const { data, error } = await supabaseAdmin
       .from("app_settings")
       .select("key, value");
@@ -23,8 +24,8 @@ export const listAppSettings = createServerFn({ method: "GET" }).handler(
     const map: Record<string, unknown> = {};
     for (const r of data ?? []) map[r.key] = r.value;
     return { settings: map as Record<string, boolean | string | number | null> };
-  },
-);
+  });
+
 
 const SettingInput = z.object({
   key: z.string().min(1),
@@ -56,17 +57,18 @@ export const setAppSetting = createServerFn({ method: "POST" })
 
 // ============ RECOMMENDATION WEIGHTS ============
 
-export const getRecommendationSettings = createServerFn({
-  method: "GET",
-}).handler(async () => {
-  const { data, error } = await supabaseAdmin
-    .from("recommendation_settings")
-    .select("weights, updated_at")
-    .eq("id", true)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return { weights: (data?.weights ?? {}) as Record<string, number> };
-});
+export const getRecommendationSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { data, error } = await supabaseAdmin
+      .from("recommendation_settings")
+      .select("weights, updated_at")
+      .eq("id", true)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return { weights: (data?.weights ?? {}) as Record<string, number> };
+  });
+
 
 const WeightsInput = z.object({
   weights: z.record(z.string(), z.number().min(0).max(5)),
