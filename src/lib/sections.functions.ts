@@ -294,20 +294,26 @@ export const getSectionVideos = createServerFn({ method: "GET" })
       q = q.eq("creator_id", filters.creatorId);
     }
     if (section.source === "recent_in_category" && typeof filters.categorySlug === "string") {
-      // Resolve category + all descendants via closure table so pinning a parent
-      // surfaces videos from any child category as well.
+      const includeDescendants = filters.includeDescendants !== false;
       const { data: cat } = await supabaseAdmin
         .from("categories")
         .select("id")
         .eq("slug", filters.categorySlug)
         .maybeSingle();
       if (!cat) return { videos: [] as SectionVideo[] };
-      const { data: desc } = await supabaseAdmin
-        .from("category_ancestors")
-        .select("descendant_id")
-        .eq("ancestor_id", cat.id as string);
-      const catIds = (desc ?? []).map((r) => r.descendant_id as string);
+
+      const catIds = includeDescendants
+        ? (
+            (
+              await supabaseAdmin
+                .from("category_ancestors")
+                .select("descendant_id")
+                .eq("ancestor_id", cat.id as string)
+            ).data ?? []
+          ).map((r) => r.descendant_id as string)
+        : [cat.id as string];
       if (catIds.length === 0) return { videos: [] as SectionVideo[] };
+
       const { data: vc } = await supabaseAdmin
         .from("video_categories")
         .select("video_id")
