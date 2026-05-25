@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/lib/auth-context";
 import {
   rewriteAuditIdentity,
@@ -30,6 +31,7 @@ import {
   cancelAccountDeletion,
   getMyDeletionRequest,
   getMyAuthIdentities,
+  instantDeleteAccount,
 } from "@/lib/lists.functions";
 
 export function ProfileSettingsSheet({
@@ -260,6 +262,7 @@ function DeleteAccountPanel() {
   const fetchIds = useServerFn(getMyAuthIdentities);
   const requestDel = useServerFn(requestAccountDeletion);
   const cancelDel = useServerFn(cancelAccountDeletion);
+  const instantDel = useServerFn(instantDeleteAccount);
 
   const reqQ = useQuery({
     queryKey: ["account-deletion"],
@@ -273,6 +276,7 @@ function DeleteAccountPanel() {
   const [confirm, setConfirm] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [reason, setReason] = React.useState("");
+  const [instant, setInstant] = React.useState(false);
 
   const active =
     reqQ.data?.request &&
@@ -285,12 +289,19 @@ function DeleteAccountPanel() {
       if (!ids) throw new Error("Loading identity providers…");
       // Tailored re-auth based on signup method (strongest if multi-method).
       if (ids.hasGoogle) {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo: window.location.href },
+        const result = await lovable.auth.signInWithOAuth("google", {
+          redirect_uri: window.location.href,
         });
-        if (error) throw error;
-        // OAuth redirects away; the deletion request happens after redirect.
+        if (result.error) throw result.error;
+        // OAuth redirects away; deletion completes after redirect when the
+        // user reopens this panel. For instant mode, queue intent via storage.
+        if (instant) {
+          try {
+            sessionStorage.setItem("pending-instant-delete", "1");
+          } catch {
+            /* ignore */
+          }
+        }
         return null;
       }
       if (ids.hasPassword) {
@@ -313,6 +324,13 @@ function DeleteAccountPanel() {
         toast.message(
           "Check your email — finish from the magic link to confirm deletion.",
         );
+        return null;
+      }
+      if (instant) {
+        await instantDel({ data: { reason: reason || undefined } });
+        toast.success("Account deleted.");
+        await supabase.auth.signOut();
+        window.location.href = "/";
         return null;
       }
       return requestDel({ data: { reason: reason || undefined } });
@@ -363,6 +381,34 @@ function DeleteAccountPanel() {
   }
 
   const ids = idsQ.data;
+
+  // If a Google re-auth redirect just completed and we previously stashed an
+  // instant-delete intent, finish it now.
+  React.useEffect(() => {
+    let cancelled = false;
+    try {
+      if (sessionStorage.getItem("pending-instant-delete") === "1") {
+        sessionStorage.removeItem("pending-instant-delete");
+        (async () => {
+          try {
+            await instantDel({ data: {} });
+            if (cancelled) return;
+            toast.success("Account deleted.");
+            await supabase.auth.signOut();
+            window.location.href = "/";
+          } catch (e) {
+            toast.error((e as Error).message);
+          }
+        })();
+      }
+    } catch {
+      /* ignore */
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [instantDel]);
+
   return (
     <div className="space-y-3 text-sm">
       <div className="rounded-md border border-foreground/30 bg-muted p-3">
@@ -371,10 +417,24 @@ function DeleteAccountPanel() {
           Delete account
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          7-day grace window. Personal data is hard-deleted afterward;
-          submissions and approvals are kept but their attribution becomes
-          “Deleted user”.
+          {instant
+            ? "Instant mode: your account and personal data are wiped immediately. Audit entries are kept but anonymized as “Deleted user”."
+            : "7-day grace window. Personal data is hard-deleted afterward; submissions and approvals are kept but their attribution becomes “Deleted user”."}
         </p>
+      </div>
+
+      <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+        <div className="space-y-1">
+          <Label htmlFor="del-instant">Delete instantly</Label>
+          <p className="text-xs text-muted-foreground">
+            Skip the 7-day grace window. This cannot be undone.
+          </p>
+        </div>
+        <Switch
+          id="del-instant"
+          checked={instant}
+          onCheckedChange={setInstant}
+        />
       </div>
 
       {ids?.hasPassword ? (
@@ -392,7 +452,7 @@ function DeleteAccountPanel() {
       {ids?.hasGoogle ? (
         <p className="text-xs text-muted-foreground">
           You signed in with Google — clicking below will re-authenticate with
-          Google before scheduling deletion.
+          Google before {instant ? "deleting" : "scheduling deletion"}.
         </p>
       ) : null}
 
@@ -437,7 +497,7 @@ function DeleteAccountPanel() {
           {submit.isPending ? (
             <Loader2 className="mr-1 h-4 w-4 animate-spin" />
           ) : null}
-          Schedule deletion
+          {instant ? "Delete now" : "Schedule deletion"}
         </Button>
         <Button variant="ghost" size="sm" onClick={signOut}>
           Sign out instead
