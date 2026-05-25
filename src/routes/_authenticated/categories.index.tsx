@@ -6,6 +6,8 @@ import {
   ChevronDown,
   ChevronRight,
   FolderTree,
+  LayoutGrid,
+  List,
   Pencil,
   Plus,
   Settings2,
