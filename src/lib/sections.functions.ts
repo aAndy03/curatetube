@@ -124,18 +124,103 @@ export const adoptTemplate = createServerFn({ method: "POST" })
 
 // ------ update / reorder / delete ------
 
+// Plan-4 buffer: keep user_category_pins in sync with sections that were
+// seeded by pinning. If the user changes source away from recent_in_category,
+// or repoints categorySlug to a different category, the old pin is removed
+// and (when applicable) the new one is created.
+async function syncPinFromSection(
+  userId: string,
+  before: { source: string; filters: Record<string, unknown> | null },
+  after: { source: string; filters: Record<string, unknown> | null },
+): Promise<void> {
+  const beforePinId = (before.filters?.pin_category_id as string | undefined) ?? null;
+  const afterCategorySlug =
+    after.source === "recent_in_category"
+      ? ((after.filters?.categorySlug as string | undefined) ?? null)
+      : null;
+
+  let afterCatId: string | null = null;
+  if (afterCategorySlug) {
+    const { data: cat } = await supabaseAdmin
+      .from("categories")
+      .select("id")
+      .eq("slug", afterCategorySlug)
+      .maybeSingle();
+    if (cat) afterCatId = cat.id as string;
+  }
+
+  if (beforePinId && beforePinId !== afterCatId) {
+    await supabaseAdmin
+      .from("user_category_pins")
+      .delete()
+      .eq("user_id", userId)
+      .eq("category_id", beforePinId);
+  }
+
+  if (afterCatId && afterCatId !== beforePinId) {
+    const { count } = await supabaseAdmin
+      .from("user_category_pins")
+      .select("category_id", { count: "exact", head: true })
+      .eq("user_id", userId);
+    await supabaseAdmin
+      .from("user_category_pins")
+      .upsert(
+        { user_id: userId, category_id: afterCatId, sort_order: count ?? 0 },
+        { onConflict: "user_id,category_id" },
+      );
+  }
+}
+
 export const updateSection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ id: z.string().uuid(), patch: SectionPatch }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const { data: before } = await supabaseAdmin
+      .from("feed_sections")
+      .select("source, filters")
+      .eq("id", data.id)
+      .maybeSingle();
+
+    const patch: Record<string, unknown> = { ...data.patch };
+    if (patch.filters || patch.source) {
+      const beforeFilters = (before?.filters as Record<string, unknown> | null) ?? {};
+      const patchFilters = (patch.filters as Record<string, unknown> | undefined) ?? {};
+      const mergedFilters: Record<string, unknown> = { ...beforeFilters, ...patchFilters };
+      const nextSource = (patch.source as string | undefined) ?? (before?.source as string);
+      if (nextSource !== "recent_in_category") {
+        delete mergedFilters.pin_category_id;
+        delete mergedFilters.categorySlug;
+      } else {
+        const beforeSlug = beforeFilters.categorySlug;
+        if (mergedFilters.categorySlug !== beforeSlug) {
+          delete mergedFilters.pin_category_id;
+        }
+      }
+      patch.filters = mergedFilters;
+    }
+
     const { error } = await supabase
       .from("feed_sections")
-      .update(data.patch as never)
+      .update(patch as never)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    if (before) {
+      await syncPinFromSection(
+        userId,
+        {
+          source: before.source as string,
+          filters: (before.filters as Record<string, unknown> | null) ?? null,
+        },
+        {
+          source: (patch.source as string | undefined) ?? (before.source as string),
+          filters: (patch.filters as Record<string, unknown> | undefined) ?? null,
+        },
+      );
+    }
     return { ok: true };
   });
 
@@ -146,7 +231,6 @@ export const reorderSections = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    // Update each row's position
     for (let i = 0; i < data.orderedIds.length; i++) {
       const id = data.orderedIds[i];
       const { error } = await supabase
@@ -163,9 +247,24 @@ export const deleteSection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const { data: before } = await supabaseAdmin
+      .from("feed_sections")
+      .select("filters")
+      .eq("id", data.id)
+      .maybeSingle();
+    const pinId = (before?.filters as Record<string, unknown> | null)?.pin_category_id as
+      | string
+      | undefined;
     const { error } = await supabase.from("feed_sections").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    if (pinId) {
+      await supabaseAdmin
+        .from("user_category_pins")
+        .delete()
+        .eq("user_id", userId)
+        .eq("category_id", pinId);
+    }
     return { ok: true };
   });
 
