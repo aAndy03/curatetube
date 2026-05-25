@@ -353,3 +353,55 @@ export const getMyAuthIdentities = createServerFn({ method: "POST" })
       hasGoogle: providers.includes("google"),
     };
   });
+
+// Instant, immediate hard-delete. Keeps audit_log rows but anonymizes them so
+// staff can still see "someone once did X" without any link back to a person.
+export const instantDeleteAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { reason?: string } | undefined) => d ?? {})
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+
+    // Audit BEFORE wiping anything. Force anonymous so we don't snapshot the name.
+    await writeAudit(supabaseAdmin, {
+      actorId: userId,
+      action: "account.delete_instant",
+      targetType: "user",
+      targetId: userId,
+      after: { reason: data.reason ?? null },
+      visibility: "staff",
+      forceAnonymous: true,
+    });
+
+    // Anonymize every past audit row from this actor.
+    await supabaseAdmin
+      .from("audit_log")
+      .update({ actor_display_snapshot: "Deleted user" })
+      .eq("actor_id", userId);
+
+    // Best-effort clean of per-user rows that may not cascade.
+    const userTables = [
+      "user_category_pins",
+      "user_feed_dedup",
+      "user_feed_state",
+      "user_broadcast_reads",
+      "user_video_status",
+      "user_roles",
+      "video_suggestions",
+      "video_submitters",
+      "rate_limit_events",
+      "batch_flush_log",
+      "notifications",
+      "account_deletion_requests",
+    ] as const;
+    for (const t of userTables) {
+      await supabaseAdmin.from(t).delete().eq("user_id", userId);
+    }
+
+    // Drop profile, then the auth user itself.
+    await supabaseAdmin.from("profiles").delete().eq("id", userId);
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
