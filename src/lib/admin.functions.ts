@@ -202,6 +202,7 @@ export const broadcastNotification = createServerFn({ method: "POST" })
 // ============ ATTRIBUTION (public chip on video detail) ============
 
 export const getVideoAttribution = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { videoId: string }) =>
     z.object({ videoId: z.string().uuid() }).parse(d),
   )

@@ -600,6 +600,7 @@ export const getCreatorDetail = createServerFn({ method: "GET" })
 
 // Public-mode contributors for a creator's library; gated by app_settings toggle.
 export const getCreatorContributors = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
