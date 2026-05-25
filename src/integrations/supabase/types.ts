@@ -1586,6 +1586,17 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_last_refresh: {
+        Row: {
+          duration_ms: number | null
+          error: string | null
+          last_refreshed_at: string | null
+          ok: boolean | null
+          rows_affected: number | null
+          view_name: string | null
+        }
+        Relationships: []
+      }
       mv_suggested_feed: {
         Row: {
           first_submitted_at: string | null
@@ -1614,6 +1625,25 @@ export type Database = {
       categories_reparent: {
         Args: { _id: string; _new_parent_id: string }
         Returns: undefined
+      }
+      fetch_category_feed_videos: {
+        Args: { _category_id: string; _exclude: string[]; _limit: number }
+        Returns: {
+          creator_handle: string
+          creator_id: string
+          creator_thumbnail_url: string
+          creator_title: string
+          duration_seconds: number
+          id: string
+          primary_tag_ids: string[]
+          published_at: string
+          submission_count: number
+          suggest_count: number
+          thumbnail_url: string
+          title: string
+          total_in_category: number
+          youtube_id: string
+        }[]
       }
       has_permission: {
         Args: { _key: string; _user_id: string }

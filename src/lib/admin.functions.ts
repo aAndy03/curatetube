@@ -270,7 +270,14 @@ export const listMvRefreshLog = createServerFn({ method: "GET" })
   });
 
 const ForceFlushInput = z.object({
-  view: z.enum(["mv_trending", "mv_suggested_feed", "mv_category_stats"]),
+  view: z.enum([
+    "mv_trending",
+    "mv_suggested_feed",
+    "mv_category_stats",
+    "mv_category_suggest_score",
+    "mv_category_trending_score",
+    "mv_creator_categories",
+  ]),
 });
 
 export const forceRefreshMv = createServerFn({ method: "POST" })
