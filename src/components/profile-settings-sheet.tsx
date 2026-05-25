@@ -381,6 +381,34 @@ function DeleteAccountPanel() {
   }
 
   const ids = idsQ.data;
+
+  // If a Google re-auth redirect just completed and we previously stashed an
+  // instant-delete intent, finish it now.
+  React.useEffect(() => {
+    let cancelled = false;
+    try {
+      if (sessionStorage.getItem("pending-instant-delete") === "1") {
+        sessionStorage.removeItem("pending-instant-delete");
+        (async () => {
+          try {
+            await instantDel({ data: {} });
+            if (cancelled) return;
+            toast.success("Account deleted.");
+            await supabase.auth.signOut();
+            window.location.href = "/";
+          } catch (e) {
+            toast.error((e as Error).message);
+          }
+        })();
+      }
+    } catch {
+      /* ignore */
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [instantDel]);
+
   return (
     <div className="space-y-3 text-sm">
       <div className="rounded-md border border-foreground/30 bg-muted p-3">
@@ -389,10 +417,24 @@ function DeleteAccountPanel() {
           Delete account
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          7-day grace window. Personal data is hard-deleted afterward;
-          submissions and approvals are kept but their attribution becomes
-          “Deleted user”.
+          {instant
+            ? "Instant mode: your account and personal data are wiped immediately. Audit entries are kept but anonymized as “Deleted user”."
+            : "7-day grace window. Personal data is hard-deleted afterward; submissions and approvals are kept but their attribution becomes “Deleted user”."}
         </p>
+      </div>
+
+      <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+        <div className="space-y-1">
+          <Label htmlFor="del-instant">Delete instantly</Label>
+          <p className="text-xs text-muted-foreground">
+            Skip the 7-day grace window. This cannot be undone.
+          </p>
+        </div>
+        <Switch
+          id="del-instant"
+          checked={instant}
+          onCheckedChange={setInstant}
+        />
       </div>
 
       {ids?.hasPassword ? (
@@ -410,7 +452,7 @@ function DeleteAccountPanel() {
       {ids?.hasGoogle ? (
         <p className="text-xs text-muted-foreground">
           You signed in with Google — clicking below will re-authenticate with
-          Google before scheduling deletion.
+          Google before {instant ? "deleting" : "scheduling deletion"}.
         </p>
       ) : null}
 
@@ -455,7 +497,7 @@ function DeleteAccountPanel() {
           {submit.isPending ? (
             <Loader2 className="mr-1 h-4 w-4 animate-spin" />
           ) : null}
-          Schedule deletion
+          {instant ? "Delete now" : "Schedule deletion"}
         </Button>
         <Button variant="ghost" size="sm" onClick={signOut}>
           Sign out instead
