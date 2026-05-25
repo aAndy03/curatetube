@@ -262,6 +262,7 @@ function DeleteAccountPanel() {
   const fetchIds = useServerFn(getMyAuthIdentities);
   const requestDel = useServerFn(requestAccountDeletion);
   const cancelDel = useServerFn(cancelAccountDeletion);
+  const instantDel = useServerFn(instantDeleteAccount);
 
   const reqQ = useQuery({
     queryKey: ["account-deletion"],
