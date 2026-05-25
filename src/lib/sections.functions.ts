@@ -294,12 +294,25 @@ export const getSectionVideos = createServerFn({ method: "GET" })
       q = q.eq("creator_id", filters.creatorId);
     }
     if (section.source === "recent_in_category" && typeof filters.categorySlug === "string") {
-      // Fetch ids that match the category, then in()
+      // Resolve category + all descendants via closure table so pinning a parent
+      // surfaces videos from any child category as well.
+      const { data: cat } = await supabaseAdmin
+        .from("categories")
+        .select("id")
+        .eq("slug", filters.categorySlug)
+        .maybeSingle();
+      if (!cat) return { videos: [] as SectionVideo[] };
+      const { data: desc } = await supabaseAdmin
+        .from("category_ancestors")
+        .select("descendant_id")
+        .eq("ancestor_id", cat.id as string);
+      const catIds = (desc ?? []).map((r) => r.descendant_id as string);
+      if (catIds.length === 0) return { videos: [] as SectionVideo[] };
       const { data: vc } = await supabaseAdmin
         .from("video_categories")
-        .select("video_id, category:categories!inner(slug)")
-        .eq("category.slug", filters.categorySlug);
-      const ids = (vc ?? []).map((r) => r.video_id);
+        .select("video_id")
+        .in("category_id", catIds);
+      const ids = Array.from(new Set((vc ?? []).map((r) => r.video_id as string)));
       if (ids.length === 0) return { videos: [] as SectionVideo[] };
       q = q.in("id", ids);
     }
