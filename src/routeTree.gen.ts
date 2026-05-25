@@ -19,8 +19,8 @@ import { Route as AuthenticatedSuggestRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedModerationRouteImport } from './routes/_authenticated/moderation'
 import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
-import { Route as AuthenticatedCategoriesRouteImport } from './routes/_authenticated/categories'
 import { Route as AuthenticatedCreatorsIndexRouteImport } from './routes/_authenticated/creators.index'
+import { Route as AuthenticatedCategoriesIndexRouteImport } from './routes/_authenticated/categories.index'
 import { Route as AuthenticatedVIdRouteImport } from './routes/_authenticated/v.$id'
 import { Route as AuthenticatedTagsSlugRouteImport } from './routes/_authenticated/tags.$slug'
 import { Route as AuthenticatedMeTabRouteImport } from './routes/_authenticated/me.$tab'
@@ -88,15 +88,16 @@ const AuthenticatedFeedRoute = AuthenticatedFeedRouteImport.update({
   path: '/feed',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedCategoriesRoute = AuthenticatedCategoriesRouteImport.update({
-  id: '/categories',
-  path: '/categories',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedCreatorsIndexRoute =
   AuthenticatedCreatorsIndexRouteImport.update({
     id: '/creators/',
     path: '/creators/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCategoriesIndexRoute =
+  AuthenticatedCategoriesIndexRouteImport.update({
+    id: '/categories/',
+    path: '/categories/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedVIdRoute = AuthenticatedVIdRouteImport.update({
@@ -127,9 +128,9 @@ const AuthenticatedCreatorsIdRoute = AuthenticatedCreatorsIdRouteImport.update({
 } as any)
 const AuthenticatedCategoriesSlugRoute =
   AuthenticatedCategoriesSlugRouteImport.update({
-    id: '/$slug',
-    path: '/$slug',
-    getParentRoute: () => AuthenticatedCategoriesRoute,
+    id: '/categories/$slug',
+    path: '/categories/$slug',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAdminVideosRoute =
   AuthenticatedAdminVideosRouteImport.update({
@@ -194,7 +195,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/categories': typeof AuthenticatedCategoriesRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
@@ -213,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/tags/$slug': typeof AuthenticatedTagsSlugRoute
   '/v/$id': typeof AuthenticatedVIdRoute
+  '/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/creators/': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
@@ -223,7 +224,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/categories': typeof AuthenticatedCategoriesRouteWithChildren
   '/feed': typeof AuthenticatedFeedRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
@@ -242,6 +242,7 @@ export interface FileRoutesByTo {
   '/me/$tab': typeof AuthenticatedMeTabRoute
   '/tags/$slug': typeof AuthenticatedTagsSlugRoute
   '/v/$id': typeof AuthenticatedVIdRoute
+  '/categories': typeof AuthenticatedCategoriesIndexRoute
   '/creators': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
@@ -254,7 +255,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/_authenticated/categories': typeof AuthenticatedCategoriesRouteWithChildren
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
   '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/_authenticated/moderation': typeof AuthenticatedModerationRoute
@@ -273,6 +273,7 @@ export interface FileRoutesById {
   '/_authenticated/me/$tab': typeof AuthenticatedMeTabRoute
   '/_authenticated/tags/$slug': typeof AuthenticatedTagsSlugRoute
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
+  '/_authenticated/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/_authenticated/creators/': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
@@ -285,7 +286,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
-    | '/categories'
     | '/feed'
     | '/leaderboard'
     | '/moderation'
@@ -304,6 +304,7 @@ export interface FileRouteTypes {
     | '/me/$tab'
     | '/tags/$slug'
     | '/v/$id'
+    | '/categories/'
     | '/creators/'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
@@ -314,7 +315,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
-    | '/categories'
     | '/feed'
     | '/leaderboard'
     | '/moderation'
@@ -333,6 +333,7 @@ export interface FileRouteTypes {
     | '/me/$tab'
     | '/tags/$slug'
     | '/v/$id'
+    | '/categories'
     | '/creators'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
@@ -344,7 +345,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/terms'
-    | '/_authenticated/categories'
     | '/_authenticated/feed'
     | '/_authenticated/leaderboard'
     | '/_authenticated/moderation'
@@ -363,6 +363,7 @@ export interface FileRouteTypes {
     | '/_authenticated/me/$tab'
     | '/_authenticated/tags/$slug'
     | '/_authenticated/v/$id'
+    | '/_authenticated/categories/'
     | '/_authenticated/creators/'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
@@ -452,18 +453,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFeedRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/categories': {
-      id: '/_authenticated/categories'
-      path: '/categories'
-      fullPath: '/categories'
-      preLoaderRoute: typeof AuthenticatedCategoriesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/creators/': {
       id: '/_authenticated/creators/'
       path: '/creators'
       fullPath: '/creators/'
       preLoaderRoute: typeof AuthenticatedCreatorsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/categories/': {
+      id: '/_authenticated/categories/'
+      path: '/categories'
+      fullPath: '/categories/'
+      preLoaderRoute: typeof AuthenticatedCategoriesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/v/$id': {
@@ -503,10 +504,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/categories/$slug': {
       id: '/_authenticated/categories/$slug'
-      path: '/$slug'
+      path: '/categories/$slug'
       fullPath: '/categories/$slug'
       preLoaderRoute: typeof AuthenticatedCategoriesSlugRouteImport
-      parentRoute: typeof AuthenticatedCategoriesRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin/videos': {
       id: '/_authenticated/admin/videos'
@@ -581,20 +582,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedCategoriesRouteChildren {
-  AuthenticatedCategoriesSlugRoute: typeof AuthenticatedCategoriesSlugRoute
-}
-
-const AuthenticatedCategoriesRouteChildren: AuthenticatedCategoriesRouteChildren =
-  {
-    AuthenticatedCategoriesSlugRoute: AuthenticatedCategoriesSlugRoute,
-  }
-
-const AuthenticatedCategoriesRouteWithChildren =
-  AuthenticatedCategoriesRoute._addFileChildren(
-    AuthenticatedCategoriesRouteChildren,
-  )
-
 interface AuthenticatedLeaderboardRouteChildren {
   AuthenticatedLeaderboardArchiveRoute: typeof AuthenticatedLeaderboardArchiveRoute
 }
@@ -610,7 +597,6 @@ const AuthenticatedLeaderboardRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedCategoriesRoute: typeof AuthenticatedCategoriesRouteWithChildren
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRouteWithChildren
   AuthenticatedModerationRoute: typeof AuthenticatedModerationRoute
@@ -623,15 +609,16 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminVideosRoute: typeof AuthenticatedAdminVideosRoute
+  AuthenticatedCategoriesSlugRoute: typeof AuthenticatedCategoriesSlugRoute
   AuthenticatedCreatorsIdRoute: typeof AuthenticatedCreatorsIdRoute
   AuthenticatedMeTabRoute: typeof AuthenticatedMeTabRoute
   AuthenticatedTagsSlugRoute: typeof AuthenticatedTagsSlugRoute
   AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
+  AuthenticatedCategoriesIndexRoute: typeof AuthenticatedCategoriesIndexRoute
   AuthenticatedCreatorsIndexRoute: typeof AuthenticatedCreatorsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedCategoriesRoute: AuthenticatedCategoriesRouteWithChildren,
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
   AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRouteWithChildren,
   AuthenticatedModerationRoute: AuthenticatedModerationRoute,
@@ -645,10 +632,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
   AuthenticatedAdminVideosRoute: AuthenticatedAdminVideosRoute,
+  AuthenticatedCategoriesSlugRoute: AuthenticatedCategoriesSlugRoute,
   AuthenticatedCreatorsIdRoute: AuthenticatedCreatorsIdRoute,
   AuthenticatedMeTabRoute: AuthenticatedMeTabRoute,
   AuthenticatedTagsSlugRoute: AuthenticatedTagsSlugRoute,
   AuthenticatedVIdRoute: AuthenticatedVIdRoute,
+  AuthenticatedCategoriesIndexRoute: AuthenticatedCategoriesIndexRoute,
   AuthenticatedCreatorsIndexRoute: AuthenticatedCreatorsIndexRoute,
 }
 
@@ -669,3 +658,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
