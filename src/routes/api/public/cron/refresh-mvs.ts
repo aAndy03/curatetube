@@ -9,6 +9,8 @@ const ALL_VIEWS = [
   "mv_suggested_feed",
   "mv_category_stats",
   "mv_category_suggest_score",
+  "mv_category_trending_score",
+  "mv_creator_categories",
 ] as const;
 type MvName = (typeof ALL_VIEWS)[number];
 
