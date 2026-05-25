@@ -1,11 +1,18 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronLeft, FolderTree } from "lucide-react";
+import { ChevronLeft, FolderTree, Pin, PinOff } from "lucide-react";
+import { toast } from "sonner";
 
 import { listVideosByCategorySlug } from "@/lib/library.functions";
+import {
+  listPinnedCategories,
+  pinCategory,
+  unpinCategory,
+} from "@/lib/category-feed.functions";
 import { VideoCard, type VideoCardData } from "@/components/video-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/categories/$slug")({
   head: () => ({
@@ -22,13 +29,47 @@ export const Route = createFileRoute("/_authenticated/categories/$slug")({
 function CategoryDetailPage() {
   const { slug } = Route.useParams();
   const fn = useServerFn(listVideosByCategorySlug);
+  const pinsFn = useServerFn(listPinnedCategories);
+  const pinFn = useServerFn(pinCategory);
+  const unpinFn = useServerFn(unpinCategory);
+  const qc = useQueryClient();
+
   const { data, isLoading } = useQuery({
     queryKey: ["category", slug],
     queryFn: () => fn({ data: { slug, limit: 60 } }),
     staleTime: 5 * 60 * 1000,
   });
+  const { data: pinsData } = useQuery({
+    queryKey: ["pinned-categories"],
+    queryFn: () => pinsFn(),
+    staleTime: 60_000,
+  });
 
   if (!isLoading && data && !data.category) throw notFound();
+
+  const categoryId = data?.category?.id as string | undefined;
+  const isPinned = Boolean(
+    categoryId && pinsData?.pinned.some((p) => p.category.id === categoryId),
+  );
+
+  const pin = useMutation({
+    mutationFn: () => pinFn({ data: { categoryId: categoryId! } }),
+    onSuccess: () => {
+      toast.success("Pinned to your feed");
+      qc.invalidateQueries({ queryKey: ["pinned-categories"] });
+      qc.invalidateQueries({ queryKey: ["category-feed"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const unpin = useMutation({
+    mutationFn: () => unpinFn({ data: { categoryId: categoryId! } }),
+    onSuccess: () => {
+      toast.success("Unpinned");
+      qc.invalidateQueries({ queryKey: ["pinned-categories"] });
+      qc.invalidateQueries({ queryKey: ["category-feed"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -39,13 +80,35 @@ function CategoryDetailPage() {
         >
           <ChevronLeft className="h-3.5 w-3.5" /> All categories
         </Link>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <FolderTree className="h-5 w-5" />
-          {data?.category?.name ?? slug}
-        </h1>
-        {data?.category?.description ? (
-          <p className="text-sm text-muted-foreground">{data.category.description}</p>
-        ) : null}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+              <FolderTree className="h-5 w-5" />
+              {data?.category?.name ?? slug}
+            </h1>
+            {data?.category?.description ? (
+              <p className="mt-1 text-sm text-muted-foreground">{data.category.description}</p>
+            ) : null}
+          </div>
+          {categoryId ? (
+            <Button
+              variant={isPinned ? "outline" : "default"}
+              size="sm"
+              onClick={() => (isPinned ? unpin.mutate() : pin.mutate())}
+              disabled={pin.isPending || unpin.isPending}
+            >
+              {isPinned ? (
+                <>
+                  <PinOff className="mr-1 h-4 w-4" /> Unpin from feed
+                </>
+              ) : (
+                <>
+                  <Pin className="mr-1 h-4 w-4" /> Pin to feed
+                </>
+              )}
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       {isLoading ? (

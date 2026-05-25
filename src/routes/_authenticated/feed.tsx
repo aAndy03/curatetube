@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { adoptTemplate, listMySections, type FeedSection } from "@/lib/sections.functions";
 import { enqueue } from "@/lib/action-queue";
 import { FeedSectionView } from "@/components/feed-section";
+import { CategoryFeedRails } from "@/components/category-feed-rails";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -124,25 +125,29 @@ function FeedPage() {
           ))}
         </div>
       ) : sections.length === 0 ? (
-        <section className="rounded-xl border bg-card p-10 text-center">
-          <Sparkles className="mx-auto h-6 w-6 text-muted-foreground" />
-          <h2 className="mt-3 text-lg font-medium">Your feed is empty</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-            Add a section from a template above to start filling your home page. You can edit, reorder, and remove sections any time.
-          </p>
-          {templates.length > 0 ? (
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {templates.map((t) => (
-                <Button key={t.id} variant="outline" onClick={() => adopt.mutate(t.id)}>
-                  <Plus className="mr-1 size-4" />
-                  {t.name}
-                </Button>
-              ))}
-            </div>
-          ) : null}
-        </section>
+        <div className="space-y-10">
+          <CategoryFeedRails />
+          <section className="rounded-xl border bg-card p-10 text-center">
+            <Sparkles className="mx-auto h-6 w-6 text-muted-foreground" />
+            <h2 className="mt-3 text-lg font-medium">Your feed is empty</h2>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              Add a section from a template above to start filling your home page. You can edit, reorder, and remove sections any time.
+            </p>
+            {templates.length > 0 ? (
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {templates.map((t) => (
+                  <Button key={t.id} variant="outline" onClick={() => adopt.mutate(t.id)}>
+                    <Plus className="mr-1 size-4" />
+                    {t.name}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        </div>
       ) : (
         <div className="space-y-10">
+          <CategoryFeedRails />
           {sections.map((s, i) => (
             <FeedSectionView
               key={s.id}

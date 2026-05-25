@@ -296,6 +296,52 @@ function DetailPane({
         </div>
       ) : null}
 
+      {!readOnly && proposedCats.length > 0 ? (
+        <div className="space-y-2 rounded-md border bg-card p-3">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Proposed categories ({applyCatIds.length}/5)
+          </p>
+          <div className="space-y-1.5">
+            {proposedCats.map((cid) => {
+              const c = catById.get(cid);
+              const checked = applyCatIds.includes(cid);
+              return (
+                <label key={cid} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggle(applyCatIds, setApplyCatIds, cid, 5)}
+                  />
+                  <span>{c?.name ?? cid.slice(0, 8)}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {!readOnly && proposedTags.length > 0 ? (
+        <div className="space-y-2 rounded-md border bg-card p-3">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Proposed primary tags ({applyTagIds.length}/3)
+          </p>
+          <div className="space-y-1.5">
+            {proposedTags.map((tid) => {
+              const t = tagById.get(tid);
+              const checked = applyTagIds.includes(tid);
+              return (
+                <label key={tid} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggle(applyTagIds, setApplyTagIds, tid, 3)}
+                  />
+                  <span>{t?.name ?? tid.slice(0, 8)}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       {!readOnly ? (
         <div className="space-y-2 rounded-md border bg-card p-3">
           <label className="text-xs uppercase tracking-wide text-muted-foreground">
