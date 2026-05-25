@@ -33,6 +33,7 @@ import {
 import {
   listPinnedCategories,
   unpinCategoriesBatch,
+  reorderPinnedCategories,
 } from "@/lib/category-feed.functions";
 import { usePermissions } from "@/lib/use-permissions";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -172,6 +173,7 @@ function PinnedTracker() {
   const qc = useQueryClient();
   const listFn = useServerFn(listPinnedCategories);
   const unpinBatchFn = useServerFn(unpinCategoriesBatch);
+  const reorderFn = useServerFn(reorderPinnedCategories);
   const { data, isLoading } = useQuery({
     queryKey: ["pinned-categories"],
     queryFn: () => listFn(),
@@ -193,6 +195,30 @@ function PinnedTracker() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const reorderMut = useMutation({
+    mutationFn: (orderedIds: string[]) => reorderFn({ data: { orderedIds } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pinned-categories"] });
+      qc.invalidateQueries({ queryKey: ["category-feed"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const move = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= pins.length) return;
+    const next = pins.map((p) => p.category.id);
+    [next[idx], next[target]] = [next[target], next[idx]];
+    // Optimistic
+    qc.setQueryData(["pinned-categories"], (prev: typeof data) => {
+      if (!prev) return prev;
+      const arr = [...prev.pinned];
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return { pinned: arr.map((p, i) => ({ ...p, sort_order: i })) };
+    });
+    reorderMut.mutate(next);
+  };
 
   if (isLoading || pins.length === 0) return null;
 
@@ -226,7 +252,7 @@ function PinnedTracker() {
         </div>
       </header>
       <ul className="divide-y">
-        {pins.map((p) => {
+        {pins.map((p, idx) => {
           const checked = selected.has(p.category.id);
           return (
             <li
@@ -255,6 +281,26 @@ function PinnedTracker() {
               <span className="text-xs text-muted-foreground">
                 {p.category.video_count} direct
               </span>
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => move(idx, -1)}
+                  disabled={idx === 0 || reorderMut.isPending}
+                  className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+                  aria-label="Move up"
+                >
+                  <ArrowUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(idx, 1)}
+                  disabled={idx === pins.length - 1 || reorderMut.isPending}
+                  className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+                  aria-label="Move down"
+                >
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </li>
           );
         })}

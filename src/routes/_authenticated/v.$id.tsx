@@ -1,11 +1,12 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users, Sparkles, ExternalLink, AlertTriangle, Tag as TagIcon } from "lucide-react";
+import { Users, Sparkles, ExternalLink, AlertTriangle, Tag as TagIcon, ChevronRight, FolderTree } from "lucide-react";
 
 import { getVideoDetail } from "@/lib/library.functions";
 import { getVideoTags } from "@/lib/tags.functions";
 import { getVideoAttribution } from "@/lib/admin.functions";
+import { getVideoCategoryPaths } from "@/lib/category-feed.functions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ function VideoDetailPage() {
   const fetchDetail = useServerFn(getVideoDetail);
   const fetchAttribution = useServerFn(getVideoAttribution);
   const fetchTags = useServerFn(getVideoTags);
+  const fetchPaths = useServerFn(getVideoCategoryPaths);
   const { data, isLoading } = useQuery({
     queryKey: ["video", id],
     queryFn: () => fetchDetail({ data: { id } }),
@@ -43,6 +45,11 @@ function VideoDetailPage() {
     queryKey: ["video-tags", id],
     queryFn: () => fetchTags({ data: { videoId: id } }),
     staleTime: 60_000,
+  });
+  const pathsQ = useQuery({
+    queryKey: ["video-category-paths", id],
+    queryFn: () => fetchPaths({ data: { videoId: id } }),
+    staleTime: 5 * 60_000,
   });
   const liveSuggestCount = useHydratedSuggestCount(id, data?.video?.suggest_count ?? 0);
 
@@ -74,6 +81,32 @@ function VideoDetailPage() {
       </div>
 
       <header className="space-y-3">
+        {pathsQ.data && pathsQ.data.paths.length > 0 ? (
+          <nav aria-label="Category breadcrumb" className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-muted-foreground">
+            <FolderTree className="h-3.5 w-3.5" />
+            {pathsQ.data.paths.map((chain, idx) => (
+              <span key={idx} className="flex items-center gap-1">
+                {idx > 0 ? <span className="mx-1 opacity-50">·</span> : null}
+                {chain.map((c, i) => (
+                  <span key={c.id} className="flex items-center gap-1">
+                    {i > 0 ? <ChevronRight className="h-3 w-3 opacity-50" /> : null}
+                    <Link
+                      to="/categories/$slug"
+                      params={{ slug: c.slug }}
+                      className={
+                        i === chain.length - 1
+                          ? "font-medium text-foreground hover:underline"
+                          : "hover:text-foreground hover:underline"
+                      }
+                    >
+                      {c.name}
+                    </Link>
+                  </span>
+                ))}
+              </span>
+            ))}
+          </nav>
+        ) : null}
         <h1 className="text-xl font-semibold leading-snug sm:text-2xl">{video.title}</h1>
         <div className="flex flex-wrap items-center justify-between gap-3">
           {video.creator ? (
