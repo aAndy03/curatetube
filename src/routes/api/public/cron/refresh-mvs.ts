@@ -4,7 +4,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const ALL_VIEWS = ["mv_trending", "mv_suggested_feed", "mv_category_stats"] as const;
+const ALL_VIEWS = [
+  "mv_trending",
+  "mv_suggested_feed",
+  "mv_category_stats",
+  "mv_category_suggest_score",
+] as const;
 type MvName = (typeof ALL_VIEWS)[number];
 
 function safeEqual(a: string, b: string) {

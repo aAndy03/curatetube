@@ -237,6 +237,13 @@ export type Database = {
             referencedRelation: "mv_category_stats"
             referencedColumns: ["category_id"]
           },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_suggest_score"
+            referencedColumns: ["category_id"]
+          },
         ]
       }
       category_ancestors: {
@@ -271,6 +278,13 @@ export type Database = {
             referencedColumns: ["category_id"]
           },
           {
+            foreignKeyName: "category_ancestors_ancestor_id_fkey"
+            columns: ["ancestor_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_suggest_score"
+            referencedColumns: ["category_id"]
+          },
+          {
             foreignKeyName: "category_ancestors_descendant_id_fkey"
             columns: ["descendant_id"]
             isOneToOne: false
@@ -282,6 +296,13 @@ export type Database = {
             columns: ["descendant_id"]
             isOneToOne: false
             referencedRelation: "mv_category_stats"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "category_ancestors_descendant_id_fkey"
+            columns: ["descendant_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_suggest_score"
             referencedColumns: ["category_id"]
           },
         ]
@@ -971,6 +992,13 @@ export type Database = {
             referencedRelation: "mv_category_stats"
             referencedColumns: ["category_id"]
           },
+          {
+            foreignKeyName: "user_category_pins_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_suggest_score"
+            referencedColumns: ["category_id"]
+          },
         ]
       }
       user_feed_dedup: {
@@ -1127,6 +1155,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "mv_category_stats"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "video_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_suggest_score"
             referencedColumns: ["category_id"]
           },
           {
@@ -1393,6 +1428,44 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_category_suggest_score: {
+        Row: {
+          category_id: string | null
+          computed_at: string | null
+          depth: number | null
+          name: string | null
+          parent_id: string | null
+          score: number | null
+          slug: string | null
+          suggest_delta_24h: number | null
+          suggest_delta_72h: number | null
+          total_videos: number | null
+          videos_with_suggests: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_stats"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mv_category_suggest_score"
+            referencedColumns: ["category_id"]
+          },
+        ]
+      }
       mv_suggested_feed: {
         Row: {
           first_submitted_at: string | null
@@ -1428,6 +1501,10 @@ export type Database = {
       }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       refresh_mv: { Args: { _name: string }; Returns: Json }
+      sync_video_primary_tag_ids: {
+        Args: { _video_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       audit_privacy_mode: "anonymous" | "public"

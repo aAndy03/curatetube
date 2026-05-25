@@ -65,7 +65,7 @@ function VideoCardImpl({
       params={{ id: video.id }}
       className="group block focus:outline-none [content-visibility:auto] [contain-intrinsic-size:1px_320px]"
     >
-      <div className="relative overflow-hidden rounded-md border bg-card transition group-hover:border-foreground/30 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+      <div className="@container/card relative overflow-hidden rounded-md border bg-card transition group-hover:border-foreground/30 group-focus-visible:ring-2 group-focus-visible:ring-ring">
         <AspectRatio ratio={16 / 9}>
           {video.thumbnail_url ? (
             <img
@@ -87,8 +87,8 @@ function VideoCardImpl({
             {formatDuration(video.duration_seconds)}
           </span>
         ) : null}
-        <div className="pointer-events-auto absolute bottom-1.5 left-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-          <div className="rounded-md bg-background/90 p-1 shadow-sm backdrop-blur">
+        <div className="pointer-events-auto absolute bottom-1.5 left-1.5 right-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+          <div className="inline-flex max-w-full rounded-md bg-background/90 p-0.5 shadow-sm backdrop-blur @[180px]/card:p-1">
             <VideoActions videoId={video.id} size="sm" />
           </div>
         </div>

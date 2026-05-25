@@ -59,7 +59,7 @@ Builds on Plans 1–3. Introduces a deep category tree, a three-tier tag system,
 - Underfilled category renders the available videos + "See all in &lt;cat&gt;" link, no padding.
 - Rails render on `/feed` above stacked sections via `<CategoryFeedRails />`.
 
-## Phase 7 — `/suggest` + `mv_category_suggest_score` — 0.4.6
+## Phase 7 — `/suggest` + `mv_category_suggest_score` — 0.4.6 ✅
 
 - New MV `mv_category_suggest_score` (15-min refresh, same cadence as `mv_trending`):
 `score = sum(suggest_delta_24h)*3 + sum(suggest_delta_72h)*1 + (videos_with_suggests/total_videos)*10`

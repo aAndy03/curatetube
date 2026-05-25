@@ -69,8 +69,29 @@ export function VideoActions({
     e.stopPropagation();
   };
 
+  // Container-query responsive: the overlay shrinks with the card thumbnail.
+  // The `@container/card` ancestor lives on VideoCard's thumbnail wrapper.
+  // - Buttons start at h-6/w-6 at the smallest card size (the min point).
+  // - "Suggest" label only appears when there's room (~card ≥ 260px wide).
+  // - On the video detail page, size="md" keeps the comfortable hit targets.
+  const baseBtn =
+    size === "md"
+      ? "h-9 w-9"
+      : "h-6 w-6 @[180px]/card:h-7 @[180px]/card:w-7";
+  const baseIcon =
+    size === "md" ? "h-4 w-4" : "h-3 w-3 @[180px]/card:h-3.5 @[180px]/card:w-3.5";
+  const suggestBtn =
+    size === "md"
+      ? "h-9 px-3"
+      : "h-6 px-1.5 @[180px]/card:h-7 @[180px]/card:px-2";
+
   return (
-    <div className={cn("flex items-center gap-1", className)}>
+    <div
+      className={cn(
+        "flex items-center gap-0.5 @[180px]/card:gap-1",
+        className,
+      )}
+    >
       {ACTIONS.map(({ key, icon: Icon, label }) => {
         const active = has(key);
         return (
@@ -79,7 +100,7 @@ export function VideoActions({
               <Button
                 size="icon"
                 variant={active ? "default" : "ghost"}
-                className={cn(size === "sm" ? "h-7 w-7" : "h-9 w-9", "shrink-0")}
+                className={cn(baseBtn, "shrink-0")}
                 onClick={(e) => {
                   stop(e);
                   onStatusClick(key, active);
@@ -87,7 +108,7 @@ export function VideoActions({
                 aria-pressed={active}
                 aria-label={label}
               >
-                <Icon className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                <Icon className={baseIcon} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{active ? `Remove from ${label.toLowerCase()}` : label}</TooltipContent>
@@ -99,15 +120,18 @@ export function VideoActions({
           <Button
             size="sm"
             variant={suggested ? "default" : "outline"}
-            className={cn("h-7 px-2", size === "md" && "h-9 px-3")}
+            className={cn(suggestBtn, "shrink-0")}
             onClick={(e) => {
               stop(e);
               onSuggestClick();
             }}
             aria-pressed={suggested}
+            aria-label={suggested ? "Remove suggestion" : "Suggest"}
           >
-            <Sparkles className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
-            <span className="ml-1 text-xs">{suggested ? "Suggested" : "Suggest"}</span>
+            <Sparkles className={baseIcon} />
+            <span className="ml-1 hidden text-xs @[260px]/card:inline">
+              {suggested ? "Suggested" : "Suggest"}
+            </span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>
