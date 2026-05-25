@@ -431,8 +431,9 @@ export const deleteBroadcasts = createServerFn({ method: "POST" })
 
 // =================== CATEGORIES ===================
 
-export const getBroadcastCategories = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const getBroadcastCategories = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
     const { data } = await supabaseAdmin
       .from("app_settings")
       .select("value")
@@ -443,8 +444,8 @@ export const getBroadcastCategories = createServerFn({ method: "GET" }).handler(
       ? (raw as unknown[]).filter((x): x is string => typeof x === "string")
       : ["general"];
     return { categories: arr };
-  },
-);
+  });
+
 
 const CategoriesInput = z.object({
   categories: z
