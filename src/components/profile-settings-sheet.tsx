@@ -276,6 +276,7 @@ function DeleteAccountPanel() {
   const [confirm, setConfirm] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [reason, setReason] = React.useState("");
+  const [instant, setInstant] = React.useState(false);
 
   const active =
     reqQ.data?.request &&
@@ -288,12 +289,19 @@ function DeleteAccountPanel() {
       if (!ids) throw new Error("Loading identity providers…");
       // Tailored re-auth based on signup method (strongest if multi-method).
       if (ids.hasGoogle) {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo: window.location.href },
+        const result = await lovable.auth.signInWithOAuth("google", {
+          redirect_uri: window.location.href,
         });
-        if (error) throw error;
-        // OAuth redirects away; the deletion request happens after redirect.
+        if (result.error) throw result.error;
+        // OAuth redirects away; deletion completes after redirect when the
+        // user reopens this panel. For instant mode, queue intent via storage.
+        if (instant) {
+          try {
+            sessionStorage.setItem("pending-instant-delete", "1");
+          } catch {
+            /* ignore */
+          }
+        }
         return null;
       }
       if (ids.hasPassword) {
@@ -316,6 +324,13 @@ function DeleteAccountPanel() {
         toast.message(
           "Check your email — finish from the magic link to confirm deletion.",
         );
+        return null;
+      }
+      if (instant) {
+        await instantDel({ data: { reason: reason || undefined } });
+        toast.success("Account deleted.");
+        await supabase.auth.signOut();
+        window.location.href = "/";
         return null;
       }
       return requestDel({ data: { reason: reason || undefined } });
