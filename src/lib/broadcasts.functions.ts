@@ -229,10 +229,15 @@ export const markBroadcastRead = createServerFn({ method: "POST" })
 
 // =================== ADMIN: CREATE (replaces old broadcastNotification fanout) ===================
 
+const SafeLink = z
+  .string()
+  .max(500)
+  .regex(/^https?:\/\//i, "Only http(s) links are allowed");
+
 const CreateInput = z.object({
   title: z.string().min(1).max(140),
   body: z.string().max(1000).optional(),
-  link: z.string().max(500).optional(),
+  link: SafeLink.optional(),
   category: z
     .string()
     .min(1)
@@ -314,7 +319,7 @@ const UpdateInput = z.object({
     .object({
       title: z.string().min(1).max(140).optional(),
       body: z.string().max(1000).nullable().optional(),
-      link: z.string().max(500).nullable().optional(),
+      link: SafeLink.nullable().optional(),
       category: z
         .string()
         .min(1)

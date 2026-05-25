@@ -274,11 +274,14 @@ const VIDEO_FIELDS =
   "id, youtube_id, title, thumbnail_url, duration_seconds, published_at, submission_count, suggest_count, primary_tag_ids, creator:creators(id, title, handle, thumbnail_url)";
 
 export const getSectionVideos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ sectionId: z.string().uuid(), offset: z.number().int().min(0).max(500).default(0) }).parse(d),
   )
-  .handler(async ({ data }) => {
-    const { data: section, error: sErr } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    // Use the user-scoped client so RLS (fs_select_own_or_template) gates access
+    // to private sections owned by other users.
+    const { data: section, error: sErr } = await context.supabase
       .from("feed_sections")
       .select("*")
       .eq("id", data.sectionId)
