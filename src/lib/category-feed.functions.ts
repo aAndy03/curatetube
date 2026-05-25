@@ -23,6 +23,8 @@ export type CategoryFeedRail = {
   pinned: boolean;
   videos: CategoryFeedVideo[];
   total_in_category: number;
+  direct_total: number;
+  scope: "all" | "direct";
 };
 
 // --- pin / unpin ---
@@ -37,15 +39,61 @@ export const listPinnedCategories = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
+
+    const categories = (data ?? []).map((r) =>
+      r.category as unknown as {
+        id: string;
+        slug: string;
+        name: string;
+        video_count: number;
+        depth: number;
+        parent_id: string | null;
+      },
+    );
+
+    const ids = categories.map((category) => category.id);
+    const { data: descendants } = ids.length
+      ? await supabaseAdmin
+          .from("category_ancestors")
+          .select("ancestor_id, descendant_id")
+          .in("ancestor_id", ids)
+      : { data: [] as Array<{ ancestor_id: string; descendant_id: string }> };
+
+    const descendantIds = Array.from(
+      new Set((descendants ?? []).map((row) => row.descendant_id as string)),
+    );
+
+    const { data: descendantCats } = descendantIds.length
+      ? await supabaseAdmin
+          .from("categories")
+          .select("id, video_count")
+          .in("id", descendantIds)
+      : { data: [] as Array<{ id: string; video_count: number }> };
+
+    const directById = new Map(
+      (descendantCats ?? []).map((row) => [row.id as string, Number(row.video_count ?? 0)]),
+    );
+    const totalByAncestor = new Map<string, number>();
+    for (const row of descendants ?? []) {
+      const ancestorId = row.ancestor_id as string;
+      totalByAncestor.set(
+        ancestorId,
+        (totalByAncestor.get(ancestorId) ?? 0) + (directById.get(row.descendant_id as string) ?? 0),
+      );
+    }
+
     return {
       pinned: (data ?? []).map((r) => ({
-        category: r.category as unknown as {
-          id: string;
-          slug: string;
-          name: string;
-          video_count: number;
-          depth: number;
-          parent_id: string | null;
+        category: {
+          ...(r.category as unknown as {
+            id: string;
+            slug: string;
+            name: string;
+            video_count: number;
+            depth: number;
+            parent_id: string | null;
+          }),
+          rollup_video_count: totalByAncestor.get((r.category as { id: string }).id) ?? 0,
         },
         sort_order: r.sort_order,
         pinned_at: r.pinned_at as string,
@@ -225,9 +273,19 @@ export const getVideoCategoryPaths = createServerFn({ method: "GET" })
 
 export const getCategoryFeed = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator(
+    (d: unknown) =>
+      z
+        .object({
+          pinnedScope: z.enum(["all", "direct"]).optional(),
+        })
+        .optional()
+        .parse(d),
+  )
+  .handler(async ({ context, data }) => {
     const { userId } = context;
     const seen = await loadOrResetDedup(userId);
+    const pinnedScope = data?.pinnedScope ?? "all";
 
     const { data: pinRows } = await supabaseAdmin
       .from("user_category_pins")
@@ -256,13 +314,23 @@ export const getCategoryFeed = createServerFn({ method: "GET" })
     const excludeIds = Array.from(seen);
 
     for (const c of pinned) {
-      const { videos, total } = await fetchCategoryFeedVideos(c.id, excludeIds, VIDEOS_PER_SECTION);
+      const [scoped, direct] = await Promise.all([
+        fetchCategoryFeedVideos(c.id, excludeIds, VIDEOS_PER_SECTION, pinnedScope === "all"),
+        fetchCategoryFeedVideos(c.id, [], 0, false),
+      ]);
       // Always render pinned rails, even when empty — users want to see their pin.
-      for (const v of videos) {
+      for (const v of scoped.videos) {
         seen.add(v.id);
         excludeIds.push(v.id);
       }
-      rails.push({ category: c, pinned: true, videos, total_in_category: total });
+      rails.push({
+        category: c,
+        pinned: true,
+        videos: scoped.videos,
+        total_in_category: scoped.total,
+        direct_total: direct.total,
+        scope: pinnedScope,
+      });
     }
     for (const c of autos) {
       const { videos, total } = await fetchCategoryFeedVideos(c.id, excludeIds, VIDEOS_PER_SECTION);
@@ -271,7 +339,14 @@ export const getCategoryFeed = createServerFn({ method: "GET" })
         seen.add(v.id);
         excludeIds.push(v.id);
       }
-      rails.push({ category: c, pinned: false, videos, total_in_category: total });
+      rails.push({
+        category: c,
+        pinned: false,
+        videos,
+        total_in_category: total,
+        direct_total: total,
+        scope: "all",
+      });
     }
 
     await persistDedup(userId, seen);

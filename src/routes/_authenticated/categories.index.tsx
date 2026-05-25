@@ -62,6 +62,12 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 
+function formatCategoryVideoCount(total: number, direct: number) {
+  const label = total === 1 ? "video" : "videos";
+  return total !== direct ? `${total} ${label} (${direct} direct)` : `${total} ${label}`;
+}
+
+
 export const Route = createFileRoute("/_authenticated/categories/")({
   head: () => ({
     meta: [
@@ -279,7 +285,10 @@ function PinnedTracker() {
                 {p.category.name}
               </Link>
               <span className="text-xs text-muted-foreground">
-                {p.category.video_count} direct
+                {formatCategoryVideoCount(
+                  p.category.rollup_video_count ?? p.category.video_count,
+                  p.category.video_count,
+                )}
               </span>
               <div className="flex items-center gap-0.5">
                 <button
@@ -392,13 +401,7 @@ function BrowseList({ search }: { search: string }) {
       >
         <span className="truncate text-sm font-medium">{n.name}</span>
         <span className="shrink-0 text-xs text-muted-foreground">
-          {(() => {
-            const total = rollup.get(n.id) ?? n.video_count;
-            const label = total === 1 ? "video" : "videos";
-            return total !== n.video_count
-              ? `${total} ${label} (${n.video_count} direct)`
-              : `${total} ${label}`;
-          })()}
+          {formatCategoryVideoCount(rollup.get(n.id) ?? n.video_count, n.video_count)}
         </span>
       </Link>
     </div>

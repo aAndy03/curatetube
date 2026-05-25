@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export function FeedSectionView({
   section,
@@ -87,6 +88,10 @@ export function FeedSectionView({
       : section.layout === "compact"
         ? "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6"
         : "grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+  const filters = (section.filters ?? {}) as Record<string, unknown>;
+  const isPinnedCategorySection =
+    section.source === "recent_in_category" && typeof filters.pin_category_id === "string";
+  const includeDescendants = filters.includeDescendants !== false;
 
   return (
     <section className="space-y-3">
@@ -96,6 +101,29 @@ export function FeedSectionView({
           <span className="text-xs text-muted-foreground">
             {labelForSource(section.source)} · {section.size} items
           </span>
+          {isPinnedCategorySection ? (
+            <ToggleGroup
+              type="single"
+              size="sm"
+              value={includeDescendants ? "all" : "direct"}
+              onValueChange={(value) => {
+                if (!value) return;
+                update.mutate({
+                  filters: {
+                    ...filters,
+                    includeDescendants: value === "all",
+                  },
+                });
+              }}
+            >
+              <ToggleGroupItem value="all" aria-label="Show all descendant videos">
+                All
+              </ToggleGroupItem>
+              <ToggleGroupItem value="direct" aria-label="Show only direct videos">
+                Direct
+              </ToggleGroupItem>
+            </ToggleGroup>
+          ) : null}
         </div>
         <div className="flex items-center gap-1">
           <Button
