@@ -314,11 +314,13 @@ export const getCategoryFeed = createServerFn({ method: "GET" })
     const excludeIds = Array.from(seen);
 
     for (const c of pinned) {
+      // Pinned rails are exempt from dedup — the user explicitly pinned them,
+      // so they should always render with their full set of videos even if
+      // those same videos appeared in another rail this cycle.
       const [scoped, direct] = await Promise.all([
-        fetchCategoryFeedVideos(c.id, excludeIds, VIDEOS_PER_SECTION, pinnedScope === "all"),
+        fetchCategoryFeedVideos(c.id, [], VIDEOS_PER_SECTION, pinnedScope === "all"),
         fetchCategoryFeedVideos(c.id, [], 0, false),
       ]);
-      // Always render pinned rails, even when empty — users want to see their pin.
       for (const v of scoped.videos) {
         seen.add(v.id);
         excludeIds.push(v.id);
