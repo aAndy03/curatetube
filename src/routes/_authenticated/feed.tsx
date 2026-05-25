@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { adoptTemplate, listMySections, type FeedSection } from "@/lib/sections.functions";
 import { enqueue } from "@/lib/action-queue";
 import { FeedSectionView } from "@/components/feed-section";
+import { CategoryFeedRails } from "@/components/category-feed-rails";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
