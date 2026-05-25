@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/lib/auth-context";
 import {
   rewriteAuditIdentity,
@@ -30,6 +31,7 @@ import {
   cancelAccountDeletion,
   getMyDeletionRequest,
   getMyAuthIdentities,
+  instantDeleteAccount,
 } from "@/lib/lists.functions";
 
 export function ProfileSettingsSheet({
