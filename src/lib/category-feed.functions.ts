@@ -1,5 +1,7 @@
 // Phase 6 — Category-aware feed rails for /feed (v0.4.5).
 // Phase 11 — Postgres-side dedup via fetch_category_feed_videos RPC.
+// Plan-4 buffer: pin/unpin also seeds a matching feed_section (source=recent_in_category)
+// tagged with filters.pin_category_id so /feed can edit it like any other section.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -31,17 +33,67 @@ export const listPinnedCategories = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("user_category_pins")
-      .select("category_id, sort_order, category:categories(id, slug, name)")
+      .select("category_id, sort_order, pinned_at, category:categories(id, slug, name, video_count, depth, parent_id)")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
     return {
       pinned: (data ?? []).map((r) => ({
-        category: r.category as unknown as { id: string; slug: string; name: string },
+        category: r.category as unknown as {
+          id: string;
+          slug: string;
+          name: string;
+          video_count: number;
+          depth: number;
+          parent_id: string | null;
+        },
         sort_order: r.sort_order,
+        pinned_at: r.pinned_at as string,
       })),
     };
   });
+
+async function ensurePinSection(
+  userId: string,
+  category: { id: string; slug: string; name: string },
+): Promise<void> {
+  // Check existing pin-linked section
+  const { data: existing } = await supabaseAdmin
+    .from("feed_sections")
+    .select("id")
+    .eq("owner_id", userId)
+    .eq("is_template", false)
+    .filter("filters->>pin_category_id", "eq", category.id)
+    .maybeSingle();
+  if (existing) return;
+
+  const { count } = await supabaseAdmin
+    .from("feed_sections")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", userId);
+
+  await supabaseAdmin.from("feed_sections").insert({
+    owner_id: userId,
+    template_id: null,
+    name: category.name,
+    source: "recent_in_category",
+    filters: { categorySlug: category.slug, pin_category_id: category.id } as never,
+    sort: "recent",
+    layout: "grid",
+    size: 8,
+    refresh_minutes: 30,
+    position: count ?? 0,
+    is_template: false,
+  });
+}
+
+async function removePinSection(userId: string, categoryId: string): Promise<void> {
+  await supabaseAdmin
+    .from("feed_sections")
+    .delete()
+    .eq("owner_id", userId)
+    .filter("filters->>pin_category_id", "eq", categoryId);
+}
 
 export const pinCategory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -59,6 +111,15 @@ export const pinCategory = createServerFn({ method: "POST" })
         { onConflict: "user_id,category_id" },
       );
     if (error) throw new Error(error.message);
+
+    // Also seed a matching feed section
+    const { data: cat } = await supabaseAdmin
+      .from("categories")
+      .select("id, slug, name")
+      .eq("id", data.categoryId)
+      .maybeSingle();
+    if (cat) await ensurePinSection(userId, cat);
+
     return { ok: true };
   });
 
@@ -73,7 +134,28 @@ export const unpinCategory = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .eq("category_id", data.categoryId);
     if (error) throw new Error(error.message);
+    await removePinSection(userId, data.categoryId);
     return { ok: true };
+  });
+
+// Batch unpin (used by /categories pinned tracker)
+export const unpinCategoriesBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ categoryIds: z.array(z.string().uuid()).min(1).max(50) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("user_category_pins")
+      .delete()
+      .eq("user_id", userId)
+      .in("category_id", data.categoryIds);
+    if (error) throw new Error(error.message);
+    for (const id of data.categoryIds) {
+      await removePinSection(userId, id);
+    }
+    return { ok: true, removed: data.categoryIds.length };
   });
 
 export const getCategoryFeed = createServerFn({ method: "GET" })
@@ -110,7 +192,7 @@ export const getCategoryFeed = createServerFn({ method: "GET" })
 
     for (const c of pinned) {
       const { videos, total } = await fetchCategoryFeedVideos(c.id, excludeIds, VIDEOS_PER_SECTION);
-      if (videos.length === 0 && total === 0) continue;
+      // Always render pinned rails, even when empty — users want to see their pin.
       for (const v of videos) {
         seen.add(v.id);
         excludeIds.push(v.id);
