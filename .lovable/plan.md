@@ -51,12 +51,13 @@ Builds on Plans 1–3. Introduces a deep category tree, a three-tier tag system,
 - Duplicate detection (Plan 1): new proposals on an existing video appear as "Category/Tag suggestion from &nbsp;" section, not a new video.
 - Rate-limit server fn: 7-day rolling window, 429 with `{remaining, resets_at}`.
 
-## Phase 6 — Feed category sections — 0.4.5
+## Phase 6 — Feed category sections — 0.4.5 ✅
 
-- User-pinned category sections (`user_category_pins`) rank above all auto sections.
-- Auto category sections: 2–3 per session, affinity-based when recommendations on, top-by-video_count otherwise.
-- Global dedup: server-side `seen_ids` Set per feed assembly, persisted in `user_feed_state` across cycle window.
-- Underfilled category → render available + "See all in &nbsp;" link, no padding.
+- User-pinned category sections (`user_category_pins`) rank above all auto sections — pinned via Pin/Unpin button on `/categories/:slug`.
+- Auto category sections: top 3 by `video_count`, skipping pinned ones.
+- Global dedup: `user_feed_dedup(user_id, seen_ids[], cycle_started_at)` keeps a single per-user set across all rails in a 60 min cycle; reset on cycle rollover.
+- Underfilled category renders the available videos + "See all in &lt;cat&gt;" link, no padding.
+- Rails render on `/feed` above stacked sections via `<CategoryFeedRails />`.
 
 ## Phase 7 — `/suggest` + `mv_category_suggest_score` — 0.4.6
 
