@@ -346,7 +346,13 @@ function BrowseList({ search }: { search: string }) {
       >
         <span className="truncate text-sm font-medium">{n.name}</span>
         <span className="shrink-0 text-xs text-muted-foreground">
-          {n.video_count} {n.video_count === 1 ? "video" : "videos"}
+          {(() => {
+            const total = rollup.get(n.id) ?? n.video_count;
+            const label = total === 1 ? "video" : "videos";
+            return total !== n.video_count
+              ? `${total} ${label} (${n.video_count} direct)`
+              : `${total} ${label}`;
+          })()}
         </span>
       </Link>
     </div>
