@@ -281,6 +281,30 @@ export const rewriteAuditIdentity = createServerFn({ method: "POST" })
       .update({ actor_display_snapshot: snapshot }, { count: "exact" })
       .eq("actor_id", userId);
     if (error) throw new Error(error.message);
+
+    // Public attribution surfaces (video detail chip, creator contributors)
+    // read from video_submitters / video_suggestions, NOT from the audit log.
+    // Without flipping these flags, "Re-anonymize" leaves the user's name
+    // visible on /v/:id and /creators/:id. Mirror the mode here.
+    const anonymous = data.mode === "anonymize";
+    const { error: subErr } = await supabaseAdmin
+      .from("video_submitters")
+      .update({ anonymous })
+      .eq("user_id", userId);
+    if (subErr) throw new Error(subErr.message);
+    const { error: sugErr } = await supabaseAdmin
+      .from("video_suggestions")
+      .update({ anonymous })
+      .eq("user_id", userId);
+    if (sugErr) throw new Error(sugErr.message);
+
+    // Also align the forward-only profile flag so newly-loaded surfaces match
+    // the user's expressed intent without requiring a separate toggle.
+    await supabaseAdmin
+      .from("profiles")
+      .update({ audit_privacy_mode: anonymous ? "anonymous" : "public" })
+      .eq("id", userId);
+
     await writeAudit(supabaseAdmin, {
       actorId: userId,
       action: data.mode === "anonymize" ? "audit.bulk_anonymize" : "audit.bulk_attribute",
@@ -290,6 +314,7 @@ export const rewriteAuditIdentity = createServerFn({ method: "POST" })
     });
     return { rewritten: count ?? 0 };
   });
+
 
 // ============ ACCOUNT DELETION ============
 
