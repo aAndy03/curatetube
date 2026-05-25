@@ -144,6 +144,7 @@ function FeedPage() {
         </section>
       ) : (
         <div className="space-y-10">
+          <CategoryFeedRails />
           {sections.map((s, i) => (
             <FeedSectionView
               key={s.id}
