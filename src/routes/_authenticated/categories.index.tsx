@@ -158,6 +158,113 @@ function CategoriesPage() {
   );
 }
 
+// ============ List (hierarchical, read-only) ============
+function BrowseList({ search }: { search: string }) {
+  const getTree = useServerFn(getCategoryTree);
+  const { data, isLoading } = useQuery({
+    queryKey: ["categories-tree"],
+    queryFn: () => getTree(),
+    staleTime: Infinity,
+  });
+
+  const tree = useMemo(() => buildTree(data?.categories ?? []), [data]);
+  const flat = useMemo(() => {
+    if (!search.trim()) return null;
+    const q = search.toLowerCase();
+    return (data?.categories ?? []).filter((c) => c.name.toLowerCase().includes(q));
+  }, [data, search]);
+
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) =>
+    setExpanded((p) => {
+      const n = new Set(p);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-9 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  const renderRow = (n: CategoryNode, hasChildren: boolean, isOpen: boolean) => (
+    <div
+      className="flex items-center gap-2 border-b px-3 py-2 last:border-b-0 hover:bg-muted/40"
+      style={{ paddingLeft: `${12 + n.depth * 18}px` }}
+    >
+      {hasChildren ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            toggle(n.id);
+          }}
+          className="rounded p-0.5 hover:bg-muted"
+          aria-label={isOpen ? "Collapse" : "Expand"}
+        >
+          {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        </button>
+      ) : (
+        <span className="inline-block w-[18px]" />
+      )}
+      <Link
+        to="/categories/$slug"
+        params={{ slug: n.slug }}
+        className="flex flex-1 items-center justify-between gap-3"
+      >
+        <span className="truncate text-sm font-medium">{n.name}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {n.video_count} {n.video_count === 1 ? "video" : "videos"}
+        </span>
+      </Link>
+    </div>
+  );
+
+  const renderTree = (rows: TreeRow[]): React.ReactNode =>
+    rows.map((r) => {
+      const isOpen = expanded.has(r.id);
+      return (
+        <div key={r.id}>
+          {renderRow(r, r.children.length > 0, isOpen)}
+          {isOpen && r.children.length > 0 ? renderTree(r.children) : null}
+        </div>
+      );
+    });
+
+  if (flat) {
+    if (flat.length === 0) {
+      return (
+        <div className="rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground">
+          No matches.
+        </div>
+      );
+    }
+    return (
+      <div className="overflow-hidden rounded-xl border bg-card">
+        {flat.map((n) => (
+          <div key={n.id}>{renderRow(n, false, false)}</div>
+        ))}
+      </div>
+    );
+  }
+
+  if (tree.length === 0) {
+    return (
+      <div className="rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground">
+        No categories yet.
+      </div>
+    );
+  }
+  return <div className="overflow-hidden rounded-xl border bg-card">{renderTree(tree)}</div>;
+}
+
+
+
 // ============ Browse mode ============
 function BrowseGrid({ search }: { search: string }) {
   const fn = useServerFn(listCategoriesWithStats);
