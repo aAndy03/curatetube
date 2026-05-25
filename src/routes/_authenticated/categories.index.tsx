@@ -69,6 +69,14 @@ function CategoriesPage() {
   const canManage = perms.data?.has("taxonomy.manage") ?? false;
   const [editMode, setEditMode] = useState(false);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    if (typeof window === "undefined") return "grid";
+    return (localStorage.getItem("ct.categories.view") as "grid" | "list") ?? "grid";
+  });
+  const updateViewMode = (v: "grid" | "list") => {
+    setViewMode(v);
+    if (typeof window !== "undefined") localStorage.setItem("ct.categories.view", v);
+  };
   const [bannerDismissed, setBannerDismissed] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem("ct.categories.editBanner") === "1";
@@ -92,6 +100,21 @@ function CategoriesPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 w-48"
           />
+          {!editMode && (
+            <ToggleGroup
+              type="single"
+              size="sm"
+              value={viewMode}
+              onValueChange={(v) => v && updateViewMode(v as "grid" | "list")}
+            >
+              <ToggleGroupItem value="grid" aria-label="Grid view">
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="List view">
+                <List className="h-3.5 w-3.5" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          )}
           {canManage && (
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <Settings2 className="h-3.5 w-3.5" />
@@ -126,6 +149,8 @@ function CategoriesPage() {
 
       {editMode && canManage ? (
         <EditorTree search={search} />
+      ) : viewMode === "list" ? (
+        <BrowseList search={search} />
       ) : (
         <BrowseGrid search={search} />
       )}
