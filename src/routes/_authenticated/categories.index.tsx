@@ -33,6 +33,7 @@ import {
 import {
   listPinnedCategories,
   unpinCategoriesBatch,
+  reorderPinnedCategories,
 } from "@/lib/category-feed.functions";
 import { usePermissions } from "@/lib/use-permissions";
 import { Checkbox } from "@/components/ui/checkbox";
