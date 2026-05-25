@@ -188,6 +188,10 @@ export function ProfileSettingsSheet({
     }
     toast.success("Saved");
     qc.invalidateQueries({ queryKey: ["profile", user?.id] });
+    if ("audit_privacy_mode" in patch) {
+      qc.invalidateQueries({ queryKey: ["video-attribution"] });
+      qc.invalidateQueries({ queryKey: ["creator-contributors"] });
+    }
   };
 
   return (
