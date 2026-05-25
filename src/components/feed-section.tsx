@@ -110,7 +110,7 @@ export function FeedSectionView({
                 if (!value) return;
                 update.mutate({
                   filters: {
-                    ...(filters as FeedSectionType["filters"] & Record<string, unknown>),
+                    ...filters,
                     includeDescendants: value === "all",
                   },
                 });
