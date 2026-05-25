@@ -159,7 +159,11 @@ export const revealAuditActor = createServerFn({ method: "POST" })
 const BroadcastInput = z.object({
   title: z.string().min(1).max(140),
   body: z.string().max(1000).optional(),
-  link: z.string().max(500).optional(),
+  link: z
+    .string()
+    .max(500)
+    .regex(/^https?:\/\//i, "Only http(s) links are allowed")
+    .optional(),
 });
 
 export const broadcastNotification = createServerFn({ method: "POST" })
