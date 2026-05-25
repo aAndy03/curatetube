@@ -3,8 +3,25 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { writeAudit } from "./audit.server";
+import { deleteAccountDataNow } from "./account-deletion.server";
 
 const ListStatus = z.enum(["wishlist", "liked", "disliked", "watched"]);
+const DeleteAccountInput = z.object({
+  reason: z.string().trim().max(500).optional(),
+  reauthAt: z.number().int().positive().optional(),
+});
+
+function assertRecentlyAuthenticated(claims: unknown, message: string) {
+  const payload = claims && typeof claims === "object" ? claims as Record<string, unknown> : {};
+  const issuedAt = typeof payload.auth_time === "number"
+    ? payload.auth_time
+    : typeof payload.iat === "number"
+      ? payload.iat
+      : null;
+  if (!issuedAt || Date.now() - issuedAt * 1000 > 10 * 60_000) {
+    throw new Error(message);
+  }
+}
 type ListStatus = z.infer<typeof ListStatus>;
 
 // ============ TOGGLE LIST ============
@@ -278,9 +295,13 @@ export const rewriteAuditIdentity = createServerFn({ method: "POST" })
 
 export const requestAccountDeletion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { reason?: string } | undefined) => d ?? {})
+  .inputValidator((d: unknown) => DeleteAccountInput.parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    assertRecentlyAuthenticated(
+      context.claims,
+      "Please re-authenticate again before scheduling deletion.",
+    );
     const cancelToken = crypto.randomUUID() + "-" + crypto.randomUUID();
     const scheduledFor = new Date(Date.now() + 7 * 86400 * 1000).toISOString();
     const { error } = await supabaseAdmin
@@ -358,50 +379,12 @@ export const getMyAuthIdentities = createServerFn({ method: "POST" })
 // staff can still see "someone once did X" without any link back to a person.
 export const instantDeleteAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { reason?: string } | undefined) => d ?? {})
+  .inputValidator((d: unknown) => DeleteAccountInput.parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-
-    // Audit BEFORE wiping anything. Force anonymous so we don't snapshot the name.
-    await writeAudit(supabaseAdmin, {
-      actorId: userId,
-      action: "account.delete_instant",
-      targetType: "user",
-      targetId: userId,
-      after: { reason: data.reason ?? null },
-      visibility: "staff",
-      forceAnonymous: true,
-    });
-
-    // Anonymize every past audit row from this actor.
-    await supabaseAdmin
-      .from("audit_log")
-      .update({ actor_display_snapshot: "Deleted user" })
-      .eq("actor_id", userId);
-
-    // Best-effort clean of per-user rows that may not cascade.
-    const userTables = [
-      "user_category_pins",
-      "user_feed_dedup",
-      "user_feed_state",
-      "user_broadcast_reads",
-      "user_video_status",
-      "user_roles",
-      "video_suggestions",
-      "video_submitters",
-      "rate_limit_events",
-      "batch_flush_log",
-      "notifications",
-      "account_deletion_requests",
-    ] as const;
-    for (const t of userTables) {
-      await supabaseAdmin.from(t).delete().eq("user_id", userId);
-    }
-
-    // Drop profile, then the auth user itself.
-    await supabaseAdmin.from("profiles").delete().eq("id", userId);
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    if (error) throw new Error(error.message);
-
-    return { ok: true };
+    assertRecentlyAuthenticated(
+      context.claims,
+      "Please re-authenticate again before deleting your account.",
+    );
+    return deleteAccountDataNow(userId, { mode: "instant" });
   });

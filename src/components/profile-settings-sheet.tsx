@@ -34,6 +34,46 @@ import {
   instantDeleteAccount,
 } from "@/lib/lists.functions";
 
+const DELETE_INTENT_KEY = "pending-account-delete";
+
+type DeleteIntent = {
+  mode: "instant" | "grace";
+  userId: string;
+  email?: string;
+  reason?: string;
+  createdAt: number;
+};
+
+function readDeleteIntent(): DeleteIntent | null {
+  try {
+    const raw = sessionStorage.getItem(DELETE_INTENT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<DeleteIntent>;
+    if (
+      (parsed.mode === "instant" || parsed.mode === "grace") &&
+      typeof parsed.userId === "string" &&
+      typeof parsed.createdAt === "number"
+    ) {
+      return parsed as DeleteIntent;
+    }
+  } catch {
+    /* ignore malformed stored intent */
+  }
+  return null;
+}
+
+function writeDeleteIntent(intent: DeleteIntent) {
+  sessionStorage.setItem(DELETE_INTENT_KEY, JSON.stringify(intent));
+}
+
+function clearDeleteIntent() {
+  try {
+    sessionStorage.removeItem(DELETE_INTENT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function ProfileSettingsSheet({
   open,
   onOpenChange,
@@ -43,6 +83,8 @@ export function ProfileSettingsSheet({
 }) {
   const { user, signOut } = useAuth();
   const qc = useQueryClient();
+  const resumeRequestDeletion = useServerFn(requestAccountDeletion);
+  const resumeInstantDeletion = useServerFn(instantDeleteAccount);
   const profileQ = useQuery({
     queryKey: ["profile", user?.id],
     enabled: !!user && open,
@@ -72,6 +114,55 @@ export function ProfileSettingsSheet({
       setRecOptIn(profileQ.data.recommendation_opt_in);
     }
   }, [profileQ.data]);
+
+  React.useEffect(() => {
+    const intent = readDeleteIntent();
+    if (!intent) return;
+    let cancelled = false;
+    (async () => {
+      const expired = Date.now() - intent.createdAt > 15 * 60_000;
+      if (expired) {
+        clearDeleteIntent();
+        toast.error("Deletion confirmation expired. Please try again.");
+        return;
+      }
+
+      const { data, error } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (error || !data.user) return;
+      if (data.user.id !== intent.userId) {
+        clearDeleteIntent();
+        toast.error("Deletion was not completed because a different account was selected.");
+        return;
+      }
+
+      try {
+        if (intent.mode === "instant") {
+          await resumeInstantDeletion({ data: { reason: intent.reason, reauthAt: intent.createdAt } });
+          clearDeleteIntent();
+          toast.success("Account deleted.");
+          await supabase.auth.signOut();
+          window.location.href = "/";
+          return;
+        }
+
+        const result = await resumeRequestDeletion({
+          data: { reason: intent.reason, reauthAt: intent.createdAt },
+        });
+        clearDeleteIntent();
+        toast.success(
+          `Deletion scheduled for ${new Date(result.scheduledFor).toLocaleString()}.`,
+        );
+        qc.invalidateQueries({ queryKey: ["account-deletion"] });
+      } catch (e) {
+        clearDeleteIntent();
+        toast.error((e as Error).message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [qc, resumeInstantDeletion, resumeRequestDeletion]);
 
   type ProfilePatch = Partial<{
     display_name: string | null;
@@ -256,7 +347,7 @@ function BulkRewriteButtons() {
 }
 
 function DeleteAccountPanel() {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const qc = useQueryClient();
   const fetchReq = useServerFn(getMyDeletionRequest);
   const fetchIds = useServerFn(getMyAuthIdentities);
@@ -287,21 +378,29 @@ function DeleteAccountPanel() {
     mutationFn: async () => {
       const ids = idsQ.data;
       if (!ids) throw new Error("Loading identity providers…");
+      if (!user?.id) throw new Error("No signed-in user found.");
+      const intent: DeleteIntent = {
+        mode: instant ? "instant" : "grace",
+        userId: user.id,
+        email: user.email,
+        reason: reason || undefined,
+        createdAt: Date.now(),
+      };
       // Tailored re-auth based on signup method (strongest if multi-method).
       if (ids.hasGoogle) {
+        writeDeleteIntent(intent);
         const result = await lovable.auth.signInWithOAuth("google", {
           redirect_uri: window.location.href,
+          extraParams: {
+            prompt: "select_account",
+            ...(user.email ? { login_hint: user.email } : {}),
+          },
         });
-        if (result.error) throw result.error;
-        // OAuth redirects away; deletion completes after redirect when the
-        // user reopens this panel. For instant mode, queue intent via storage.
-        if (instant) {
-          try {
-            sessionStorage.setItem("pending-instant-delete", "1");
-          } catch {
-            /* ignore */
-          }
+        if (result.error) {
+          clearDeleteIntent();
+          throw result.error;
         }
+        if (!result.redirected) window.location.reload();
         return null;
       }
       if (ids.hasPassword) {
@@ -316,24 +415,28 @@ function DeleteAccountPanel() {
         // Magic link path
         const { data: u } = await supabase.auth.getUser();
         if (!u.user?.email) throw new Error("No email on file");
+        writeDeleteIntent(intent);
         const { error } = await supabase.auth.signInWithOtp({
           email: u.user.email,
-          options: { shouldCreateUser: false },
+          options: { shouldCreateUser: false, emailRedirectTo: window.location.href },
         });
-        if (error) throw error;
+        if (error) {
+          clearDeleteIntent();
+          throw error;
+        }
         toast.message(
           "Check your email — finish from the magic link to confirm deletion.",
         );
         return null;
       }
       if (instant) {
-        await instantDel({ data: { reason: reason || undefined } });
+        await instantDel({ data: { reason: reason || undefined, reauthAt: Date.now() } });
         toast.success("Account deleted.");
         await supabase.auth.signOut();
         window.location.href = "/";
         return null;
       }
-      return requestDel({ data: { reason: reason || undefined } });
+      return requestDel({ data: { reason: reason || undefined, reauthAt: Date.now() } });
     },
     onSuccess: (r) => {
       if (r) {
@@ -381,33 +484,6 @@ function DeleteAccountPanel() {
   }
 
   const ids = idsQ.data;
-
-  // If a Google re-auth redirect just completed and we previously stashed an
-  // instant-delete intent, finish it now.
-  React.useEffect(() => {
-    let cancelled = false;
-    try {
-      if (sessionStorage.getItem("pending-instant-delete") === "1") {
-        sessionStorage.removeItem("pending-instant-delete");
-        (async () => {
-          try {
-            await instantDel({ data: {} });
-            if (cancelled) return;
-            toast.success("Account deleted.");
-            await supabase.auth.signOut();
-            window.location.href = "/";
-          } catch (e) {
-            toast.error((e as Error).message);
-          }
-        })();
-      }
-    } catch {
-      /* ignore */
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [instantDel]);
 
   return (
     <div className="space-y-3 text-sm">
