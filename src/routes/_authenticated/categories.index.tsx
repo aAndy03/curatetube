@@ -30,7 +30,13 @@ import {
   deleteCategory,
   type CategoryNode,
 } from "@/lib/categories.functions";
+import {
+  listPinnedCategories,
+  unpinCategoriesBatch,
+} from "@/lib/category-feed.functions";
 import { usePermissions } from "@/lib/use-permissions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Pin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,6 +154,8 @@ function CategoriesPage() {
         </Alert>
       )}
 
+      <PinnedTracker />
+
       {editMode && canManage ? (
         <EditorTree search={search} />
       ) : viewMode === "list" ? (
@@ -156,6 +164,102 @@ function CategoriesPage() {
         <BrowseGrid search={search} />
       )}
     </div>
+  );
+}
+
+// ============ Pinned tracker (batch unpin) ============
+function PinnedTracker() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listPinnedCategories);
+  const unpinBatchFn = useServerFn(unpinCategoriesBatch);
+  const { data, isLoading } = useQuery({
+    queryKey: ["pinned-categories"],
+    queryFn: () => listFn(),
+    staleTime: 30_000,
+  });
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const pins = data?.pinned ?? [];
+  const allSelected = pins.length > 0 && pins.every((p) => selected.has(p.category.id));
+
+  const unpinMut = useMutation({
+    mutationFn: (ids: string[]) => unpinBatchFn({ data: { categoryIds: ids } }),
+    onSuccess: (res) => {
+      toast.success(`Unpinned ${res.removed}`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["pinned-categories"] });
+      qc.invalidateQueries({ queryKey: ["category-feed"] });
+      qc.invalidateQueries({ queryKey: ["my-sections"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (isLoading || pins.length === 0) return null;
+
+  return (
+    <section className="rounded-xl border bg-card">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Pin className="h-3.5 w-3.5" /> Pinned to feed
+          <span className="text-xs text-muted-foreground">({pins.length})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setSelected(
+                allSelected ? new Set() : new Set(pins.map((p) => p.category.id)),
+              )
+            }
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            {allSelected ? "Clear" : "Select all"}
+          </button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={selected.size === 0 || unpinMut.isPending}
+            onClick={() => unpinMut.mutate(Array.from(selected))}
+          >
+            Unpin selected ({selected.size})
+          </Button>
+        </div>
+      </header>
+      <ul className="divide-y">
+        {pins.map((p) => {
+          const checked = selected.has(p.category.id);
+          return (
+            <li
+              key={p.category.id}
+              className="flex items-center gap-3 px-4 py-2"
+            >
+              <Checkbox
+                checked={checked}
+                onCheckedChange={(v) =>
+                  setSelected((prev) => {
+                    const next = new Set(prev);
+                    if (v) next.add(p.category.id);
+                    else next.delete(p.category.id);
+                    return next;
+                  })
+                }
+                aria-label={`Select ${p.category.name}`}
+              />
+              <Link
+                to="/categories/$slug"
+                params={{ slug: p.category.slug }}
+                className="flex-1 truncate text-sm hover:underline"
+              >
+                {p.category.name}
+              </Link>
+              <span className="text-xs text-muted-foreground">
+                {p.category.video_count} direct
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -169,6 +273,28 @@ function BrowseList({ search }: { search: string }) {
   });
 
   const tree = useMemo(() => buildTree(data?.categories ?? []), [data]);
+  // Rollup video_count: sum of self + all descendants (so parents reflect children).
+  const rollup = useMemo(() => {
+    const all = data?.categories ?? [];
+    const byParent = new Map<string | null, CategoryNode[]>();
+    for (const n of all) {
+      const arr = byParent.get(n.parent_id) ?? [];
+      arr.push(n);
+      byParent.set(n.parent_id, arr);
+    }
+    const memo = new Map<string, number>();
+    const sum = (id: string, direct: number): number => {
+      const cached = memo.get(id);
+      if (cached !== undefined) return cached;
+      const kids = byParent.get(id) ?? [];
+      let total = direct;
+      for (const k of kids) total += sum(k.id, k.video_count);
+      memo.set(id, total);
+      return total;
+    };
+    for (const n of all) sum(n.id, n.video_count);
+    return memo;
+  }, [data]);
   const flat = useMemo(() => {
     if (!search.trim()) return null;
     const q = search.toLowerCase();
@@ -220,7 +346,13 @@ function BrowseList({ search }: { search: string }) {
       >
         <span className="truncate text-sm font-medium">{n.name}</span>
         <span className="shrink-0 text-xs text-muted-foreground">
-          {n.video_count} {n.video_count === 1 ? "video" : "videos"}
+          {(() => {
+            const total = rollup.get(n.id) ?? n.video_count;
+            const label = total === 1 ? "video" : "videos";
+            return total !== n.video_count
+              ? `${total} ${label} (${n.video_count} direct)`
+              : `${total} ${label}`;
+          })()}
         </span>
       </Link>
     </div>
