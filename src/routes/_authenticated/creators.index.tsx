@@ -65,7 +65,7 @@ function CreatorsPage() {
 function AllCreatorsView({
   query,
 }: {
-  query: ReturnType<typeof useQuery<Awaited<ReturnType<ReturnType<typeof useServerFn<typeof listCreators>>>>>>;
+  query: { isLoading: boolean; data?: { creators: Array<{ id: string; title: string; handle: string | null; thumbnail_url: string | null; subscriber_count: number | null }> } };
 }) {
   if (query.isLoading) {
     return (
@@ -103,7 +103,7 @@ function AllCreatorsView({
 function ByCategoryView({
   query,
 }: {
-  query: ReturnType<typeof useQuery<Awaited<ReturnType<ReturnType<typeof useServerFn<typeof listCreatorsByCategory>>>>>>;
+  query: { isLoading: boolean; data?: Awaited<ReturnType<typeof listCreatorsByCategory>> };
 }) {
   if (query.isLoading) {
     return (
