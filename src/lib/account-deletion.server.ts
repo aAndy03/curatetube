@@ -112,7 +112,11 @@ export async function deleteAccountDataNow(
   await deleteWhere("notifications", "user_id", userId);
   await deleteWhere("user_roles", "user_id", userId);
   await deleteWhere("feed_sections", "owner_id", userId);
-  await deleteWhere("submissions", "submitter_id", userId);
+  if (options.mode === "instant") {
+    await deleteWhere("submissions", "submitter_id", userId);
+  } else {
+    await updateWhere("submissions", { submitter_id: null, anonymous: true }, "submitter_id", userId);
+  }
   await updateWhere("submissions", { decided_by: null }, "decided_by", userId);
   await updateWhere("user_roles", { granted_by: null }, "granted_by", userId);
   await deleteWhere("account_deletion_requests", "user_id", userId);
