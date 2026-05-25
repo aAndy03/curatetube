@@ -237,7 +237,18 @@ const EXPECTED_CADENCE_MS: Record<string, number> = {
   mv_trending: 15 * 60_000,
   mv_suggested_feed: 15 * 60_000,
   mv_category_stats: 24 * 3600_000,
+  mv_category_suggest_score: 15 * 60_000,
+  mv_category_trending_score: 15 * 60_000,
+  mv_creator_categories: 24 * 3600_000,
 };
+
+type MvKey =
+  | "mv_trending"
+  | "mv_suggested_feed"
+  | "mv_category_stats"
+  | "mv_category_suggest_score"
+  | "mv_category_trending_score"
+  | "mv_creator_categories";
 
 function MvRefreshSection({ canEdit }: { canEdit: boolean }) {
   const fetchLog = useServerFn(listMvRefreshLog);
@@ -249,8 +260,7 @@ function MvRefreshSection({ canEdit }: { canEdit: boolean }) {
     refetchInterval: 30_000,
   });
   const flush = useMutation({
-    mutationFn: (view: "mv_trending" | "mv_suggested_feed" | "mv_category_stats") =>
-      flushFn({ data: { view } }),
+    mutationFn: (view: MvKey) => flushFn({ data: { view } }),
     onSuccess: (r) => {
       if (r.ok) toast.success(`Refreshed (${r.rows ?? 0} rows)`);
       else toast.error(r.error ?? "Refresh failed");
@@ -259,10 +269,13 @@ function MvRefreshSection({ canEdit }: { canEdit: boolean }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const VIEWS = [
-    { key: "mv_trending" as const, label: "Trending" },
-    { key: "mv_suggested_feed" as const, label: "Suggested feed" },
-    { key: "mv_category_stats" as const, label: "Category stats" },
+  const VIEWS: { key: MvKey; label: string }[] = [
+    { key: "mv_trending", label: "Trending" },
+    { key: "mv_suggested_feed", label: "Suggested feed" },
+    { key: "mv_category_stats", label: "Category stats" },
+    { key: "mv_category_suggest_score", label: "Category suggest score" },
+    { key: "mv_category_trending_score", label: "Category trending score" },
+    { key: "mv_creator_categories", label: "Creators by category" },
   ];
 
   const lastByView = new Map<
