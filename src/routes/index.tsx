@@ -7,13 +7,21 @@ import { useAuth } from "@/lib/auth-context";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CurateTube — Community-curated YouTube library" },
+      { title: "CurateTube — Community-curated YouTube worth watching" },
       {
         name: "description",
         content:
-          "A monochrome, desktop-first home for the videos a real community thinks are worth your time.",
+          "Community-curated YouTube database. Contributors submit, moderators curate, and the best videos rise via suggestions and time-anchored leaderboards.",
       },
+      { property: "og:title", content: "CurateTube — Community-curated YouTube worth watching" },
+      {
+        property: "og:description",
+        content:
+          "Community-curated YouTube database. Contributors submit, moderators curate, and the best videos rise via suggestions and time-anchored leaderboards.",
+      },
+      { property: "og:url", content: "https://curatetube.lovable.app/" },
     ],
+    links: [{ rel: "canonical", href: "https://curatetube.lovable.app/" }],
   }),
   component: Landing,
 });
@@ -105,7 +113,7 @@ function Landing() {
         ].map((f) => (
           <div key={f.title} className="rounded-lg border bg-card p-5">
             <f.icon className="h-5 w-5" />
-            <h3 className="mt-3 text-sm font-semibold">{f.title}</h3>
+            <h2 className="mt-3 text-sm font-semibold">{f.title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
           </div>
         ))}

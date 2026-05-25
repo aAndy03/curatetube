@@ -109,6 +109,7 @@ function CategoriesPage() {
         </div>
         <div className="flex items-center gap-3">
           <Input
+            aria-label="Filter categories by name"
             placeholder="Filter by name…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

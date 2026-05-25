@@ -11,7 +11,16 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/creators/")({
-  head: () => ({ meta: [{ title: "Creators — CurateTube" }] }),
+  head: () => ({
+    meta: [
+      { title: "Creators — CurateTube" },
+      {
+        name: "description",
+        content:
+          "Browse YouTube channels added to the CurateTube library through approved community submissions.",
+      },
+    ],
+  }),
   component: CreatorsPage,
 });
 

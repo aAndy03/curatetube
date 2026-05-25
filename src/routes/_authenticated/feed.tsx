@@ -23,7 +23,16 @@ import { usePermissions } from "@/lib/use-permissions";
 import { useSubmitSheet } from "@/lib/use-submit-sheet";
 
 export const Route = createFileRoute("/_authenticated/feed")({
-  head: () => ({ meta: [{ title: "Home — CurateTube" }] }),
+  head: () => ({
+    meta: [
+      { title: "Your Feed — CurateTube" },
+      {
+        name: "description",
+        content:
+          "Your personal CurateTube home. Stack, reorder, and customize sections of community-curated YouTube videos.",
+      },
+    ],
+  }),
   component: FeedPage,
 });
 
@@ -73,7 +82,7 @@ function FeedPage() {
     <div className="mx-auto w-full max-w-7xl space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Home</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Your CurateTube Feed</h1>
           <p className="text-sm text-muted-foreground">
             Build your own feed by stacking sections. Reorder, resize, and pick what fills each one.
           </p>

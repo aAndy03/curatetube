@@ -1,0 +1,13 @@
+# CurateTube
+
+> A community-curated public database of YouTube videos and creators. Contributors submit, moderators curate, and the community surfaces the best of YouTube via suggestions and time-anchored leaderboards.
+
+## Pages
+
+- [Home](/): Overview of CurateTube and how community curation works.
+- [Privacy Policy](/privacy): How we handle personal data, audit identity, and account deletion.
+- [Terms of Service](/terms): Acceptable use rules for the CurateTube community.
+
+## Optional
+
+- [Sign in](/login): Sign in or create an account to participate.

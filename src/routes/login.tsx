@@ -26,7 +26,21 @@ export const Route = createFileRoute("/login")({
     }
   },
   head: () => ({
-    meta: [{ title: "Sign in — CurateTube" }],
+    meta: [
+      { title: "Sign in — CurateTube" },
+      {
+        name: "description",
+        content:
+          "Sign in or create your CurateTube account to submit videos, suggest favorites, and shape the community-curated YouTube library.",
+      },
+      { property: "og:title", content: "Sign in — CurateTube" },
+      {
+        property: "og:description",
+        content: "Sign in to CurateTube to submit, suggest, and curate YouTube videos.",
+      },
+      { property: "og:url", content: "https://curatetube.lovable.app/login" },
+    ],
+    links: [{ rel: "canonical", href: "https://curatetube.lovable.app/login" }],
   }),
   component: LoginPage,
 });
@@ -46,7 +60,7 @@ function LoginPage() {
             CurateTube
           </Link>
           <h1 className="mt-4 text-2xl font-semibold tracking-tight">
-            Welcome
+            Sign in to CurateTube
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in or create an account. The first user becomes Owner.

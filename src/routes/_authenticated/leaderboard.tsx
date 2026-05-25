@@ -41,6 +41,16 @@ const Search = z.object({
 
 export const Route = createFileRoute("/_authenticated/leaderboard")({
   validateSearch: Search,
+  head: () => ({
+    meta: [
+      { title: "Leaderboard — CurateTube" },
+      {
+        name: "description",
+        content:
+          "Time-anchored CurateTube leaderboards: Top 10, 30, and 100 community-suggested YouTube videos, refreshed on a schedule with full snapshot history.",
+      },
+    ],
+  }),
   component: LeaderboardPage,
 });
 
@@ -119,10 +129,10 @@ function LeaderboardPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
       <header className="space-y-2">
-        <div className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Trophy className="size-6" />
           Leaderboard
-        </div>
+        </h1>
         <p className="text-sm text-muted-foreground">
           Community-curated rankings, snapshotted on a schedule. Snapshots are immutable.
         </p>
@@ -130,9 +140,9 @@ function LeaderboardPage() {
 
       <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Tier</label>
+          <label htmlFor="lb-tier" className="text-xs text-muted-foreground">Tier</label>
           <Select value={tier} onValueChange={setTier}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger id="lb-tier" aria-label="Leaderboard tier" className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -145,9 +155,9 @@ function LeaderboardPage() {
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Scope</label>
+          <label htmlFor="lb-scope" className="text-xs text-muted-foreground">Scope</label>
           <Select value={scopeType} onValueChange={setScope}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger id="lb-scope" aria-label="Leaderboard scope" className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -160,7 +170,7 @@ function LeaderboardPage() {
         </div>
         {scopeType !== "global" ? (
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-foreground">
+            <label htmlFor="lb-scope-value" className="text-xs text-muted-foreground">
               {scopeType === "language"
                 ? "Language code (e.g. en)"
                 : scopeType === "category"
@@ -168,6 +178,8 @@ function LeaderboardPage() {
                 : "Creator id (uuid)"}
             </label>
             <Input
+              id="lb-scope-value"
+              aria-label="Leaderboard scope filter value"
               defaultValue={scopeValue ?? ""}
               onBlur={(e) => setScopeValue(e.currentTarget.value.trim())}
               onKeyDown={(e) => {
