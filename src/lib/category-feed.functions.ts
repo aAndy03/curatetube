@@ -157,6 +157,71 @@ export const unpinCategoriesBatch = createServerFn({ method: "POST" })
     }
     return { ok: true, removed: data.categoryIds.length };
   });
+// Reorder all pins for the current user (used by /categories pinned tracker)
+export const reorderPinnedCategories = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ orderedIds: z.array(z.string().uuid()).min(1).max(50) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    for (let i = 0; i < data.orderedIds.length; i++) {
+      const { error } = await supabase
+        .from("user_category_pins")
+        .update({ sort_order: i })
+        .eq("user_id", userId)
+        .eq("category_id", data.orderedIds[i]);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+// Return the parent→…→leaf chains for every category this video belongs to.
+// Used by the video detail breadcrumb.
+export const getVideoCategoryPaths = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ videoId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: vc } = await supabaseAdmin
+      .from("video_categories")
+      .select("category_id")
+      .eq("video_id", data.videoId);
+    const leafIds = (vc ?? []).map((r) => r.category_id as string);
+    if (leafIds.length === 0) return { paths: [] as Array<Array<{ id: string; slug: string; name: string }>> };
+
+    const { data: anc } = await supabaseAdmin
+      .from("category_ancestors")
+      .select("ancestor_id, descendant_id, depth")
+      .in("descendant_id", leafIds);
+
+    const { data: cats } = await supabaseAdmin
+      .from("categories")
+      .select("id, slug, name")
+      .in(
+        "id",
+        Array.from(new Set((anc ?? []).map((r) => r.ancestor_id as string))),
+      );
+    const catMap = new Map(
+      (cats ?? []).map((c) => [c.id as string, { id: c.id as string, slug: c.slug as string, name: c.name as string }]),
+    );
+
+    const byLeaf = new Map<string, Array<{ depth: number; cat: { id: string; slug: string; name: string } }>>();
+    for (const r of anc ?? []) {
+      const leaf = r.descendant_id as string;
+      const cat = catMap.get(r.ancestor_id as string);
+      if (!cat) continue;
+      const arr = byLeaf.get(leaf) ?? [];
+      arr.push({ depth: r.depth as number, cat });
+      byLeaf.set(leaf, arr);
+    }
+    const paths = leafIds.map((leaf) => {
+      const arr = byLeaf.get(leaf) ?? [];
+      // depth = distance from ancestor to descendant; root has highest depth.
+      arr.sort((a, b) => b.depth - a.depth);
+      return arr.map((x) => x.cat);
+    });
+    return { paths };
+  });
+
 
 export const getCategoryFeed = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
