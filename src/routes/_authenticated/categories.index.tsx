@@ -50,7 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export const Route = createFileRoute("/_authenticated/categories")({
+export const Route = createFileRoute("/_authenticated/categories/")({
   head: () => ({
     meta: [
       { title: "Categories — CurateTube" },
