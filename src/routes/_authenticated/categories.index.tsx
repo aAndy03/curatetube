@@ -30,7 +30,13 @@ import {
   deleteCategory,
   type CategoryNode,
 } from "@/lib/categories.functions";
+import {
+  listPinnedCategories,
+  unpinCategoriesBatch,
+} from "@/lib/category-feed.functions";
 import { usePermissions } from "@/lib/use-permissions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Pin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
