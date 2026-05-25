@@ -66,19 +66,19 @@ Builds on Plans 1–3. Introduces a deep category tree, a three-tier tag system,
 - `/suggest` layout: existing "Suggested videos" rail on top + 2–4 "Suggested categories" rails below (top 6 by suggest_count per cat). Dedup via `seen_ids`.
 - Cold-start: if all scores=0, order by `video_count` and flag `is_cold_start` so the page header reads "Most popular" vs "Based on recent activity".
 
-## Phase 8 — `/trending` + `mv_category_trending_score` — 0.4.7
+## Phase 8 — `/trending` + `mv_category_trending_score` — 0.4.7 ✅
 
 - New MV (15-min refresh):
 `score = suggest_delta_24h*3 + like_delta_24h*2 + watch_delta_24h*1 + new_videos_7d*5 + submission_delta_7d*2 + leaderboard_entries*4 + diversity_bonus`
 `diversity_bonus = +2` if >3 distinct creators contributing. Normalized 0–100 at refresh time.
 - Per-video contribution clamped to **40 %** of its category score (viral-cap from `app_settings`).
 - Categories with `video_count < trending_min_video_count` (default 3) excluded.
-- `/trending` mirrors `/suggest` layout: existing trending rail + "Trending categories" rails, score badge + delta arrow vs previous cycle.
+- `/trending` mirrors `/suggest` layout: existing trending rail + "Trending categories" rails, score badge + new-7d/creators badges, shared `user_feed_dedup` cycle.
 
-## Phase 9 — `/creators` by-category view — 0.4.8
+## Phase 9 — `/creators` by-category view — 0.4.8 ✅
 
 - ToggleGroup at top: "All creators" (unchanged) | "By category".
-- New MV `mv_creator_categories` (daily refresh) — creator belongs to category if ≥1 of their videos sits in it.
+- New MV `mv_creator_categories` (daily refresh) — creator belongs to category if ≥1 of their videos sits in it (rolled up to top-level via `category_ancestors`).
 - "By category" view: section per top-level category, creators repeated across categories (intentional, no dedup here).
 
 ## Phase 10 — Refactor-map sync + admin reshuffle — 0.4.9
