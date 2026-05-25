@@ -419,6 +419,23 @@ export const moderateSubmission = createServerFn({ method: "POST" })
             .from("video_tags")
             .upsert(rows, { onConflict: "video_id,tag_id", ignoreDuplicates: true });
         }
+
+        // Bug fix: mv_category_stats powers /categories grid. Without an
+        // immediate refresh, the newly-approved video doesn't appear there
+        // until the 15-minute cron tick. CONCURRENTLY keeps it non-blocking
+        // for readers; failure is swallowed so approval still succeeds.
+        if (data.applyCategoryIds?.length) {
+          try {
+            await (supabaseAdmin.rpc as unknown as (
+              n: string,
+              p: Record<string, unknown>,
+            ) => Promise<{ error: { message: string } | null }>)("refresh_mv", {
+              _name: "mv_category_stats",
+            });
+          } catch {
+            // best-effort; cron will catch up
+          }
+        }
       }
 
       await writeAudit(supabaseAdmin, {
