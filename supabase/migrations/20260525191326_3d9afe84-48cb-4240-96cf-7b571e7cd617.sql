@@ -1,0 +1,1 @@
+ALTER VIEW public.mv_last_refresh SET (security_invoker = on);
