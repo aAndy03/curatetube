@@ -298,9 +298,10 @@ export const requestAccountDeletion = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => DeleteAccountInput.parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    if (data.reauthAt && Date.now() - data.reauthAt > 10 * 60_000) {
-      throw new Error("Please re-authenticate again before scheduling deletion.");
-    }
+    assertRecentlyAuthenticated(
+      context.claims,
+      "Please re-authenticate again before scheduling deletion.",
+    );
     const cancelToken = crypto.randomUUID() + "-" + crypto.randomUUID();
     const scheduledFor = new Date(Date.now() + 7 * 86400 * 1000).toISOString();
     const { error } = await supabaseAdmin
@@ -381,8 +382,9 @@ export const instantDeleteAccount = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => DeleteAccountInput.parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    if (!data.reauthAt || Date.now() - data.reauthAt > 10 * 60_000) {
-      throw new Error("Please re-authenticate again before deleting your account.");
-    }
+    assertRecentlyAuthenticated(
+      context.claims,
+      "Please re-authenticate again before deleting your account.",
+    );
     return deleteAccountDataNow(userId, { mode: "instant" });
   });
