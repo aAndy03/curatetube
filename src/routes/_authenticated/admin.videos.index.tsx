@@ -585,6 +585,8 @@ function VideoRow({
   flatTree,
   allTags,
   selected,
+  showAiCols,
+  staleThresholdDays,
   onToggle,
   onAddCat,
   onRmCat,
@@ -597,6 +599,8 @@ function VideoRow({
   flatTree: Array<{ id: string; label: string; depth: number }>;
   allTags: Tag[];
   selected: boolean;
+  showAiCols: boolean;
+  staleThresholdDays: number;
   onToggle: (v: boolean) => void;
   onAddCat: (id: string) => void;
   onRmCat: (id: string) => void;
@@ -604,6 +608,19 @@ function VideoRow({
   onRmTag: (id: string) => void;
 }) {
   const atCatCap = video.category_ids.length >= 5;
+  const staleMs = staleThresholdDays * 24 * 3600 * 1000;
+  const aiStale =
+    !video.ai_categorised_at ||
+    Date.now() - new Date(video.ai_categorised_at).getTime() > staleMs;
+  const conf = video.ai_confidence_avg;
+  const confTone =
+    conf == null
+      ? "text-muted-foreground"
+      : conf >= 0.8
+        ? "text-emerald-600 dark:text-emerald-400"
+        : conf >= 0.5
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-destructive";
   return (
     <tr className="border-b align-top last:border-b-0 hover:bg-muted/30">
       <td className="px-3 py-2">
