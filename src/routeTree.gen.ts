@@ -28,13 +28,13 @@ import { Route as AuthenticatedMeTabRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedLeaderboardArchiveRouteImport } from './routes/_authenticated/leaderboard.archive'
 import { Route as AuthenticatedCreatorsIdRouteImport } from './routes/_authenticated/creators.$id'
 import { Route as AuthenticatedCategoriesSlugRouteImport } from './routes/_authenticated/categories.$slug'
-import { Route as AuthenticatedAdminVideosRouteImport } from './routes/_authenticated/admin.videos'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
 import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
 import { Route as AuthenticatedAdminRecommendationsRouteImport } from './routes/_authenticated/admin.recommendations'
 import { Route as AuthenticatedAdminBroadcastRouteImport } from './routes/_authenticated/admin.broadcast'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedAdminVideosIndexRouteImport } from './routes/_authenticated/admin.videos.index'
 import { Route as ApiPublicCronSessionExpiryWarnRouteImport } from './routes/api/public/cron/session-expiry-warn'
 import { Route as ApiPublicCronRefreshMvsRouteImport } from './routes/api/public/cron/refresh-mvs'
 import { Route as ApiPublicCronLeaderboardRouteImport } from './routes/api/public/cron/leaderboard'
@@ -141,12 +141,6 @@ const AuthenticatedCategoriesSlugRoute =
     path: '/categories/$slug',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAdminVideosRoute =
-  AuthenticatedAdminVideosRouteImport.update({
-    id: '/admin/videos',
-    path: '/admin/videos',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAdminSettingsRoute =
   AuthenticatedAdminSettingsRouteImport.update({
     id: '/admin/settings',
@@ -181,6 +175,12 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/admin/audit',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAdminVideosIndexRoute =
+  AuthenticatedAdminVideosIndexRouteImport.update({
+    id: '/admin/videos/',
+    path: '/admin/videos/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiPublicCronSessionExpiryWarnRoute =
   ApiPublicCronSessionExpiryWarnRouteImport.update({
     id: '/api/public/cron/session-expiry-warn',
@@ -212,9 +212,9 @@ const ApiPublicCronAccountDeletionsRoute =
   } as any)
 const AuthenticatedAdminVideosVideoIdRoute =
   AuthenticatedAdminVideosVideoIdRouteImport.update({
-    id: '/$videoId',
-    path: '/$videoId',
-    getParentRoute: () => AuthenticatedAdminVideosRoute,
+    id: '/admin/videos/$videoId',
+    path: '/admin/videos/$videoId',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -234,7 +234,6 @@ export interface FileRoutesByFullPath {
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
-  '/admin/videos': typeof AuthenticatedAdminVideosRouteWithChildren
   '/categories/$slug': typeof AuthenticatedCategoriesSlugRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
@@ -249,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
+  '/admin/videos/': typeof AuthenticatedAdminVideosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -267,7 +267,6 @@ export interface FileRoutesByTo {
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
-  '/admin/videos': typeof AuthenticatedAdminVideosRouteWithChildren
   '/categories/$slug': typeof AuthenticatedCategoriesSlugRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
@@ -282,6 +281,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
+  '/admin/videos': typeof AuthenticatedAdminVideosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -302,7 +302,6 @@ export interface FileRoutesById {
   '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
-  '/_authenticated/admin/videos': typeof AuthenticatedAdminVideosRouteWithChildren
   '/_authenticated/categories/$slug': typeof AuthenticatedCategoriesSlugRoute
   '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/_authenticated/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
@@ -317,6 +316,7 @@ export interface FileRoutesById {
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
+  '/_authenticated/admin/videos/': typeof AuthenticatedAdminVideosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -337,7 +337,6 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/roles'
     | '/admin/settings'
-    | '/admin/videos'
     | '/categories/$slug'
     | '/creators/$id'
     | '/leaderboard/archive'
@@ -352,6 +351,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
+    | '/admin/videos/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -370,7 +370,6 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/roles'
     | '/admin/settings'
-    | '/admin/videos'
     | '/categories/$slug'
     | '/creators/$id'
     | '/leaderboard/archive'
@@ -385,6 +384,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
+    | '/admin/videos'
   id:
     | '__root__'
     | '/'
@@ -404,7 +404,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/reports'
     | '/_authenticated/admin/roles'
     | '/_authenticated/admin/settings'
-    | '/_authenticated/admin/videos'
     | '/_authenticated/categories/$slug'
     | '/_authenticated/creators/$id'
     | '/_authenticated/leaderboard/archive'
@@ -419,6 +418,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
+    | '/_authenticated/admin/videos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -570,13 +570,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCategoriesSlugRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/admin/videos': {
-      id: '/_authenticated/admin/videos'
-      path: '/admin/videos'
-      fullPath: '/admin/videos'
-      preLoaderRoute: typeof AuthenticatedAdminVideosRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/admin/settings': {
       id: '/_authenticated/admin/settings'
       path: '/admin/settings'
@@ -619,6 +612,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/videos/': {
+      id: '/_authenticated/admin/videos/'
+      path: '/admin/videos'
+      fullPath: '/admin/videos/'
+      preLoaderRoute: typeof AuthenticatedAdminVideosIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/public/cron/session-expiry-warn': {
       id: '/api/public/cron/session-expiry-warn'
       path: '/api/public/cron/session-expiry-warn'
@@ -656,10 +656,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/admin/videos/$videoId': {
       id: '/_authenticated/admin/videos/$videoId'
-      path: '/$videoId'
+      path: '/admin/videos/$videoId'
       fullPath: '/admin/videos/$videoId'
       preLoaderRoute: typeof AuthenticatedAdminVideosVideoIdRouteImport
-      parentRoute: typeof AuthenticatedAdminVideosRoute
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
@@ -678,20 +678,6 @@ const AuthenticatedLeaderboardRouteWithChildren =
     AuthenticatedLeaderboardRouteChildren,
   )
 
-interface AuthenticatedAdminVideosRouteChildren {
-  AuthenticatedAdminVideosVideoIdRoute: typeof AuthenticatedAdminVideosVideoIdRoute
-}
-
-const AuthenticatedAdminVideosRouteChildren: AuthenticatedAdminVideosRouteChildren =
-  {
-    AuthenticatedAdminVideosVideoIdRoute: AuthenticatedAdminVideosVideoIdRoute,
-  }
-
-const AuthenticatedAdminVideosRouteWithChildren =
-  AuthenticatedAdminVideosRoute._addFileChildren(
-    AuthenticatedAdminVideosRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRouteWithChildren
@@ -704,7 +690,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
-  AuthenticatedAdminVideosRoute: typeof AuthenticatedAdminVideosRouteWithChildren
   AuthenticatedCategoriesSlugRoute: typeof AuthenticatedCategoriesSlugRoute
   AuthenticatedCreatorsIdRoute: typeof AuthenticatedCreatorsIdRoute
   AuthenticatedMeTabRoute: typeof AuthenticatedMeTabRoute
@@ -712,6 +697,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedVIdRoute: typeof AuthenticatedVIdRoute
   AuthenticatedCategoriesIndexRoute: typeof AuthenticatedCategoriesIndexRoute
   AuthenticatedCreatorsIndexRoute: typeof AuthenticatedCreatorsIndexRoute
+  AuthenticatedAdminVideosVideoIdRoute: typeof AuthenticatedAdminVideosVideoIdRoute
+  AuthenticatedAdminVideosIndexRoute: typeof AuthenticatedAdminVideosIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -727,7 +714,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
-  AuthenticatedAdminVideosRoute: AuthenticatedAdminVideosRouteWithChildren,
   AuthenticatedCategoriesSlugRoute: AuthenticatedCategoriesSlugRoute,
   AuthenticatedCreatorsIdRoute: AuthenticatedCreatorsIdRoute,
   AuthenticatedMeTabRoute: AuthenticatedMeTabRoute,
@@ -735,6 +721,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedVIdRoute: AuthenticatedVIdRoute,
   AuthenticatedCategoriesIndexRoute: AuthenticatedCategoriesIndexRoute,
   AuthenticatedCreatorsIndexRoute: AuthenticatedCreatorsIndexRoute,
+  AuthenticatedAdminVideosVideoIdRoute: AuthenticatedAdminVideosVideoIdRoute,
+  AuthenticatedAdminVideosIndexRoute: AuthenticatedAdminVideosIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -757,3 +745,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
