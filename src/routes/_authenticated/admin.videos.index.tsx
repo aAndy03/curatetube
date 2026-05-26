@@ -148,6 +148,8 @@ function AdminVideosPage() {
       uncategorized,
       tagId,
       hasPrimary,
+      pendingReviewOnly,
+      sortBy,
       page,
     ],
     enabled: !!canManage,
@@ -160,10 +162,36 @@ function AdminVideosPage() {
           tag_id: tagId,
           has_primary_tags:
             hasPrimary === "any" ? undefined : hasPrimary === "yes",
+          ai_pending_review_only: pendingReviewOnly || undefined,
+          sort_by: sortBy,
+          sort_dir: sortBy === "ai_confidence_avg" ? "desc" : "desc",
           page,
           page_size: pageSize,
         },
       }),
+  });
+
+  const fetchCoverage = useServerFn(getAiCoverage);
+  const queueStaleFn = useServerFn(queueAllStaleAi);
+  const coverageQ = useQuery({
+    queryKey: ["ai-coverage"],
+    enabled: !!canManage,
+    queryFn: () => fetchCoverage(),
+    staleTime: 60_000,
+  });
+  const queueStale = useMutation({
+    mutationFn: () => queueStaleFn(),
+    onSuccess: (r) => {
+      if (r.jobs_created === 0) {
+        toast.success("No stale videos to re-categorise");
+      } else {
+        toast.success(
+          `Queued ${r.jobs_created} AI jobs across ${r.videos} videos${r.total_stale && r.total_stale > r.videos ? ` (of ${r.total_stale} stale)` : ""}`,
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["ai-coverage"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
   const tags = (tagsQ.data?.tags ?? []) as Tag[];
