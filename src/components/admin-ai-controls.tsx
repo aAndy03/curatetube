@@ -48,7 +48,9 @@ import {
   pauseAiBatch,
   resumeAiBatch,
   cancelAiBatch,
+  runAiTickNow,
 } from "@/lib/admin-ai.functions";
+
 
 const TASKS = [
   { key: "categorise", label: "Categorise" },
