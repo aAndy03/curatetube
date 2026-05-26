@@ -59,16 +59,23 @@ export const listAdminVideos = createServerFn({ method: "POST" })
     let q = supabaseAdmin
       .from("videos")
       .select(
-        "id, title, thumbnail_url, published_at, status, submission_count, suggest_count, primary_tag_ids, creator:creators(id, title)",
+        "id, title, thumbnail_url, published_at, status, submission_count, suggest_count, primary_tag_ids, ai_categorised_at, ai_tagged_at, ai_review_status, ai_confidence_avg, creator:creators(id, title)",
         { count: "exact" },
-      )
-      .order("published_at", { ascending: false, nullsFirst: false })
+      );
+
+    const sortBy = data.sort_by ?? "published_at";
+    const sortAsc = data.sort_dir === "asc";
+    q = q
+      .order(sortBy, { ascending: sortAsc, nullsFirst: false })
       .range(from, to);
 
     if (data.q) q = q.ilike("title", `%${data.q}%`);
     if (data.creator_id) q = q.eq("creator_id", data.creator_id);
     if (data.date_from) q = q.gte("published_at", data.date_from);
     if (data.date_to) q = q.lte("published_at", data.date_to);
+    if (data.ai_pending_review_only) {
+      q = q.eq("ai_review_status", "pending_review" as never);
+    }
     if (data.has_primary_tags === true) {
       q = q.not("primary_tag_ids", "eq", [] as unknown as string[]);
     } else if (data.has_primary_tags === false) {
