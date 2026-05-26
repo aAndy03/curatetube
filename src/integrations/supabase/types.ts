@@ -1897,6 +1897,45 @@ export type Database = {
         Args: { _id: string; _new_parent_id: string }
         Returns: undefined
       }
+      claim_ai_job: {
+        Args: {
+          _scope?: Database["public"]["Enums"]["ai_job_scope"]
+          _session_id?: string
+        }
+        Returns: {
+          assigned_session_id: string | null
+          batch_id: string | null
+          completed_at: string | null
+          completion_tokens: number
+          created_at: string
+          created_by: string | null
+          error_text: string | null
+          failed_at: string | null
+          id: string
+          job_type: Database["public"]["Enums"]["ai_job_type"]
+          max_duration_s: number | null
+          max_results: number | null
+          max_retries: number
+          model_used: string | null
+          paused_at: string | null
+          priority: number
+          prompt_tokens: number
+          resumed_at: string | null
+          retry_count: number
+          scope: Database["public"]["Enums"]["ai_job_scope"]
+          started_at: string | null
+          status: Database["public"]["Enums"]["ai_job_status"]
+          taxonomy_snapshot_id: string | null
+          updated_at: string
+          video_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       fetch_category_feed_videos: {
         Args: { _category_id: string; _exclude: string[]; _limit: number }
         Returns: {
@@ -1922,6 +1961,11 @@ export type Database = {
       }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       refresh_mv: { Args: { _name: string }; Returns: Json }
+      sweep_ai_retries: { Args: never; Returns: number }
+      sweep_stale_ai_sessions: {
+        Args: { _timeout_s?: number }
+        Returns: number
+      }
       sync_video_primary_tag_ids: {
         Args: { _video_id: string }
         Returns: undefined
