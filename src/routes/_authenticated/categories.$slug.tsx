@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, FolderTree, Pin, PinOff } from "lucide-react";
 import { toast } from "sonner";
@@ -14,10 +14,39 @@ import { VideoCard, type VideoCardData } from "@/components/video-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
+const categoryQuery = (slug: string) =>
+  queryOptions({
+    queryKey: ["category", slug],
+    queryFn: () => listVideosByCategorySlug({ data: { slug, limit: 60 } }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+const clamp = (s: string, max: number) =>
+  s.length > max ? s.slice(0, max - 1).trimEnd() + "…" : s;
+
 export const Route = createFileRoute("/_authenticated/categories/$slug")({
-  head: () => ({
-    meta: [{ title: "Category — CurateTube" }],
-  }),
+  loader: ({ params, context }) =>
+    context.queryClient.ensureQueryData(categoryQuery(params.slug)),
+  head: ({ loaderData, params }) => {
+    const cat = loaderData?.category;
+    const name = cat?.name ?? params.slug;
+    const title = clamp(`${name} — Curated videos on CurateTube`, 60);
+    const desc = cat?.description
+      ? clamp(cat.description.replace(/\s+/g, " ").trim(), 160)
+      : clamp(`Browse community-curated YouTube videos in the ${name} category on CurateTube.`, 160);
+    const url = `https://curatetube.lovable.app/categories/${params.slug}`;
+    return {
+      meta: [
+        { title },
+        { name: "description", content: desc },
+        { property: "og:title", content: title },
+        { property: "og:description", content: desc },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
   component: CategoryDetailPage,
   notFoundComponent: () => (
     <div className="p-10 text-center text-sm text-muted-foreground">

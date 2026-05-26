@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, ChevronRight, ExternalLink, Sparkles } from "lucide-react";
 
@@ -21,22 +21,63 @@ import { VideoCard } from "@/components/video-card";
 type SortKey = "recent" | "top_suggested" | "oldest";
 const PAGE_SIZE = 24;
 
+const creatorDetailQuery = (id: string) =>
+  queryOptions({
+    queryKey: ["creator", id, "recent", 0],
+    queryFn: () =>
+      getCreatorDetail({ data: { id, page: 0, sort: "recent", pageSize: PAGE_SIZE } }),
+  });
+
+const clamp = (s: string, max: number) =>
+  s.length > max ? s.slice(0, max - 1).trimEnd() + "…" : s;
+
 export const Route = createFileRoute("/_authenticated/creators/$id")({
-  head: () => ({
-    meta: [
-      { title: "Creator — CurateTube" },
-      {
-        name: "description",
-        content:
-          "Approved videos and community contributors for this YouTube creator on CurateTube.",
-      },
-      { property: "og:title", content: "Creator — CurateTube" },
-      {
-        property: "og:description",
-        content: "Approved videos and contributors for this creator on CurateTube.",
-      },
-    ],
-  }),
+  loader: ({ params, context }) =>
+    context.queryClient.ensureQueryData(creatorDetailQuery(params.id)),
+  head: ({ loaderData, params }) => {
+    const c = loaderData?.creator as
+      | { title?: string; description?: string | null; thumbnail_url?: string | null }
+      | null
+      | undefined;
+    const name = c?.title ?? "Creator";
+    const title = clamp(`${name} — Curated videos on CurateTube`, 60);
+    const desc = c?.description
+      ? clamp(c.description.replace(/\s+/g, " ").trim(), 160)
+      : clamp(`Approved YouTube videos and community contributors for ${name} on CurateTube.`, 160);
+    const url = `https://curatetube.lovable.app/creators/${params.id}`;
+    const image = c?.thumbnail_url ?? undefined;
+    const meta: Array<Record<string, string>> = [
+      { title },
+      { name: "description", content: desc },
+      { property: "og:title", content: title },
+      { property: "og:description", content: desc },
+      { property: "og:type", content: "profile" },
+      { property: "og:url", content: url },
+    ];
+    if (image) {
+      meta.push({ property: "og:image", content: image });
+      meta.push({ name: "twitter:image", content: image });
+    }
+    const scripts: Array<{ type: string; children: string }> = [];
+    if (c?.title) {
+      scripts.push({
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Person",
+          name: c.title,
+          description: desc,
+          image: c.thumbnail_url ?? undefined,
+          url,
+        }),
+      });
+    }
+    return {
+      meta,
+      links: [{ rel: "canonical", href: url }],
+      scripts,
+    };
+  },
   component: CreatorDetailPage,
 });
 

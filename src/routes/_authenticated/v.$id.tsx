@@ -1,5 +1,5 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Users, Sparkles, ExternalLink, AlertTriangle, Tag as TagIcon, ChevronRight, FolderTree } from "lucide-react";
 
@@ -15,22 +15,68 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { VideoActions } from "@/components/video-actions";
 import { useHydratedSuggestCount } from "@/hooks/use-hydrated-status";
 
+const videoDetailQuery = (id: string) =>
+  queryOptions({
+    queryKey: ["video", id],
+    queryFn: () => getVideoDetail({ data: { id } }),
+  });
+
+const clamp = (s: string, max: number) =>
+  s.length > max ? s.slice(0, max - 1).trimEnd() + "…" : s;
+
 export const Route = createFileRoute("/_authenticated/v/$id")({
-  head: () => ({
-    meta: [
-      { title: "Video — CurateTube" },
-      {
-        name: "description",
-        content:
-          "Watch and discuss a community-curated YouTube video on CurateTube, with tags, categories, and contributor attribution.",
-      },
-      { property: "og:title", content: "Video — CurateTube" },
-      {
-        property: "og:description",
-        content: "A community-curated YouTube video on CurateTube.",
-      },
-    ],
-  }),
+  loader: ({ params, context }) =>
+    context.queryClient.ensureQueryData(videoDetailQuery(params.id)),
+  head: ({ loaderData, params }) => {
+    const v = loaderData?.video;
+    const title = v?.title
+      ? clamp(`${v.title} — CurateTube`, 60)
+      : "Video — CurateTube";
+    const desc = v?.description
+      ? clamp(v.description.replace(/\s+/g, " ").trim(), 160)
+      : v?.title
+        ? clamp(`Watch "${v.title}" on CurateTube — a community-curated YouTube video.`, 160)
+        : "Watch a community-curated YouTube video on CurateTube.";
+    const url = `https://curatetube.lovable.app/v/${params.id}`;
+    const image = v?.thumbnail_url ?? undefined;
+    const meta: Array<Record<string, string>> = [
+      { title },
+      { name: "description", content: desc },
+      { property: "og:title", content: title },
+      { property: "og:description", content: desc },
+      { property: "og:type", content: "video.other" },
+      { property: "og:url", content: url },
+    ];
+    if (image) {
+      meta.push({ property: "og:image", content: image });
+      meta.push({ name: "twitter:image", content: image });
+    }
+    const scripts: Array<{ type: string; children: string }> = [];
+    if (v) {
+      scripts.push({
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "VideoObject",
+          name: v.title,
+          description: desc,
+          thumbnailUrl: v.thumbnail_url ?? undefined,
+          uploadDate: v.published_at ?? undefined,
+          embedUrl: v.youtube_id
+            ? `https://www.youtube-nocookie.com/embed/${v.youtube_id}`
+            : undefined,
+          contentUrl: v.youtube_id
+            ? `https://www.youtube.com/watch?v=${v.youtube_id}`
+            : undefined,
+        }),
+      });
+    }
+    return {
+      meta,
+      links: [{ rel: "canonical", href: url }],
+      scripts,
+    };
+  },
   component: VideoDetailPage,
   notFoundComponent: () => (
     <div className="mx-auto max-w-xl p-10 text-center">
