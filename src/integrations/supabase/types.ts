@@ -44,6 +44,256 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_agent_sessions: {
+        Row: {
+          agent_index: number
+          context_snapshot_id: string | null
+          current_job_id: string | null
+          end_reason: string | null
+          id: string
+          last_heartbeat: string
+          model: string
+          scope: Database["public"]["Enums"]["ai_job_scope"]
+          session_ended_at: string | null
+          session_started_at: string
+          total_completion_tokens: number
+          total_jobs_completed: number
+          total_prompt_tokens: number
+        }
+        Insert: {
+          agent_index?: number
+          context_snapshot_id?: string | null
+          current_job_id?: string | null
+          end_reason?: string | null
+          id?: string
+          last_heartbeat?: string
+          model: string
+          scope: Database["public"]["Enums"]["ai_job_scope"]
+          session_ended_at?: string | null
+          session_started_at?: string
+          total_completion_tokens?: number
+          total_jobs_completed?: number
+          total_prompt_tokens?: number
+        }
+        Update: {
+          agent_index?: number
+          context_snapshot_id?: string | null
+          current_job_id?: string | null
+          end_reason?: string | null
+          id?: string
+          last_heartbeat?: string
+          model?: string
+          scope?: Database["public"]["Enums"]["ai_job_scope"]
+          session_ended_at?: string | null
+          session_started_at?: string
+          total_completion_tokens?: number
+          total_jobs_completed?: number
+          total_prompt_tokens?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_sessions_context_snapshot_id_fkey"
+            columns: ["context_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "ai_taxonomy_snapshot"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_job_results: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          confidence: number
+          created_at: string
+          deleted_at: string | null
+          entity_deleted: boolean
+          entity_id: string
+          entity_name: string
+          id: string
+          job_id: string
+          rejection_reason: string | null
+          result_type: Database["public"]["Enums"]["ai_job_type"]
+          run_version: number
+          video_id: string
+          was_accepted: boolean | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          confidence?: number
+          created_at?: string
+          deleted_at?: string | null
+          entity_deleted?: boolean
+          entity_id: string
+          entity_name: string
+          id?: string
+          job_id: string
+          rejection_reason?: string | null
+          result_type: Database["public"]["Enums"]["ai_job_type"]
+          run_version?: number
+          video_id: string
+          was_accepted?: boolean | null
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          confidence?: number
+          created_at?: string
+          deleted_at?: string | null
+          entity_deleted?: boolean
+          entity_id?: string
+          entity_name?: string
+          id?: string
+          job_id?: string
+          rejection_reason?: string | null
+          result_type?: Database["public"]["Enums"]["ai_job_type"]
+          run_version?: number
+          video_id?: string
+          was_accepted?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_job_results_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ai_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_jobs: {
+        Row: {
+          assigned_session_id: string | null
+          batch_id: string | null
+          completed_at: string | null
+          completion_tokens: number
+          created_at: string
+          created_by: string | null
+          error_text: string | null
+          failed_at: string | null
+          id: string
+          job_type: Database["public"]["Enums"]["ai_job_type"]
+          max_duration_s: number | null
+          max_results: number | null
+          max_retries: number
+          model_used: string | null
+          paused_at: string | null
+          priority: number
+          prompt_tokens: number
+          resumed_at: string | null
+          retry_count: number
+          scope: Database["public"]["Enums"]["ai_job_scope"]
+          started_at: string | null
+          status: Database["public"]["Enums"]["ai_job_status"]
+          taxonomy_snapshot_id: string | null
+          updated_at: string
+          video_id: string
+        }
+        Insert: {
+          assigned_session_id?: string | null
+          batch_id?: string | null
+          completed_at?: string | null
+          completion_tokens?: number
+          created_at?: string
+          created_by?: string | null
+          error_text?: string | null
+          failed_at?: string | null
+          id?: string
+          job_type: Database["public"]["Enums"]["ai_job_type"]
+          max_duration_s?: number | null
+          max_results?: number | null
+          max_retries?: number
+          model_used?: string | null
+          paused_at?: string | null
+          priority?: number
+          prompt_tokens?: number
+          resumed_at?: string | null
+          retry_count?: number
+          scope: Database["public"]["Enums"]["ai_job_scope"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ai_job_status"]
+          taxonomy_snapshot_id?: string | null
+          updated_at?: string
+          video_id: string
+        }
+        Update: {
+          assigned_session_id?: string | null
+          batch_id?: string | null
+          completed_at?: string | null
+          completion_tokens?: number
+          created_at?: string
+          created_by?: string | null
+          error_text?: string | null
+          failed_at?: string | null
+          id?: string
+          job_type?: Database["public"]["Enums"]["ai_job_type"]
+          max_duration_s?: number | null
+          max_results?: number | null
+          max_retries?: number
+          model_used?: string | null
+          paused_at?: string | null
+          priority?: number
+          prompt_tokens?: number
+          resumed_at?: string | null
+          retry_count?: number
+          scope?: Database["public"]["Enums"]["ai_job_scope"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ai_job_status"]
+          taxonomy_snapshot_id?: string | null
+          updated_at?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_jobs_assigned_session_id_fkey"
+            columns: ["assigned_session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agent_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_taxonomy_snapshot_id_fkey"
+            columns: ["taxonomy_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "ai_taxonomy_snapshot"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_taxonomy_snapshot: {
+        Row: {
+          categories_compact: string
+          id: string
+          is_current: boolean
+          platform_tags_compact: string
+          secondary_tags_compact: string
+          snapshot_at: string
+          total_categories: number
+          total_tags: number
+        }
+        Insert: {
+          categories_compact?: string
+          id?: string
+          is_current?: boolean
+          platform_tags_compact?: string
+          secondary_tags_compact?: string
+          snapshot_at?: string
+          total_categories?: number
+          total_tags?: number
+        }
+        Update: {
+          categories_compact?: string
+          id?: string
+          is_current?: boolean
+          platform_tags_compact?: string
+          secondary_tags_compact?: string
+          snapshot_at?: string
+          total_categories?: number
+          total_tags?: number
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           key: string
@@ -688,6 +938,7 @@ export type Database = {
           display_name: string | null
           id: string
           recommendation_opt_in: boolean
+          suspended_at: string | null
           updated_at: string
           username: string | null
         }
@@ -699,6 +950,7 @@ export type Database = {
           display_name?: string | null
           id: string
           recommendation_opt_in?: boolean
+          suspended_at?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -710,6 +962,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           recommendation_opt_in?: boolean
+          suspended_at?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -1395,6 +1648,12 @@ export type Database = {
       }
       videos: {
         Row: {
+          ai_categorisation_model: string | null
+          ai_categorised_at: string | null
+          ai_confidence_avg: number | null
+          ai_review_status: Database["public"]["Enums"]["ai_review_status"]
+          ai_tagged_at: string | null
+          ai_tagging_model: string | null
           app_dislike_count: number
           app_like_count: number
           app_watch_count: number
@@ -1422,6 +1681,12 @@ export type Database = {
           youtube_id: string
         }
         Insert: {
+          ai_categorisation_model?: string | null
+          ai_categorised_at?: string | null
+          ai_confidence_avg?: number | null
+          ai_review_status?: Database["public"]["Enums"]["ai_review_status"]
+          ai_tagged_at?: string | null
+          ai_tagging_model?: string | null
           app_dislike_count?: number
           app_like_count?: number
           app_watch_count?: number
@@ -1449,6 +1714,12 @@ export type Database = {
           youtube_id: string
         }
         Update: {
+          ai_categorisation_model?: string | null
+          ai_categorised_at?: string | null
+          ai_confidence_avg?: number | null
+          ai_review_status?: Database["public"]["Enums"]["ai_review_status"]
+          ai_tagged_at?: string | null
+          ai_tagging_model?: string | null
           app_dislike_count?: number
           app_like_count?: number
           app_watch_count?: number
@@ -1657,6 +1928,26 @@ export type Database = {
       }
     }
     Enums: {
+      ai_job_scope:
+        | "user_submit"
+        | "admin_single"
+        | "admin_batch"
+        | "admin_queue"
+      ai_job_status:
+        | "pending"
+        | "claimed"
+        | "running"
+        | "paused"
+        | "completed"
+        | "failed"
+        | "cancelled"
+      ai_job_type: "categorise" | "tag_primary" | "tag_secondary" | "tag_rest"
+      ai_review_status:
+        | "none"
+        | "pending_review"
+        | "accepted"
+        | "partially_accepted"
+        | "rejected"
       audit_privacy_mode: "anonymous" | "public"
       audit_visibility: "internal" | "staff" | "public"
       notification_type:
@@ -1808,6 +2099,29 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      ai_job_scope: [
+        "user_submit",
+        "admin_single",
+        "admin_batch",
+        "admin_queue",
+      ],
+      ai_job_status: [
+        "pending",
+        "claimed",
+        "running",
+        "paused",
+        "completed",
+        "failed",
+        "cancelled",
+      ],
+      ai_job_type: ["categorise", "tag_primary", "tag_secondary", "tag_rest"],
+      ai_review_status: [
+        "none",
+        "pending_review",
+        "accepted",
+        "partially_accepted",
+        "rejected",
+      ],
       audit_privacy_mode: ["anonymous", "public"],
       audit_visibility: ["internal", "staff", "public"],
       notification_type: [
