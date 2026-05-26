@@ -350,6 +350,10 @@ function DetailPane({
         </div>
       ) : null}
 
+      {submission.video_id ? (
+        <AiSuggestionsPanel videoId={submission.video_id} readOnly={readOnly} />
+      ) : null}
+
       {!readOnly ? (
         <div className="space-y-2 rounded-md border bg-card p-3">
           <label className="text-xs uppercase tracking-wide text-muted-foreground">
