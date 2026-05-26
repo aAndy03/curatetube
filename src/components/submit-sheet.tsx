@@ -47,6 +47,8 @@ function formatResetIn(iso: string | null): string {
 export function SubmitSheet({ open, onOpenChange }: SubmitSheetProps) {
   const submitFn = useServerFn(submitVideos);
   const quotaFn = useServerFn(getSubmitQuota);
+  const aiDispatchFn = useServerFn(dispatchUserSubmitAi);
+  const [aiQueued, setAiQueued] = React.useState(0);
   const [rows, setRows] = React.useState<UrlRowState[]>([
     { url: "", selectedCategoryIds: [], selectedTagIds: [] },
   ]);
