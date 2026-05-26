@@ -384,3 +384,174 @@ function DetailPane({
     </div>
   );
 }
+
+function confidenceTone(c: number): string {
+  if (c >= 0.8) return "border-emerald-500/50 text-emerald-600 dark:text-emerald-400";
+  if (c >= 0.5) return "border-amber-500/50 text-amber-600 dark:text-amber-400";
+  return "border-destructive/50 text-destructive";
+}
+
+function AiSuggestionsPanel({ videoId, readOnly }: { videoId: string; readOnly: boolean }) {
+  const fetchFn = useServerFn(getAiResultsForModeration);
+  const acceptFn = useServerFn(acceptAiResultMod);
+  const rejectFn = useServerFn(rejectAiResultMod);
+  const rerunFn = useServerFn(rerunVideoAi);
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["mod-ai-results", videoId],
+    queryFn: () => fetchFn({ data: { video_id: videoId } }),
+    refetchInterval: (q) => {
+      const d = q.state.data as { activeJobs?: unknown[] } | undefined;
+      return d?.activeJobs && d.activeJobs.length > 0 ? 5000 : false;
+    },
+  });
+
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ["mod-ai-results", videoId] });
+
+  const accept = useMutation({
+    mutationFn: (resultId: string) => acceptFn({ data: { result_id: resultId } }),
+    onSuccess: () => {
+      toast.success("Accepted");
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const reject = useMutation({
+    mutationFn: (resultId: string) => rejectFn({ data: { result_id: resultId } }),
+    onSuccess: () => {
+      toast.success("Rejected");
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const rerun = useMutation({
+    mutationFn: () => rerunFn({ data: { video_id: videoId, task_types: ["categorise", "tag_primary", "tag_secondary"] } }),
+    onSuccess: (r) => {
+      toast.success(`AI re-run queued (${r.jobs_created} job${r.jobs_created === 1 ? "" : "s"})`);
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  const results = data?.results ?? [];
+  const active = data?.activeJobs ?? [];
+
+  const grouped = React.useMemo(() => {
+    const m: Record<string, typeof results> = {
+      categorise: [],
+      tag_primary: [],
+      tag_secondary: [],
+      tag_rest: [],
+    };
+    for (const r of results) {
+      const t = r.result_type as string;
+      if (m[t]) m[t].push(r);
+    }
+    return m;
+  }, [results]);
+
+  const labelFor: Record<string, string> = {
+    categorise: "Categories",
+    tag_primary: "Primary tags",
+    tag_secondary: "Secondary tags",
+    tag_rest: "Other tags",
+  };
+
+  return (
+    <div className="space-y-2 rounded-md border bg-card p-3">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+          <Sparkles className="h-3 w-3" /> AI suggestions
+          {active.length > 0 ? (
+            <span className="ml-1 inline-flex items-center gap-1 normal-case text-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> {active.length} running
+            </span>
+          ) : null}
+        </p>
+        {!readOnly ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => rerun.mutate()}
+            disabled={rerun.isPending || active.length > 0}
+          >
+            {rerun.isPending ? (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-1 h-3 w-3" />
+            )}
+            Re-run AI
+          </Button>
+        ) : null}
+      </div>
+
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground">Loading…</p>
+      ) : results.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {active.length > 0 ? "AI is processing this video…" : "No AI suggestions yet."}
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {(["categorise", "tag_primary", "tag_secondary", "tag_rest"] as const).map((kind) => {
+            const items = grouped[kind];
+            if (!items || items.length === 0) return null;
+            return (
+              <div key={kind} className="space-y-1.5">
+                <p className="text-[11px] font-medium text-muted-foreground">{labelFor[kind]}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {items.map((r) => {
+                    const conf = (r.confidence as number) ?? 0;
+                    const accepted = r.was_accepted === true;
+                    const rejected = r.was_accepted === false;
+                    return (
+                      <div
+                        key={r.id}
+                        className={`flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] ${
+                          accepted ? "opacity-60" : rejected ? "opacity-40 line-through" : ""
+                        }`}
+                      >
+                        <span>{r.entity_name}</span>
+                        <span
+                          className={`rounded-full border px-1 text-[10px] ${confidenceTone(conf)}`}
+                          title={`Confidence ${(conf * 100).toFixed(0)}%`}
+                        >
+                          {(conf * 100).toFixed(0)}
+                        </span>
+                        {!readOnly && r.was_accepted === null ? (
+                          <>
+                            <button
+                              type="button"
+                              className="ml-0.5 rounded-full p-0.5 text-muted-foreground hover:text-emerald-600 disabled:opacity-30"
+                              onClick={() => accept.mutate(r.id)}
+                              disabled={accept.isPending || reject.isPending}
+                              aria-label="Accept"
+                            >
+                              <ThumbsUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-full p-0.5 text-muted-foreground hover:text-destructive disabled:opacity-30"
+                              onClick={() => reject.mutate(r.id)}
+                              disabled={accept.isPending || reject.isPending}
+                              aria-label="Reject"
+                            >
+                              <ThumbsDown className="h-3 w-3" />
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
