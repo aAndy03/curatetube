@@ -40,6 +40,7 @@ import { Route as ApiPublicCronRefreshMvsRouteImport } from './routes/api/public
 import { Route as ApiPublicCronLeaderboardRouteImport } from './routes/api/public/cron/leaderboard'
 import { Route as ApiPublicCronAiOrchestratorRouteImport } from './routes/api/public/cron/ai-orchestrator'
 import { Route as ApiPublicCronAccountDeletionsRouteImport } from './routes/api/public/cron/account-deletions'
+import { Route as AuthenticatedAdminVideosVideoIdRouteImport } from './routes/_authenticated/admin.videos.$videoId'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -209,6 +210,12 @@ const ApiPublicCronAccountDeletionsRoute =
     path: '/api/public/cron/account-deletions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAdminVideosVideoIdRoute =
+  AuthenticatedAdminVideosVideoIdRouteImport.update({
+    id: '/$videoId',
+    path: '/$videoId',
+    getParentRoute: () => AuthenticatedAdminVideosRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -227,7 +234,7 @@ export interface FileRoutesByFullPath {
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
-  '/admin/videos': typeof AuthenticatedAdminVideosRoute
+  '/admin/videos': typeof AuthenticatedAdminVideosRouteWithChildren
   '/categories/$slug': typeof AuthenticatedCategoriesSlugRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/v/$id': typeof AuthenticatedVIdRoute
   '/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/creators/': typeof AuthenticatedCreatorsIndexRoute
+  '/admin/videos/$videoId': typeof AuthenticatedAdminVideosVideoIdRoute
   '/api/public/cron/account-deletions': typeof ApiPublicCronAccountDeletionsRoute
   '/api/public/cron/ai-orchestrator': typeof ApiPublicCronAiOrchestratorRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
@@ -259,7 +267,7 @@ export interface FileRoutesByTo {
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
-  '/admin/videos': typeof AuthenticatedAdminVideosRoute
+  '/admin/videos': typeof AuthenticatedAdminVideosRouteWithChildren
   '/categories/$slug': typeof AuthenticatedCategoriesSlugRoute
   '/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
@@ -268,6 +276,7 @@ export interface FileRoutesByTo {
   '/v/$id': typeof AuthenticatedVIdRoute
   '/categories': typeof AuthenticatedCategoriesIndexRoute
   '/creators': typeof AuthenticatedCreatorsIndexRoute
+  '/admin/videos/$videoId': typeof AuthenticatedAdminVideosVideoIdRoute
   '/api/public/cron/account-deletions': typeof ApiPublicCronAccountDeletionsRoute
   '/api/public/cron/ai-orchestrator': typeof ApiPublicCronAiOrchestratorRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
@@ -293,7 +302,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
-  '/_authenticated/admin/videos': typeof AuthenticatedAdminVideosRoute
+  '/_authenticated/admin/videos': typeof AuthenticatedAdminVideosRouteWithChildren
   '/_authenticated/categories/$slug': typeof AuthenticatedCategoriesSlugRoute
   '/_authenticated/creators/$id': typeof AuthenticatedCreatorsIdRoute
   '/_authenticated/leaderboard/archive': typeof AuthenticatedLeaderboardArchiveRoute
@@ -302,6 +311,7 @@ export interface FileRoutesById {
   '/_authenticated/v/$id': typeof AuthenticatedVIdRoute
   '/_authenticated/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/_authenticated/creators/': typeof AuthenticatedCreatorsIndexRoute
+  '/_authenticated/admin/videos/$videoId': typeof AuthenticatedAdminVideosVideoIdRoute
   '/api/public/cron/account-deletions': typeof ApiPublicCronAccountDeletionsRoute
   '/api/public/cron/ai-orchestrator': typeof ApiPublicCronAiOrchestratorRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/v/$id'
     | '/categories/'
     | '/creators/'
+    | '/admin/videos/$videoId'
     | '/api/public/cron/account-deletions'
     | '/api/public/cron/ai-orchestrator'
     | '/api/public/cron/leaderboard'
@@ -368,6 +379,7 @@ export interface FileRouteTypes {
     | '/v/$id'
     | '/categories'
     | '/creators'
+    | '/admin/videos/$videoId'
     | '/api/public/cron/account-deletions'
     | '/api/public/cron/ai-orchestrator'
     | '/api/public/cron/leaderboard'
@@ -401,6 +413,7 @@ export interface FileRouteTypes {
     | '/_authenticated/v/$id'
     | '/_authenticated/categories/'
     | '/_authenticated/creators/'
+    | '/_authenticated/admin/videos/$videoId'
     | '/api/public/cron/account-deletions'
     | '/api/public/cron/ai-orchestrator'
     | '/api/public/cron/leaderboard'
@@ -641,6 +654,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronAccountDeletionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/videos/$videoId': {
+      id: '/_authenticated/admin/videos/$videoId'
+      path: '/$videoId'
+      fullPath: '/admin/videos/$videoId'
+      preLoaderRoute: typeof AuthenticatedAdminVideosVideoIdRouteImport
+      parentRoute: typeof AuthenticatedAdminVideosRoute
+    }
   }
 }
 
@@ -658,6 +678,20 @@ const AuthenticatedLeaderboardRouteWithChildren =
     AuthenticatedLeaderboardRouteChildren,
   )
 
+interface AuthenticatedAdminVideosRouteChildren {
+  AuthenticatedAdminVideosVideoIdRoute: typeof AuthenticatedAdminVideosVideoIdRoute
+}
+
+const AuthenticatedAdminVideosRouteChildren: AuthenticatedAdminVideosRouteChildren =
+  {
+    AuthenticatedAdminVideosVideoIdRoute: AuthenticatedAdminVideosVideoIdRoute,
+  }
+
+const AuthenticatedAdminVideosRouteWithChildren =
+  AuthenticatedAdminVideosRoute._addFileChildren(
+    AuthenticatedAdminVideosRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRouteWithChildren
@@ -670,7 +704,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
-  AuthenticatedAdminVideosRoute: typeof AuthenticatedAdminVideosRoute
+  AuthenticatedAdminVideosRoute: typeof AuthenticatedAdminVideosRouteWithChildren
   AuthenticatedCategoriesSlugRoute: typeof AuthenticatedCategoriesSlugRoute
   AuthenticatedCreatorsIdRoute: typeof AuthenticatedCreatorsIdRoute
   AuthenticatedMeTabRoute: typeof AuthenticatedMeTabRoute
@@ -693,7 +727,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
-  AuthenticatedAdminVideosRoute: AuthenticatedAdminVideosRoute,
+  AuthenticatedAdminVideosRoute: AuthenticatedAdminVideosRouteWithChildren,
   AuthenticatedCategoriesSlugRoute: AuthenticatedCategoriesSlugRoute,
   AuthenticatedCreatorsIdRoute: AuthenticatedCreatorsIdRoute,
   AuthenticatedMeTabRoute: AuthenticatedMeTabRoute,
