@@ -243,7 +243,9 @@ function AdminVideosPage() {
             {total.toLocaleString()} total · inline category & tag editing
           </p>
         </div>
+        <AiMonitorSheet />
       </header>
+
 
       {/* Filters */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
