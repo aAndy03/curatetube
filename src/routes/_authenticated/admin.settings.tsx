@@ -111,7 +111,171 @@ function SettingsPage() {
 
       <SyncHealthSection canEdit={!!canEdit} />
 
+      <AiSettingsSection
+        canEdit={!!canEdit}
+        settings={settings}
+        onSave={(key, value) => save.mutate({ key, value })}
+        saving={save.isPending}
+      />
+
       <MvRefreshSection canEdit={!!canEdit} />
+    </div>
+  );
+}
+
+const AI_MODELS = [
+  "google/gemini-2.5-flash-lite",
+  "google/gemini-2.5-flash",
+  "google/gemini-2.5-pro",
+  "openai/gpt-5-nano",
+  "openai/gpt-5-mini",
+  "openai/gpt-5",
+] as const;
+
+function AiSettingsSection({
+  canEdit,
+  settings,
+  onSave,
+  saving,
+}: {
+  canEdit: boolean;
+  settings: Record<string, unknown>;
+  onSave: (key: string, value: unknown) => void;
+  saving: boolean;
+}) {
+  const num = (k: string, fb: number) =>
+    typeof settings[k] === "number" ? (settings[k] as number) : fb;
+  const str = (k: string, fb: string) =>
+    typeof settings[k] === "string" ? (settings[k] as string) : fb;
+
+  const SLIDERS: Array<{ key: string; label: string; min: number; max: number; step?: number; fallback: number }> = [
+    { key: "ai_max_parallel_agents", label: "Max parallel agents", min: 1, max: 6, fallback: 2 },
+    { key: "ai_session_max_jobs", label: "Jobs per session", min: 5, max: 50, fallback: 20 },
+    { key: "ai_heartbeat_timeout_s", label: "Heartbeat timeout (s)", min: 30, max: 180, step: 10, fallback: 90 },
+    { key: "ai_max_categories_per_video", label: "Max categories per video", min: 1, max: 30, fallback: 30 },
+    { key: "ai_min_tags_secondary", label: "Min secondary tags", min: 10, max: 200, step: 10, fallback: 50 },
+    { key: "ai_stale_threshold_days", label: "Stale threshold (days)", min: 30, max: 730, step: 5, fallback: 365 },
+  ];
+
+  const MODEL_SLOTS: Array<{ key: string; label: string; fallback: string }> = [
+    { key: "ai_user_submit_model", label: "User-submit model", fallback: "google/gemini-2.5-flash-lite" },
+    { key: "ai_admin_model", label: "Admin model", fallback: "openai/gpt-5-mini" },
+    { key: "ai_batch_model", label: "Batch model", fallback: "google/gemini-2.5-flash" },
+  ];
+
+  return (
+    <section className="space-y-3 rounded-md border bg-card p-4">
+      <header>
+        <h2 className="text-base font-semibold">AI orchestration</h2>
+        <p className="text-xs text-muted-foreground">
+          Model selection and runtime controls for AI categorisation & tagging.
+          Hot-reloaded by the orchestrator on each tick.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {MODEL_SLOTS.map((m) => {
+          const value = str(m.key, m.fallback);
+          return (
+            <div key={m.key} className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">{m.label}</label>
+              <select
+                disabled={!canEdit || saving}
+                value={value}
+                onChange={(e) => onSave(m.key, e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                {AI_MODELS.map((mod) => (
+                  <option key={mod} value={mod}>{mod}</option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="space-y-3 pt-2">
+        {SLIDERS.map((s) => (
+          <AiSliderRow
+            key={s.key}
+            label={s.label}
+            min={s.min}
+            max={s.max}
+            step={s.step ?? 1}
+            value={num(s.key, s.fallback)}
+            canEdit={canEdit}
+            saving={saving}
+            onSave={(v) => onSave(s.key, v)}
+          />
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
+        <ToggleRow
+          label="Auto-categorise user submissions"
+          help="When on, new submissions immediately trigger AI categorise + tagging jobs."
+          checked={settings["ai_user_submit_auto"] === true}
+          disabled={!canEdit || saving}
+          onChange={(v) => onSave("ai_user_submit_auto", v)}
+        />
+        <ToggleRow
+          label="Show AI attribution on public video pages"
+          help="Displays a small 'AI-assisted categorisation' chip on /v/$id."
+          checked={settings["show_ai_attribution_on_videos"] === true}
+          disabled={!canEdit || saving}
+          onChange={(v) => onSave("show_ai_attribution_on_videos", v)}
+        />
+      </div>
+    </section>
+  );
+}
+
+function AiSliderRow({
+  label, min, max, step, value, canEdit, saving, onSave,
+}: {
+  label: string; min: number; max: number; step: number; value: number;
+  canEdit: boolean; saving: boolean; onSave: (v: number) => void;
+}) {
+  const [local, setLocal] = React.useState(value);
+  React.useEffect(() => setLocal(value), [value]);
+  const dirty = local !== value;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-56 text-sm">{label}</span>
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={[local]}
+        onValueChange={(v) => setLocal(v[0] ?? value)}
+        disabled={!canEdit}
+        className="flex-1"
+      />
+      <span className="w-16 text-right text-sm tabular-nums">{local}</span>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={!canEdit || !dirty || saving}
+        onClick={() => onSave(local)}
+      >
+        Save
+      </Button>
+    </div>
+  );
+}
+
+function ToggleRow({
+  label, help, checked, disabled, onChange,
+}: {
+  label: string; help: string; checked: boolean; disabled: boolean; onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded border p-3">
+      <div>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{help}</p>
+      </div>
+      <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
     </div>
   );
 }

@@ -210,6 +210,15 @@ function AdminVideoDetailPage() {
           <div className="rounded-xl border bg-card p-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               <Brain className="h-4 w-4" /> AI metadata
+              {(() => {
+                const cat = v.ai_categorised_at;
+                const stale = !cat || Date.now() - new Date(cat).getTime() > 365 * 24 * 3600 * 1000;
+                return stale ? (
+                  <span className="rounded-full border border-amber-500/50 px-1.5 py-0.5 text-[10px] font-normal text-amber-600 dark:text-amber-400">
+                    stale
+                  </span>
+                ) : null;
+              })()}
             </h2>
             <dl className="mt-3 space-y-2 text-sm">
               <Stat

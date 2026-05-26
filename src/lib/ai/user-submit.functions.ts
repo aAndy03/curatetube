@@ -109,7 +109,35 @@ export const getAiResultsForModeration = createServerFn({ method: "POST" })
       .eq("video_id", data.video_id)
       .in("status", ["pending", "claimed", "running"] as never);
 
-    return { results: results ?? [], activeJobs: activeJobs ?? [] };
+    const { data: v } = await supabaseAdmin
+      .from("videos")
+      .select("ai_categorised_at, ai_tagged_at, ai_review_status, ai_confidence_avg")
+      .eq("id", data.video_id)
+      .maybeSingle();
+
+    const { data: staleSetting } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_stale_threshold_days")
+      .maybeSingle();
+    const staleDays =
+      typeof staleSetting?.value === "number"
+        ? (staleSetting.value as number)
+        : 365;
+
+    return {
+      results: results ?? [],
+      activeJobs: activeJobs ?? [],
+      ai_meta: v
+        ? {
+            categorised_at: (v.ai_categorised_at as string | null) ?? null,
+            tagged_at: (v.ai_tagged_at as string | null) ?? null,
+            review_status: (v.ai_review_status as string | null) ?? null,
+            confidence_avg: (v.ai_confidence_avg as number | null) ?? null,
+            stale_threshold_days: staleDays,
+          }
+        : null,
+    };
   });
 
 // ============ acceptAiResultMod / rejectAiResultMod ============

@@ -211,13 +211,43 @@ export const getVideoAttribution = createServerFn({ method: "GET" })
     z.object({ videoId: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data }) => {
-    const { data: setting } = await supabaseAdmin
+    const { data: settings } = await supabaseAdmin
       .from("app_settings")
-      .select("value")
-      .eq("key", "attribution.video_detail_chip")
-      .maybeSingle();
-    const enabled = setting?.value === true;
-    if (!enabled) return { enabled: false, contributors: [] };
+      .select("key, value")
+      .in("key", ["attribution.video_detail_chip", "show_ai_attribution_on_videos"]);
+    const map: Record<string, unknown> = {};
+    for (const s of settings ?? []) map[s.key] = s.value;
+    const enabled = map["attribution.video_detail_chip"] === true;
+    const aiAttribEnabled = map["show_ai_attribution_on_videos"] === true;
+
+    let aiAttribution: {
+      categorisation_model: string | null;
+      tagging_model: string | null;
+      categorised_at: string | null;
+      tagged_at: string | null;
+    } | null = null;
+
+    if (aiAttribEnabled) {
+      const { data: v } = await supabaseAdmin
+        .from("videos")
+        .select(
+          "ai_categorisation_model, ai_tagging_model, ai_categorised_at, ai_tagged_at",
+        )
+        .eq("id", data.videoId)
+        .maybeSingle();
+      if (v && (v.ai_categorised_at || v.ai_tagged_at)) {
+        aiAttribution = {
+          categorisation_model: (v.ai_categorisation_model as string | null) ?? null,
+          tagging_model: (v.ai_tagging_model as string | null) ?? null,
+          categorised_at: (v.ai_categorised_at as string | null) ?? null,
+          tagged_at: (v.ai_tagged_at as string | null) ?? null,
+        };
+      }
+    }
+
+    if (!enabled) {
+      return { enabled: false, contributors: [], ai_attribution: aiAttribution };
+    }
 
     const { data: rows } = await supabaseAdmin
       .from("video_submitters")
@@ -255,7 +285,7 @@ export const getVideoAttribution = createServerFn({ method: "GET" })
         first_submitted_at: r.first_submitted_at,
       };
     });
-    return { enabled: true, contributors };
+    return { enabled: true, contributors, ai_attribution: aiAttribution };
   });
 
 // ============ MV REFRESH LOG / FORCE FLUSH ============

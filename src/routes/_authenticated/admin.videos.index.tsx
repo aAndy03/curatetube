@@ -26,6 +26,8 @@ import {
   addVideoTag,
   removeVideoTag,
   batchUpdateVideos,
+  queueAllStaleAi,
+  getAiCoverage,
   type AdminVideoRow,
 } from "@/lib/admin-videos.functions";
 
@@ -108,6 +110,11 @@ function AdminVideosPage() {
   const [hasPrimary, setHasPrimary] = React.useState<
     "any" | "yes" | "no"
   >("any");
+  const [pendingReviewOnly, setPendingReviewOnly] = React.useState(false);
+  const [sortBy, setSortBy] = React.useState<
+    "published_at" | "ai_confidence_avg"
+  >("published_at");
+  const [showAiCols, setShowAiCols] = React.useState(true);
   const [page, setPage] = React.useState(0);
   const pageSize = 50;
 
@@ -115,7 +122,10 @@ function AdminVideosPage() {
     const t = setTimeout(() => setQDebounced(q), 250);
     return () => clearTimeout(t);
   }, [q]);
-  React.useEffect(() => setPage(0), [qDebounced, categoryId, uncategorized, tagId, hasPrimary]);
+  React.useEffect(
+    () => setPage(0),
+    [qDebounced, categoryId, uncategorized, tagId, hasPrimary, pendingReviewOnly, sortBy],
+  );
 
   const tagsQ = useQuery({
     queryKey: ["admin-all-tags"],
@@ -138,6 +148,8 @@ function AdminVideosPage() {
       uncategorized,
       tagId,
       hasPrimary,
+      pendingReviewOnly,
+      sortBy,
       page,
     ],
     enabled: !!canManage,
@@ -150,10 +162,36 @@ function AdminVideosPage() {
           tag_id: tagId,
           has_primary_tags:
             hasPrimary === "any" ? undefined : hasPrimary === "yes",
+          ai_pending_review_only: pendingReviewOnly || undefined,
+          sort_by: sortBy,
+          sort_dir: sortBy === "ai_confidence_avg" ? "desc" : "desc",
           page,
           page_size: pageSize,
         },
       }),
+  });
+
+  const fetchCoverage = useServerFn(getAiCoverage);
+  const queueStaleFn = useServerFn(queueAllStaleAi);
+  const coverageQ = useQuery({
+    queryKey: ["ai-coverage"],
+    enabled: !!canManage,
+    queryFn: () => fetchCoverage(),
+    staleTime: 60_000,
+  });
+  const queueStale = useMutation({
+    mutationFn: () => queueStaleFn(),
+    onSuccess: (r) => {
+      if (r.jobs_created === 0) {
+        toast.success("No stale videos to re-categorise");
+      } else {
+        toast.success(
+          `Queued ${r.jobs_created} AI jobs across ${r.videos} videos${r.total_stale && r.total_stale > r.videos ? ` (of ${r.total_stale} stale)` : ""}`,
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["ai-coverage"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
   const tags = (tagsQ.data?.tags ?? []) as Tag[];
@@ -246,6 +284,47 @@ function AdminVideosPage() {
         <AiMonitorSheet />
       </header>
 
+      {/* AI coverage widget */}
+      {coverageQ.data ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 text-sm">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              AI coverage
+            </span>
+            <span className="text-lg font-semibold tabular-nums">
+              {coverageQ.data.coverage_pct}%
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {coverageQ.data.ai_fresh.toLocaleString()} fresh ·{" "}
+            <span className="text-amber-600 dark:text-amber-400">
+              {coverageQ.data.ai_stale_or_missing.toLocaleString()} stale/missing
+            </span>{" "}
+            · {coverageQ.data.pending_review.toLocaleString()} pending review ·
+            threshold {coverageQ.data.stale_threshold_days}d
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={pendingReviewOnly ? "default" : "outline"}
+              onClick={() => setPendingReviewOnly((v) => !v)}
+            >
+              {pendingReviewOnly ? "✓ " : ""}Pending review only
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={
+                queueStale.isPending ||
+                coverageQ.data.ai_stale_or_missing === 0
+              }
+              onClick={() => queueStale.mutate()}
+            >
+              {queueStale.isPending ? "Queueing…" : "Queue all stale"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Filters */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
@@ -284,15 +363,42 @@ function AdminVideosPage() {
             <SelectItem value="no">Missing primary tags</SelectItem>
           </SelectContent>
         </Select>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground sm:col-span-4">
-          <Checkbox
-            checked={uncategorized}
-            disabled={!!categoryId}
-            onCheckedChange={(v) => setUncategorized(!!v)}
-          />
-          Show only uncategorized videos
-        </label>
+        <div className="flex flex-wrap items-center gap-4 sm:col-span-4">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={uncategorized}
+              disabled={!!categoryId}
+              onCheckedChange={(v) => setUncategorized(!!v)}
+            />
+            Show only uncategorized videos
+          </label>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={showAiCols}
+              onCheckedChange={(v) => setShowAiCols(!!v)}
+            />
+            Show AI columns
+          </label>
+          <div className="ml-auto flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Sort:</span>
+            <Select
+              value={sortBy}
+              onValueChange={(v) => setSortBy(v as typeof sortBy)}
+            >
+              <SelectTrigger className="h-8 w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="published_at">Newest published</SelectItem>
+                <SelectItem value="ai_confidence_avg">
+                  AI confidence (high → low)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
+
 
       {/* Batch toolbar */}
       {selected.size > 0 ? (
@@ -372,19 +478,27 @@ function AdminVideosPage() {
               <th className="w-16 px-3 py-2 text-right font-medium">Subm</th>
               <th className="w-16 px-3 py-2 text-right font-medium">Sugg</th>
               <th className="w-32 px-3 py-2 font-medium">Approved</th>
+              {showAiCols ? (
+                <>
+                  <th className="w-28 px-3 py-2 font-medium">AI review</th>
+                  <th className="w-20 px-3 py-2 text-right font-medium">
+                    AI conf.
+                  </th>
+                </>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {videosQ.isLoading ? (
               <tr>
-                <td colSpan={10} className="p-4">
+                <td colSpan={showAiCols ? 12 : 10} className="p-4">
                   <Skeleton className="h-72 w-full" />
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={showAiCols ? 12 : 10}
                   className="px-3 py-12 text-center text-muted-foreground"
                 >
                   No videos match these filters.
@@ -400,6 +514,10 @@ function AdminVideosPage() {
                   flatTree={flatTree}
                   allTags={tags}
                   selected={selected.has(v.id)}
+                  showAiCols={showAiCols}
+                  staleThresholdDays={
+                    coverageQ.data?.stale_threshold_days ?? 365
+                  }
                   onToggle={(checked) => {
                     const next = new Set(selected);
                     if (checked) {
@@ -467,6 +585,8 @@ function VideoRow({
   flatTree,
   allTags,
   selected,
+  showAiCols,
+  staleThresholdDays,
   onToggle,
   onAddCat,
   onRmCat,
@@ -479,6 +599,8 @@ function VideoRow({
   flatTree: Array<{ id: string; label: string; depth: number }>;
   allTags: Tag[];
   selected: boolean;
+  showAiCols: boolean;
+  staleThresholdDays: number;
   onToggle: (v: boolean) => void;
   onAddCat: (id: string) => void;
   onRmCat: (id: string) => void;
@@ -486,6 +608,19 @@ function VideoRow({
   onRmTag: (id: string) => void;
 }) {
   const atCatCap = video.category_ids.length >= 5;
+  const staleMs = staleThresholdDays * 24 * 3600 * 1000;
+  const aiStale =
+    !video.ai_categorised_at ||
+    Date.now() - new Date(video.ai_categorised_at).getTime() > staleMs;
+  const conf = video.ai_confidence_avg;
+  const confTone =
+    conf == null
+      ? "text-muted-foreground"
+      : conf >= 0.8
+        ? "text-emerald-600 dark:text-emerald-400"
+        : conf >= 0.5
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-destructive";
   return (
     <tr className="border-b align-top last:border-b-0 hover:bg-muted/30">
       <td className="px-3 py-2">
@@ -521,6 +656,11 @@ function VideoRow({
           </Link>
           {video.category_ids.length === 0 ? (
             <span className="text-amber-600">Uncategorized</span>
+          ) : null}
+          {aiStale ? (
+            <span className="rounded-full border border-amber-500/50 px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-400">
+              AI stale
+            </span>
           ) : null}
         </div>
       </td>
@@ -607,6 +747,22 @@ function VideoRow({
           ? new Date(video.approved_at).toLocaleDateString()
           : "—"}
       </td>
+      {showAiCols ? (
+        <>
+          <td className="px-3 py-2 text-xs">
+            {video.ai_review_status && video.ai_review_status !== "none" ? (
+              <Badge variant="outline" className="text-[10px]">
+                {video.ai_review_status.replace(/_/g, " ")}
+              </Badge>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </td>
+          <td className={`px-3 py-2 text-right text-xs tabular-nums ${confTone}`}>
+            {conf != null ? `${Math.round(conf * 100)}%` : "—"}
+          </td>
+        </>
+      ) : null}
     </tr>
   );
 }
