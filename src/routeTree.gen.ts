@@ -38,6 +38,7 @@ import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authentic
 import { Route as ApiPublicCronSessionExpiryWarnRouteImport } from './routes/api/public/cron/session-expiry-warn'
 import { Route as ApiPublicCronRefreshMvsRouteImport } from './routes/api/public/cron/refresh-mvs'
 import { Route as ApiPublicCronLeaderboardRouteImport } from './routes/api/public/cron/leaderboard'
+import { Route as ApiPublicCronAiOrchestratorRouteImport } from './routes/api/public/cron/ai-orchestrator'
 import { Route as ApiPublicCronAccountDeletionsRouteImport } from './routes/api/public/cron/account-deletions'
 
 const TermsRoute = TermsRouteImport.update({
@@ -196,6 +197,12 @@ const ApiPublicCronLeaderboardRoute =
     path: '/api/public/cron/leaderboard',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronAiOrchestratorRoute =
+  ApiPublicCronAiOrchestratorRouteImport.update({
+    id: '/api/public/cron/ai-orchestrator',
+    path: '/api/public/cron/ai-orchestrator',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronAccountDeletionsRoute =
   ApiPublicCronAccountDeletionsRouteImport.update({
     id: '/api/public/cron/account-deletions',
@@ -230,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/creators/': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/account-deletions': typeof ApiPublicCronAccountDeletionsRoute
+  '/api/public/cron/ai-orchestrator': typeof ApiPublicCronAiOrchestratorRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
@@ -261,6 +269,7 @@ export interface FileRoutesByTo {
   '/categories': typeof AuthenticatedCategoriesIndexRoute
   '/creators': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/account-deletions': typeof ApiPublicCronAccountDeletionsRoute
+  '/api/public/cron/ai-orchestrator': typeof ApiPublicCronAiOrchestratorRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
@@ -294,6 +303,7 @@ export interface FileRoutesById {
   '/_authenticated/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/_authenticated/creators/': typeof AuthenticatedCreatorsIndexRoute
   '/api/public/cron/account-deletions': typeof ApiPublicCronAccountDeletionsRoute
+  '/api/public/cron/ai-orchestrator': typeof ApiPublicCronAiOrchestratorRoute
   '/api/public/cron/leaderboard': typeof ApiPublicCronLeaderboardRoute
   '/api/public/cron/refresh-mvs': typeof ApiPublicCronRefreshMvsRoute
   '/api/public/cron/session-expiry-warn': typeof ApiPublicCronSessionExpiryWarnRoute
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/categories/'
     | '/creators/'
     | '/api/public/cron/account-deletions'
+    | '/api/public/cron/ai-orchestrator'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/creators'
     | '/api/public/cron/account-deletions'
+    | '/api/public/cron/ai-orchestrator'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
@@ -390,6 +402,7 @@ export interface FileRouteTypes {
     | '/_authenticated/categories/'
     | '/_authenticated/creators/'
     | '/api/public/cron/account-deletions'
+    | '/api/public/cron/ai-orchestrator'
     | '/api/public/cron/leaderboard'
     | '/api/public/cron/refresh-mvs'
     | '/api/public/cron/session-expiry-warn'
@@ -403,6 +416,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   ApiPublicCronAccountDeletionsRoute: typeof ApiPublicCronAccountDeletionsRoute
+  ApiPublicCronAiOrchestratorRoute: typeof ApiPublicCronAiOrchestratorRoute
   ApiPublicCronLeaderboardRoute: typeof ApiPublicCronLeaderboardRoute
   ApiPublicCronRefreshMvsRoute: typeof ApiPublicCronRefreshMvsRoute
   ApiPublicCronSessionExpiryWarnRoute: typeof ApiPublicCronSessionExpiryWarnRoute
@@ -613,6 +627,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronLeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/ai-orchestrator': {
+      id: '/api/public/cron/ai-orchestrator'
+      path: '/api/public/cron/ai-orchestrator'
+      fullPath: '/api/public/cron/ai-orchestrator'
+      preLoaderRoute: typeof ApiPublicCronAiOrchestratorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/account-deletions': {
       id: '/api/public/cron/account-deletions'
       path: '/api/public/cron/account-deletions'
@@ -694,6 +715,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   ApiPublicCronAccountDeletionsRoute: ApiPublicCronAccountDeletionsRoute,
+  ApiPublicCronAiOrchestratorRoute: ApiPublicCronAiOrchestratorRoute,
   ApiPublicCronLeaderboardRoute: ApiPublicCronLeaderboardRoute,
   ApiPublicCronRefreshMvsRoute: ApiPublicCronRefreshMvsRoute,
   ApiPublicCronSessionExpiryWarnRoute: ApiPublicCronSessionExpiryWarnRoute,

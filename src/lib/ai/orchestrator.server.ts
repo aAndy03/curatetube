@@ -211,15 +211,11 @@ async function completeJob(jobId: string, args: { model: string; prompt_tokens: 
 
 async function stampVideoAi(videoId: string, jobType: AiJobType, model: string, avgConfidence: number) {
   const now = new Date().toISOString();
-  const patch: Record<string, unknown> = {};
-  if (jobType === "categorise") {
-    patch.ai_categorised_at = now;
-    patch.ai_categorisation_model = model;
-  } else {
-    patch.ai_tagged_at = now;
-    patch.ai_tagging_model = model;
-  }
-  if (Number.isFinite(avgConfidence)) patch.ai_confidence_avg = avgConfidence;
+  const conf = Number.isFinite(avgConfidence) ? avgConfidence : null;
+  const patch =
+    jobType === "categorise"
+      ? { ai_categorised_at: now, ai_categorisation_model: model, ai_confidence_avg: conf }
+      : { ai_tagged_at: now, ai_tagging_model: model, ai_confidence_avg: conf };
   await supabaseAdmin.from("videos").update(patch).eq("id", videoId);
 }
 
