@@ -55,6 +55,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { BatchAiPopover, AiMonitorSheet } from "@/components/admin-ai-controls";
 
 export const Route = createFileRoute("/_authenticated/admin/videos/")({
   beforeLoad: async () => {
@@ -242,7 +243,9 @@ function AdminVideosPage() {
             {total.toLocaleString()} total · inline category & tag editing
           </p>
         </div>
+        <AiMonitorSheet />
       </header>
+
 
       {/* Filters */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
@@ -320,6 +323,10 @@ function AdminVideosPage() {
                 id && batch.mutate({ op: "add_tag", tag_id: id })
               }
               placeholder="+ Add tag"
+            />
+            <BatchAiPopover
+              selectedIds={Array.from(selected)}
+              onDispatched={() => setSelected(new Set())}
             />
             <Button
               size="sm"
