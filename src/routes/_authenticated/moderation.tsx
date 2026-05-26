@@ -437,6 +437,12 @@ function AiSuggestionsPanel({ videoId, readOnly }: { videoId: string; readOnly: 
 
   const results = data?.results ?? [];
   const active = data?.activeJobs ?? [];
+  const aiMeta = (data as { ai_meta?: { categorised_at: string | null; stale_threshold_days: number } } | undefined)?.ai_meta;
+  const aiStale =
+    !!aiMeta &&
+    (!aiMeta.categorised_at ||
+      Date.now() - new Date(aiMeta.categorised_at).getTime() >
+        aiMeta.stale_threshold_days * 24 * 3600 * 1000);
 
   const grouped = React.useMemo(() => {
     const m: Record<string, typeof results> = {
