@@ -5,6 +5,16 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { writeAudit } from "../audit.server";
+import { tick as runOrchestratorTick } from "./orchestrator.server";
+
+async function kickOrchestrator(): Promise<void> {
+  try {
+    await runOrchestratorTick();
+  } catch (e) {
+    console.error("[kickOrchestrator]", e instanceof Error ? e.message : e);
+  }
+}
+
 
 async function requireAnyPerm(userId: string, keys: string[]) {
   for (const k of keys) {
