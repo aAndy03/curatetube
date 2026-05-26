@@ -26,6 +26,8 @@ import {
   addVideoTag,
   removeVideoTag,
   batchUpdateVideos,
+  queueAllStaleAi,
+  getAiCoverage,
   type AdminVideoRow,
 } from "@/lib/admin-videos.functions";
 
