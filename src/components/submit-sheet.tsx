@@ -11,6 +11,7 @@ import {
   type PreviewResult,
   type SuggestionChip,
 } from "@/lib/submit.functions";
+import { dispatchUserSubmitAi } from "@/lib/ai/user-submit.functions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
