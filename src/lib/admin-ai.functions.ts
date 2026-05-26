@@ -222,21 +222,30 @@ export const listAiBatches = createServerFn({ method: "POST" })
         agg.first_created_at = j.created_at as string;
     }
 
-    // Confidence averages from ai_job_results joined by job ids.
+    // Confidence averages from ai_job_results aggregated per batch.
     const batchIds = Array.from(map.keys());
     const avgConfByBatch = new Map<string, { sum: number; n: number }>();
     if (batchIds.length > 0) {
-      const { data: results } = await supabaseAdmin
-        .from("ai_job_results")
-        .select("confidence, job:ai_jobs!inner(batch_id)")
-        .in("job.batch_id", batchIds as never);
-      for (const r of results ?? []) {
-        const bid = (r as { job: { batch_id: string } }).job?.batch_id;
-        if (!bid) continue;
-        const a = avgConfByBatch.get(bid) ?? { sum: 0, n: 0 };
-        a.sum += (r.confidence as number) ?? 0;
-        a.n += 1;
-        avgConfByBatch.set(bid, a);
+      const jobIdToBatch = new Map<string, string>();
+      for (const j of jobs ?? []) {
+        if (j.batch_id) jobIdToBatch.set(j.id, j.batch_id as string);
+      }
+      const allJobIds = Array.from(jobIdToBatch.keys());
+      const chunkSize = 500;
+      for (let i = 0; i < allJobIds.length; i += chunkSize) {
+        const chunk = allJobIds.slice(i, i + chunkSize);
+        const { data: results } = await supabaseAdmin
+          .from("ai_job_results")
+          .select("job_id, confidence")
+          .in("job_id", chunk);
+        for (const r of results ?? []) {
+          const bid = jobIdToBatch.get(r.job_id as string);
+          if (!bid) continue;
+          const a = avgConfByBatch.get(bid) ?? { sum: 0, n: 0 };
+          a.sum += (r.confidence as number) ?? 0;
+          a.n += 1;
+          avgConfByBatch.set(bid, a);
+        }
       }
     }
 
