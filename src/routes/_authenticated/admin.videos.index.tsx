@@ -55,6 +55,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { BatchAiPopover, AiMonitorSheet } from "@/components/admin-ai-controls";
 
 export const Route = createFileRoute("/_authenticated/admin/videos/")({
   beforeLoad: async () => {
