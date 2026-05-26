@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   useMutation,
@@ -497,21 +497,21 @@ function VideoRow({
         )}
       </td>
       <td className="px-3 py-2">
-        <a
-          href={`/admin/videos/${video.id}`}
+        <Link
+          to="/admin/videos/$videoId"
+          params={{ videoId: video.id }}
           className="line-clamp-2 font-medium hover:underline"
         >
           {video.title}
-        </a>
+        </Link>
         <div className="mt-0.5 flex items-center gap-2 text-xs">
-          <a
-            href={`/v/${video.id}`}
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            to="/v/$id"
+            params={{ id: video.id }}
             className="text-muted-foreground hover:underline"
           >
             View public ↗
-          </a>
+          </Link>
           {video.category_ids.length === 0 ? (
             <span className="text-amber-600">Uncategorized</span>
           ) : null}
