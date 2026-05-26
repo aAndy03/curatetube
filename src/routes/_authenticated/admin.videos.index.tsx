@@ -56,7 +56,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/admin/videos")({
+export const Route = createFileRoute("/_authenticated/admin/videos/")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/login" });
