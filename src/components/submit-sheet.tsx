@@ -266,6 +266,13 @@ export function SubmitSheet({ open, onOpenChange }: SubmitSheetProps) {
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">Submission results</p>
+                {aiQueued > 0 ? (
+                  <div className="flex items-center gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Categorising with AI in the background ({aiQueued} task{aiQueued === 1 ? "" : "s"} queued).
+                    Moderators will see the suggestions when they review.
+                  </div>
+                ) : null}
                 <ul className="space-y-2">
                   {results.map((r, i) => (
                     <li key={i} className="rounded-md border p-3 text-sm">
