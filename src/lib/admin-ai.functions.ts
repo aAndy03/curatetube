@@ -123,15 +123,26 @@ export const listAiSessions = createServerFn({ method: "POST" })
     const jobIds = (data ?? [])
       .map((s) => s.current_job_id)
       .filter((x): x is string => !!x);
-    let jobTitleById = new Map<string, string>();
+    const jobTitleById = new Map<string, string>();
     if (jobIds.length > 0) {
       const { data: jobs } = await supabaseAdmin
         .from("ai_jobs")
-        .select("id, video:videos(title)")
+        .select("id, video_id")
         .in("id", jobIds);
+      const vids = (jobs ?? [])
+        .map((j) => j.video_id as string)
+        .filter(Boolean);
+      const titleByVid = new Map<string, string>();
+      if (vids.length > 0) {
+        const { data: vrows } = await supabaseAdmin
+          .from("videos")
+          .select("id, title")
+          .in("id", vids);
+        for (const v of vrows ?? []) titleByVid.set(v.id, v.title);
+      }
       for (const j of jobs ?? []) {
-        const title = (j as { video: { title: string } | null }).video?.title;
-        if (title) jobTitleById.set(j.id, title);
+        const t = titleByVid.get(j.video_id as string);
+        if (t) jobTitleById.set(j.id, t);
       }
     }
 
