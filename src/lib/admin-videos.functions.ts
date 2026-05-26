@@ -350,3 +350,125 @@ export const batchUpdateVideos = createServerFn({ method: "POST" })
     });
     return { ok, skipped };
   });
+
+// ============ Stale-AI helpers (Phase 7) ============
+async function getAiStaleThresholdMs(): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", "ai_stale_threshold_days")
+    .maybeSingle();
+  const days = typeof data?.value === "number" ? (data.value as number) : 365;
+  return Math.max(1, days) * 24 * 3600 * 1000;
+}
+
+export const queueAllStaleAi = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requirePerm(context.userId, "library.manage");
+
+    const staleMs = await getAiStaleThresholdMs();
+    const cutoff = new Date(Date.now() - staleMs).toISOString();
+
+    const { data: vids } = await supabaseAdmin
+      .from("videos")
+      .select("id, ai_categorised_at")
+      .eq("status", "approved")
+      .or(`ai_categorised_at.is.null,ai_categorised_at.lt.${cutoff}`)
+      .limit(2000);
+
+    const ids = (vids ?? []).map((v) => v.id);
+    if (ids.length === 0) {
+      return { ok: true, jobs_created: 0, videos: 0, batch_id: null };
+    }
+
+    const { data: capSetting } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_max_batch_size")
+      .maybeSingle();
+    const cap =
+      typeof capSetting?.value === "number" ? (capSetting.value as number) : 500;
+
+    const tasks = ["categorise", "tag_primary", "tag_secondary"] as const;
+    const maxVideos = Math.max(1, Math.floor(cap / tasks.length));
+    const selectedIds = ids.slice(0, maxVideos);
+
+    const batchId = crypto.randomUUID();
+    const rows: Array<Record<string, unknown>> = [];
+    for (const vid of selectedIds) {
+      for (const t of tasks) {
+        rows.push({
+          job_type: t,
+          scope: "admin_batch",
+          video_id: vid,
+          batch_id: batchId,
+          status: "pending",
+          priority: 6,
+          created_by: context.userId,
+        });
+      }
+    }
+    const { error } = await supabaseAdmin
+      .from("ai_jobs")
+      .insert(rows as never);
+    if (error) throw new Error(error.message);
+
+    await writeAudit(supabaseAdmin, {
+      actorId: context.userId,
+      action: "ai.batch_dispatched",
+      targetType: "ai_batch",
+      targetId: batchId,
+      after: {
+        reason: "queue_all_stale",
+        videos: selectedIds.length,
+        jobs: rows.length,
+      },
+      visibility: "staff",
+    });
+
+    return {
+      ok: true,
+      jobs_created: rows.length,
+      videos: selectedIds.length,
+      batch_id: batchId,
+      total_stale: ids.length,
+    };
+  });
+
+export const getAiCoverage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requirePerm(context.userId, "library.manage");
+
+    const staleMs = await getAiStaleThresholdMs();
+    const cutoff = new Date(Date.now() - staleMs).toISOString();
+
+    const [{ count: approved }, { count: fresh }, { count: pendingReview }] =
+      await Promise.all([
+        supabaseAdmin
+          .from("videos")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "approved"),
+        supabaseAdmin
+          .from("videos")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "approved")
+          .gte("ai_categorised_at", cutoff),
+        supabaseAdmin
+          .from("videos")
+          .select("id", { count: "exact", head: true })
+          .eq("ai_review_status", "pending_review" as never),
+      ]);
+
+    const a = approved ?? 0;
+    const f = fresh ?? 0;
+    return {
+      approved_total: a,
+      ai_fresh: f,
+      ai_stale_or_missing: Math.max(0, a - f),
+      pending_review: pendingReview ?? 0,
+      coverage_pct: a > 0 ? Math.round((f / a) * 100) : 0,
+      stale_threshold_days: Math.round(staleMs / (24 * 3600 * 1000)),
+    };
+  });
