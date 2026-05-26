@@ -22,6 +22,28 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: "https://curatetube.lovable.app/" },
     ],
     links: [{ rel: "canonical", href: "https://curatetube.lovable.app/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "CurateTube",
+          url: "https://curatetube.lovable.app/",
+          description:
+            "Community-curated YouTube database. Contributors submit, moderators curate, and the best videos rise via suggestions and time-anchored leaderboards.",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "CurateTube",
+          url: "https://curatetube.lovable.app/",
+        }),
+      },
+    ],
   }),
   component: Landing,
 });
