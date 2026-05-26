@@ -3,6 +3,29 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { writeAudit } from "./audit.server";
+import { tick as runOrchestratorTick } from "./ai/orchestrator.server";
+
+// Best-effort: run the orchestrator inline. Errors are swallowed so that
+// dispatch endpoints never fail because of a transient AI gateway error.
+async function kickOrchestrator(): Promise<void> {
+  try {
+    await runOrchestratorTick();
+  } catch (e) {
+    console.error("[kickOrchestrator]", e instanceof Error ? e.message : e);
+  }
+}
+
+// Manually trigger an orchestrator tick (drains pending AI jobs). Used by
+// the admin AI monitor sheet's polling loop and the "Run now" button.
+export const runAiTickNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requirePerm(context.userId, "library.manage");
+    const result = await runOrchestratorTick();
+    return { ok: true, ...result };
+  });
+
+
 
 async function requirePerm(userId: string, key: string) {
   const { data } = await supabaseAdmin.rpc("has_permission", {
