@@ -284,6 +284,47 @@ function AdminVideosPage() {
         <AiMonitorSheet />
       </header>
 
+      {/* AI coverage widget */}
+      {coverageQ.data ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 text-sm">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              AI coverage
+            </span>
+            <span className="text-lg font-semibold tabular-nums">
+              {coverageQ.data.coverage_pct}%
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {coverageQ.data.ai_fresh.toLocaleString()} fresh ·{" "}
+            <span className="text-amber-600 dark:text-amber-400">
+              {coverageQ.data.ai_stale_or_missing.toLocaleString()} stale/missing
+            </span>{" "}
+            · {coverageQ.data.pending_review.toLocaleString()} pending review ·
+            threshold {coverageQ.data.stale_threshold_days}d
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={pendingReviewOnly ? "default" : "outline"}
+              onClick={() => setPendingReviewOnly((v) => !v)}
+            >
+              {pendingReviewOnly ? "✓ " : ""}Pending review only
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={
+                queueStale.isPending ||
+                coverageQ.data.ai_stale_or_missing === 0
+              }
+              onClick={() => queueStale.mutate()}
+            >
+              {queueStale.isPending ? "Queueing…" : "Queue all stale"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Filters */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
@@ -322,15 +363,42 @@ function AdminVideosPage() {
             <SelectItem value="no">Missing primary tags</SelectItem>
           </SelectContent>
         </Select>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground sm:col-span-4">
-          <Checkbox
-            checked={uncategorized}
-            disabled={!!categoryId}
-            onCheckedChange={(v) => setUncategorized(!!v)}
-          />
-          Show only uncategorized videos
-        </label>
+        <div className="flex flex-wrap items-center gap-4 sm:col-span-4">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={uncategorized}
+              disabled={!!categoryId}
+              onCheckedChange={(v) => setUncategorized(!!v)}
+            />
+            Show only uncategorized videos
+          </label>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={showAiCols}
+              onCheckedChange={(v) => setShowAiCols(!!v)}
+            />
+            Show AI columns
+          </label>
+          <div className="ml-auto flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Sort:</span>
+            <Select
+              value={sortBy}
+              onValueChange={(v) => setSortBy(v as typeof sortBy)}
+            >
+              <SelectTrigger className="h-8 w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="published_at">Newest published</SelectItem>
+                <SelectItem value="ai_confidence_avg">
+                  AI confidence (high → low)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
+
 
       {/* Batch toolbar */}
       {selected.size > 0 ? (
