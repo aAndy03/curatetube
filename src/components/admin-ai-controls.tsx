@@ -300,7 +300,18 @@ export function AiMonitorSheet() {
           <SheetDescription>
             Live status of AI agent sessions and batch queue.
           </SheetDescription>
+          <div className="mt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={tickM.isPending}
+              onClick={() => tickM.mutate()}
+            >
+              {tickM.isPending ? "Running…" : "Run now"}
+            </Button>
+          </div>
         </SheetHeader>
+
 
         <section className="mt-6">
           <h3 className="mb-2 text-sm font-semibold">Active sessions</h3>
