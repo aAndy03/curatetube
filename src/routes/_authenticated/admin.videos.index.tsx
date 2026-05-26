@@ -657,6 +657,11 @@ function VideoRow({
           {video.category_ids.length === 0 ? (
             <span className="text-amber-600">Uncategorized</span>
           ) : null}
+          {aiStale ? (
+            <span className="rounded-full border border-amber-500/50 px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-400">
+              AI stale
+            </span>
+          ) : null}
         </div>
       </td>
       <td className="px-3 py-2 text-muted-foreground">
