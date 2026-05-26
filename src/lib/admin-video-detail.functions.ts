@@ -45,16 +45,17 @@ export const getVideoDetail = createServerFn({ method: "POST" })
         .order("rank", { ascending: true }),
     ]);
 
-    return {
-      video,
-      categories: (vcs ?? [])
-        .map((r) => (r as { category: unknown }).category)
-        .filter(Boolean),
-      tags: (vts ?? []).map((r) => ({
-        rank: (r as { rank: number }).rank,
-        ...((r as { tag: Record<string, unknown> }).tag ?? {}),
-      })),
-    };
+    type CategoryRow = { id: string; slug: string; name: string; depth: number; parent_id: string | null };
+    type TagRow = { id: string; slug: string; name: string; is_platform_tag: boolean; tier: string };
+    const categories: CategoryRow[] = (vcs ?? [])
+      .map((r) => (r as { category: CategoryRow | null }).category)
+      .filter((c): c is CategoryRow => !!c);
+    const tags = (vts ?? []).map((r) => {
+      const row = r as { rank: number; tag: TagRow | null };
+      return { rank: row.rank, tag: row.tag };
+    });
+
+    return { video, categories, tags };
   });
 
 // ============ getAiResultsForVideo ============
