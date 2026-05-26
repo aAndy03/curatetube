@@ -110,6 +110,11 @@ function AdminVideosPage() {
   const [hasPrimary, setHasPrimary] = React.useState<
     "any" | "yes" | "no"
   >("any");
+  const [pendingReviewOnly, setPendingReviewOnly] = React.useState(false);
+  const [sortBy, setSortBy] = React.useState<
+    "published_at" | "ai_confidence_avg"
+  >("published_at");
+  const [showAiCols, setShowAiCols] = React.useState(true);
   const [page, setPage] = React.useState(0);
   const pageSize = 50;
 
@@ -117,7 +122,10 @@ function AdminVideosPage() {
     const t = setTimeout(() => setQDebounced(q), 250);
     return () => clearTimeout(t);
   }, [q]);
-  React.useEffect(() => setPage(0), [qDebounced, categoryId, uncategorized, tagId, hasPrimary]);
+  React.useEffect(
+    () => setPage(0),
+    [qDebounced, categoryId, uncategorized, tagId, hasPrimary, pendingReviewOnly, sortBy],
+  );
 
   const tagsQ = useQuery({
     queryKey: ["admin-all-tags"],
