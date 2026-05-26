@@ -478,19 +478,27 @@ function AdminVideosPage() {
               <th className="w-16 px-3 py-2 text-right font-medium">Subm</th>
               <th className="w-16 px-3 py-2 text-right font-medium">Sugg</th>
               <th className="w-32 px-3 py-2 font-medium">Approved</th>
+              {showAiCols ? (
+                <>
+                  <th className="w-28 px-3 py-2 font-medium">AI review</th>
+                  <th className="w-20 px-3 py-2 text-right font-medium">
+                    AI conf.
+                  </th>
+                </>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {videosQ.isLoading ? (
               <tr>
-                <td colSpan={10} className="p-4">
+                <td colSpan={showAiCols ? 12 : 10} className="p-4">
                   <Skeleton className="h-72 w-full" />
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={showAiCols ? 12 : 10}
                   className="px-3 py-12 text-center text-muted-foreground"
                 >
                   No videos match these filters.
@@ -506,6 +514,10 @@ function AdminVideosPage() {
                   flatTree={flatTree}
                   allTags={tags}
                   selected={selected.has(v.id)}
+                  showAiCols={showAiCols}
+                  staleThresholdDays={
+                    coverageQ.data?.stale_threshold_days ?? 365
+                  }
                   onToggle={(checked) => {
                     const next = new Set(selected);
                     if (checked) {
