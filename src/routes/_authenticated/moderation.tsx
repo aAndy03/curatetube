@@ -3,12 +3,18 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
-import { Check, X, Loader2, Eye, Users, Sparkles } from "lucide-react";
+import { Check, X, Loader2, Eye, Users, Sparkles, RefreshCw, ThumbsUp, ThumbsDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { listSubmissionQueue, moderateSubmission } from "@/lib/library.functions";
 import { getCategoryTree } from "@/lib/categories.functions";
 import { useTagsCache } from "@/hooks/use-tags-cache";
+import {
+  getAiResultsForModeration,
+  acceptAiResultMod,
+  rejectAiResultMod,
+  rerunVideoAi,
+} from "@/lib/ai/user-submit.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
