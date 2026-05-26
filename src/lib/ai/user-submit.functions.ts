@@ -320,9 +320,12 @@ export const rerunVideoAi = createServerFn({ method: "POST" })
       visibility: "staff",
     });
 
+    if (rows.length > 0) await kickOrchestrator();
+
     return {
       ok: true,
       jobs_created: rows.length,
       run_version: nextVersion,
     };
   });
+
