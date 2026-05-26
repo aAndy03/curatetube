@@ -11,6 +11,7 @@ import {
   type PreviewResult,
   type SuggestionChip,
 } from "@/lib/submit.functions";
+import { dispatchUserSubmitAi } from "@/lib/ai/user-submit.functions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,6 +47,8 @@ function formatResetIn(iso: string | null): string {
 export function SubmitSheet({ open, onOpenChange }: SubmitSheetProps) {
   const submitFn = useServerFn(submitVideos);
   const quotaFn = useServerFn(getSubmitQuota);
+  const aiDispatchFn = useServerFn(dispatchUserSubmitAi);
+  const [aiQueued, setAiQueued] = React.useState(0);
   const [rows, setRows] = React.useState<UrlRowState[]>([
     { url: "", selectedCategoryIds: [], selectedTagIds: [] },
   ]);
@@ -68,6 +71,7 @@ export function SubmitSheet({ open, onOpenChange }: SubmitSheetProps) {
     setWarnings([]);
     setAnonymous(false);
     setResults(null);
+    setAiQueued(0);
   };
 
   const cleanedUrls = rows.map((r) => r.url.trim()).filter(Boolean);
@@ -94,13 +98,32 @@ export function SubmitSheet({ open, onOpenChange }: SubmitSheetProps) {
         },
       });
     },
-    onSuccess: (r) => {
+    onSuccess: async (r) => {
       setResults(r.results);
       const ok = r.results.filter((x) => x.status === "pending").length;
       const dup = r.results.filter((x) => x.status === "duplicate").length;
       const bad = r.results.filter((x) => x.status === "invalid").length;
       toast.success(`${ok} queued · ${dup} already in library · ${bad} invalid`);
       quotaQuery.refetch();
+
+      // Phase 6 — fire-and-forget user_submit AI jobs for every video that
+      // came back with a videoId. Never block the submit flow on this.
+      const videoIds = Array.from(
+        new Set(
+          r.results
+            .map((x) => x.videoId)
+            .filter((id): id is string => typeof id === "string"),
+        ),
+      );
+      if (videoIds.length > 0) {
+        try {
+          const res = await aiDispatchFn({ data: { video_ids: videoIds } });
+          setAiQueued(res.dispatched ?? 0);
+        } catch (err) {
+          // Silent — AI assist is non-blocking.
+          console.warn("[submit-sheet] AI dispatch failed", err);
+        }
+      }
     },
     onError: (e: unknown) => {
       toast.error(e instanceof Error ? e.message : "Submission failed");
@@ -243,6 +266,13 @@ export function SubmitSheet({ open, onOpenChange }: SubmitSheetProps) {
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">Submission results</p>
+                {aiQueued > 0 ? (
+                  <div className="flex items-center gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Categorising with AI in the background ({aiQueued} task{aiQueued === 1 ? "" : "s"} queued).
+                    Moderators will see the suggestions when they review.
+                  </div>
+                ) : null}
                 <ul className="space-y-2">
                   {results.map((r, i) => (
                     <li key={i} className="rounded-md border p-3 text-sm">
