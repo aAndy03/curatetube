@@ -747,6 +747,22 @@ function VideoRow({
           ? new Date(video.approved_at).toLocaleDateString()
           : "—"}
       </td>
+      {showAiCols ? (
+        <>
+          <td className="px-3 py-2 text-xs">
+            {video.ai_review_status && video.ai_review_status !== "none" ? (
+              <Badge variant="outline" className="text-[10px]">
+                {video.ai_review_status.replace(/_/g, " ")}
+              </Badge>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </td>
+          <td className={`px-3 py-2 text-right text-xs tabular-nums ${confTone}`}>
+            {conf != null ? `${Math.round(conf * 100)}%` : "—"}
+          </td>
+        </>
+      ) : null}
     </tr>
   );
 }
