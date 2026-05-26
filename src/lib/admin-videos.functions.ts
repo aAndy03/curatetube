@@ -162,6 +162,10 @@ export const listAdminVideos = createServerFn({ method: "POST" })
         category_ids: catMap.get(r.id) ?? [],
         tag_ids: tagMap.get(r.id) ?? [],
         tag_total: (tagMap.get(r.id) ?? []).length,
+        ai_categorised_at: r.ai_categorised_at ?? null,
+        ai_tagged_at: r.ai_tagged_at ?? null,
+        ai_review_status: r.ai_review_status ?? null,
+        ai_confidence_avg: r.ai_confidence_avg ?? null,
       })),
       total: count ?? 0,
     };
