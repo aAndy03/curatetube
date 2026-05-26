@@ -259,16 +259,6 @@ export function AiMonitorSheet() {
 
 
 
-  const hasActive = (batchesQ.data?.batches ?? []).some(
-    (b) => b.counts.pending + b.counts.claimed + b.counts.running > 0,
-  );
-
-  // Adaptive: slow to 30s when nothing active
-  React.useEffect(() => {
-    if (!open) return;
-    // re-fetch toggle: react-query refetchInterval handled above. This effect
-    // is purely so React notices `hasActive` changes if needed.
-  }, [open, hasActive]);
 
   const pauseM = useMutation({
     mutationFn: (batch_id: string) => pause({ data: { batch_id } }),
