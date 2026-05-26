@@ -22,6 +22,9 @@ const ListInput = z.object({
   date_from: z.string().datetime().optional(),
   date_to: z.string().datetime().optional(),
   has_primary_tags: z.boolean().optional(),
+  ai_pending_review_only: z.boolean().optional(),
+  sort_by: z.enum(["published_at", "ai_confidence_avg"]).optional(),
+  sort_dir: z.enum(["asc", "desc"]).optional(),
   page: z.number().int().min(0).max(2000).default(0),
   page_size: z.number().int().min(1).max(100).default(50),
 });
@@ -39,6 +42,10 @@ export type AdminVideoRow = {
   category_ids: string[];
   tag_ids: string[];
   tag_total: number;
+  ai_categorised_at: string | null;
+  ai_tagged_at: string | null;
+  ai_review_status: string | null;
+  ai_confidence_avg: number | null;
 };
 
 export const listAdminVideos = createServerFn({ method: "POST" })
