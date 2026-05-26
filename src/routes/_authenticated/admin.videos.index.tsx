@@ -324,6 +324,10 @@ function AdminVideosPage() {
               }
               placeholder="+ Add tag"
             />
+            <BatchAiPopover
+              selectedIds={Array.from(selected)}
+              onDispatched={() => setSelected(new Set())}
+            />
             <Button
               size="sm"
               variant="ghost"
