@@ -470,6 +470,11 @@ function AiSuggestionsPanel({ videoId, readOnly }: { videoId: string; readOnly: 
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
           <Sparkles className="h-3 w-3" /> AI suggestions
+          {aiStale ? (
+            <span className="ml-1 rounded-full border border-amber-500/50 px-1.5 py-0.5 text-[10px] normal-case text-amber-600 dark:text-amber-400">
+              stale
+            </span>
+          ) : null}
           {active.length > 0 ? (
             <span className="ml-1 inline-flex items-center gap-1 normal-case text-foreground">
               <Loader2 className="h-3 w-3 animate-spin" /> {active.length} running
