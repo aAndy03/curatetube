@@ -98,13 +98,32 @@ export function SubmitSheet({ open, onOpenChange }: SubmitSheetProps) {
         },
       });
     },
-    onSuccess: (r) => {
+    onSuccess: async (r) => {
       setResults(r.results);
       const ok = r.results.filter((x) => x.status === "pending").length;
       const dup = r.results.filter((x) => x.status === "duplicate").length;
       const bad = r.results.filter((x) => x.status === "invalid").length;
       toast.success(`${ok} queued · ${dup} already in library · ${bad} invalid`);
       quotaQuery.refetch();
+
+      // Phase 6 — fire-and-forget user_submit AI jobs for every video that
+      // came back with a videoId. Never block the submit flow on this.
+      const videoIds = Array.from(
+        new Set(
+          r.results
+            .map((x) => x.videoId)
+            .filter((id): id is string => typeof id === "string"),
+        ),
+      );
+      if (videoIds.length > 0) {
+        try {
+          const res = await aiDispatchFn({ data: { video_ids: videoIds } });
+          setAiQueued(res.dispatched ?? 0);
+        } catch (err) {
+          // Silent — AI assist is non-blocking.
+          console.warn("[submit-sheet] AI dispatch failed", err);
+        }
+      }
     },
     onError: (e: unknown) => {
       toast.error(e instanceof Error ? e.message : "Submission failed");
