@@ -205,6 +205,7 @@ export function AiMonitorSheet() {
   const pause = useServerFn(pauseAiBatch);
   const resume = useServerFn(resumeAiBatch);
   const cancel = useServerFn(cancelAiBatch);
+  const runTick = useServerFn(runAiTickNow);
 
   const batchesQ = useQuery({
     queryKey: ["ai-batches"],
@@ -219,6 +220,44 @@ export function AiMonitorSheet() {
     enabled: open,
     refetchInterval: open ? 5000 : false,
   });
+
+  const hasActive = (batchesQ.data?.batches ?? []).some(
+    (b) => b.counts.pending + b.counts.claimed + b.counts.running > 0,
+  );
+
+  // While the sheet is open and there is work pending, drain the queue.
+  React.useEffect(() => {
+    if (!open || !hasActive) return;
+    let cancelled = false;
+    const loop = async () => {
+      while (!cancelled) {
+        try {
+          await runTick();
+        } catch {
+          /* ignore */
+        }
+        batchesQ.refetch();
+        sessionsQ.refetch();
+        await new Promise((r) => setTimeout(r, 4000));
+      }
+    };
+    void loop();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, hasActive, runTick, batchesQ, sessionsQ]);
+
+  const tickM = useMutation({
+    mutationFn: () => runTick(),
+    onSuccess: (r) => {
+      toast.success(`Ran ${r.ranJobs} jobs (retried ${r.retried}, reissued ${r.reissued})`);
+      batchesQ.refetch();
+      sessionsQ.refetch();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Tick failed"),
+  });
+
+
 
   const hasActive = (batchesQ.data?.batches ?? []).some(
     (b) => b.counts.pending + b.counts.claimed + b.counts.running > 0,
