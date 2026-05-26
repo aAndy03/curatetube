@@ -71,6 +71,7 @@ export function SubmitSheet({ open, onOpenChange }: SubmitSheetProps) {
     setWarnings([]);
     setAnonymous(false);
     setResults(null);
+    setAiQueued(0);
   };
 
   const cleanedUrls = rows.map((r) => r.url.trim()).filter(Boolean);
