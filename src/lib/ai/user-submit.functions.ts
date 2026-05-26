@@ -89,8 +89,10 @@ export const dispatchUserSubmitAi = createServerFn({ method: "POST" })
       console.error("[dispatchUserSubmitAi] insert error", error.message);
       return { ok: false, dispatched: 0 };
     }
+    await kickOrchestrator();
     return { ok: true, dispatched: rows.length };
   });
+
 
 // ============ getAiResultsForModeration ============
 // Lighter-weight version of admin getAiResultsForVideo for moderators.
