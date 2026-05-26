@@ -119,6 +119,9 @@ export const dispatchBatchAiJobs = createServerFn({ method: "POST" })
       visibility: "staff",
     });
 
+    // Drain a few jobs synchronously so the user sees results immediately.
+    await kickOrchestrator();
+
     return {
       ok: true,
       batch_id: batchId,
@@ -126,6 +129,7 @@ export const dispatchBatchAiJobs = createServerFn({ method: "POST" })
       warning,
     };
   });
+
 
 // ============ listAiSessions ============
 export const listAiSessions = createServerFn({ method: "POST" })
