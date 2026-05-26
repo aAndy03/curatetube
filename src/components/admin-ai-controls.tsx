@@ -48,7 +48,9 @@ import {
   pauseAiBatch,
   resumeAiBatch,
   cancelAiBatch,
+  runAiTickNow,
 } from "@/lib/admin-ai.functions";
+
 
 const TASKS = [
   { key: "categorise", label: "Categorise" },
@@ -203,6 +205,7 @@ export function AiMonitorSheet() {
   const pause = useServerFn(pauseAiBatch);
   const resume = useServerFn(resumeAiBatch);
   const cancel = useServerFn(cancelAiBatch);
+  const runTick = useServerFn(runAiTickNow);
 
   const batchesQ = useQuery({
     queryKey: ["ai-batches"],
@@ -222,12 +225,40 @@ export function AiMonitorSheet() {
     (b) => b.counts.pending + b.counts.claimed + b.counts.running > 0,
   );
 
-  // Adaptive: slow to 30s when nothing active
+  // While the sheet is open and there is work pending, drain the queue.
   React.useEffect(() => {
-    if (!open) return;
-    // re-fetch toggle: react-query refetchInterval handled above. This effect
-    // is purely so React notices `hasActive` changes if needed.
-  }, [open, hasActive]);
+    if (!open || !hasActive) return;
+    let cancelled = false;
+    const loop = async () => {
+      while (!cancelled) {
+        try {
+          await runTick();
+        } catch {
+          /* ignore */
+        }
+        batchesQ.refetch();
+        sessionsQ.refetch();
+        await new Promise((r) => setTimeout(r, 4000));
+      }
+    };
+    void loop();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, hasActive, runTick, batchesQ, sessionsQ]);
+
+  const tickM = useMutation({
+    mutationFn: () => runTick(),
+    onSuccess: (r) => {
+      toast.success(`Ran ${r.ranJobs} jobs (retried ${r.retried}, reissued ${r.reissued})`);
+      batchesQ.refetch();
+      sessionsQ.refetch();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Tick failed"),
+  });
+
+
+
 
   const pauseM = useMutation({
     mutationFn: (batch_id: string) => pause({ data: { batch_id } }),
@@ -269,7 +300,18 @@ export function AiMonitorSheet() {
           <SheetDescription>
             Live status of AI agent sessions and batch queue.
           </SheetDescription>
+          <div className="mt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={tickM.isPending}
+              onClick={() => tickM.mutate()}
+            >
+              {tickM.isPending ? "Running…" : "Run now"}
+            </Button>
+          </div>
         </SheetHeader>
+
 
         <section className="mt-6">
           <h3 className="mb-2 text-sm font-semibold">Active sessions</h3>
