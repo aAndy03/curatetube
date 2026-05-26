@@ -498,16 +498,24 @@ function VideoRow({
       </td>
       <td className="px-3 py-2">
         <a
-          href={`/v/${video.id}`}
+          href={`/admin/videos/${video.id}`}
           className="line-clamp-2 font-medium hover:underline"
         >
           {video.title}
         </a>
-        {video.category_ids.length === 0 ? (
-          <span className="mt-1 inline-block text-xs text-amber-600">
-            Uncategorized
-          </span>
-        ) : null}
+        <div className="mt-0.5 flex items-center gap-2 text-xs">
+          <a
+            href={`/v/${video.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-muted-foreground hover:underline"
+          >
+            View public ↗
+          </a>
+          {video.category_ids.length === 0 ? (
+            <span className="text-amber-600">Uncategorized</span>
+          ) : null}
+        </div>
       </td>
       <td className="px-3 py-2 text-muted-foreground">
         {video.creator?.title ?? "—"}
