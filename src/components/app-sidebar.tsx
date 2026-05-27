@@ -165,7 +165,7 @@ export function AppSidebar() {
         ) : null}
       </SidebarContent>
       <SidebarFooter>
-        <p className="px-2 text-[10px] text-muted-foreground">alpha0.4.11 · Plan 4 · Buffer</p>
+        <p className="px-2 text-[10px] text-muted-foreground">alpha 0.5.8</p>
       </SidebarFooter>
     </Sidebar>
   );
