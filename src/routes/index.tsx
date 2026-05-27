@@ -20,6 +20,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "CurateTube — Community-curated YouTube worth watching" },
+      {name: "google-site-verification", content: "jzDIj-AVS2m4C5Yg87mbHNjQ9VneqyY5_EbEi0sQfHA},
       {
         name: "description",
         content:
