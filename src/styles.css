@@ -177,3 +177,24 @@
     color: var(--color-background);
   }
 }
+
+@keyframes slide-down-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-60%);
+    filter: blur(8px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.animate-slide-down-in {
+  animation: slide-down-in 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}

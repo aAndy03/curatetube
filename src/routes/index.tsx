@@ -60,10 +60,10 @@ function CyclingWord() {
     return () => clearInterval(t);
   }, []);
   return (
-    <span className="relative inline-block align-baseline">
+    <span className="relative inline-flex overflow-hidden align-baseline pb-[0.15em] leading-[1.1]">
       <span
         key={i}
-        className="inline-block animate-fade-in bg-gradient-to-r from-primary via-foreground to-primary bg-clip-text text-transparent"
+        className="inline-block animate-slide-down-in pb-[0.15em] leading-[1.1] text-foreground"
       >
         {CYCLE_NAMES[i]}
       </span>
@@ -131,7 +131,7 @@ function Landing() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       {/* Header */}
-      <header className="relative z-20 border-b border-border/40 backdrop-blur-md">
+      <header className="relative z-20 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
             CurateTube
@@ -207,15 +207,18 @@ function Landing() {
           })}
         </div>
 
-        {/* Blur + vignette overlays */}
-        <div aria-hidden className="absolute inset-0 backdrop-blur-2xl" />
+        {/* Soft blur + vignette */}
+        <div aria-hidden className="absolute inset-0 backdrop-blur-md" />
+        <div aria-hidden className="absolute inset-0 bg-background/40" />
         <div
           aria-hidden
-          className="absolute inset-0 bg-background/60"
+          className="absolute inset-0"
           style={{
-            boxShadow: "inset 0 0 240px 80px hsl(var(--background) / 0.95)",
+            background:
+              "radial-gradient(ellipse at center, transparent 30%, hsl(var(--background) / 0.6) 70%, hsl(var(--background)) 100%)",
           }}
         />
+
         <ProceduralBlobs />
 
         {/* Content */}
@@ -228,7 +231,7 @@ function Landing() {
             Community-curated YouTube
           </Badge>
 
-          <h1 className="text-balance text-5xl font-semibold tracking-tight md:text-7xl">
+          <h1 className="text-balance pb-2 text-5xl font-semibold leading-[1.1] tracking-tight md:text-7xl">
             <CyclingWord />
             <span className="text-muted-foreground">, but </span>
             <span className="bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
@@ -316,7 +319,7 @@ function Landing() {
       </section>
 
       {/* FOOTER */}
-      <footer className="relative border-t border-border/40 backdrop-blur-md">
+      <footer className="relative backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-6 text-sm text-muted-foreground md:flex-row">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-foreground">CurateTube</span>
