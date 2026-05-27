@@ -2,14 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  ArrowRight,
-  Flag,
-  Sparkles,
-  Trophy,
-  ShieldCheck,
-  Users2,
-} from "lucide-react";
+import { ArrowRight, Flag, Sparkles, Trophy, ShieldCheck, Users2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +13,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "CurateTube — Community-curated YouTube worth watching" },
-      {name: "google-site-verification", content: "jzDIj-AVS2m4C5Yg87mbHNjQ9VneqyY5_EbEi0sQfHA},
+      { name: "google-site-verification", content: "jzDIj-AVS2m4C5Yg87mbHNjQ9VneqyY5_EbEi0sQfHA" },
       {
         name: "description",
         content:
@@ -43,8 +36,7 @@ export const Route = createFileRoute("/")({
           "@type": "WebSite",
           name: "CurateTube",
           url: "https://curatetube.lovable.app/",
-          description:
-            "Community-curated YouTube database. Like Nebula or Curiosity Stream, but free.",
+          description: "Community-curated YouTube database. Like Nebula or Curiosity Stream, but free.",
         }),
       },
     ],
@@ -62,10 +54,7 @@ function CyclingWord() {
   }, []);
   return (
     <span className="relative inline-flex overflow-hidden align-baseline pb-[0.15em] leading-[1.1]">
-      <span
-        key={i}
-        className="inline-block animate-slide-down-in pb-[0.15em] leading-[1.1] text-foreground"
-      >
+      <span key={i} className="inline-block animate-slide-down-in pb-[0.15em] leading-[1.1] text-foreground">
         {CYCLE_NAMES[i]}
       </span>
     </span>
@@ -75,7 +64,7 @@ function CyclingWord() {
 // Deterministic procedural blobs (no SSR/CSR mismatch).
 const BLOBS = Array.from({ length: 6 }, (_, idx) => {
   // simple LCG-ish deterministic values
-  const s = (n: number) => ((Math.sin((idx + 1) * n) + 1) / 2);
+  const s = (n: number) => (Math.sin((idx + 1) * n) + 1) / 2;
   return {
     top: `${Math.round(s(12.9) * 80)}%`,
     left: `${Math.round(s(78.2) * 85)}%`,
@@ -87,10 +76,7 @@ const BLOBS = Array.from({ length: 6 }, (_, idx) => {
 
 function ProceduralBlobs() {
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 overflow-hidden motion-reduce:hidden"
-    >
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden motion-reduce:hidden">
       {BLOBS.map((b, i) => (
         <div
           key={i}
@@ -165,19 +151,10 @@ function Landing() {
       {/* HERO with video wall */}
       <section className="relative isolate min-h-[88vh] overflow-hidden">
         {/* Video wall background */}
-        <div
-          aria-hidden
-          className="absolute inset-0 grid grid-cols-3 grid-rows-2 gap-0 motion-reduce:hidden"
-        >
+        <div aria-hidden className="absolute inset-0 grid grid-cols-3 grid-rows-2 gap-0 motion-reduce:hidden">
           {Array.from({ length: 6 }).map((_, idx) => {
             const v = videos[idx];
-            if (!v)
-              return (
-                <div
-                  key={idx}
-                  className="bg-gradient-to-br from-muted/40 to-background"
-                />
-              );
+            if (!v) return <div key={idx} className="bg-gradient-to-br from-muted/40 to-background" />;
             return (
               <div key={v.id} className="relative overflow-hidden">
                 <iframe
@@ -192,10 +169,7 @@ function Landing() {
           })}
         </div>
         {/* Reduced-motion fallback: static thumbnails */}
-        <div
-          aria-hidden
-          className="absolute inset-0 hidden grid-cols-3 grid-rows-2 motion-reduce:grid"
-        >
+        <div aria-hidden className="absolute inset-0 hidden grid-cols-3 grid-rows-2 motion-reduce:grid">
           {Array.from({ length: 6 }).map((_, idx) => {
             const v = videos[idx];
             return (
@@ -241,9 +215,8 @@ function Landing() {
           </h1>
 
           <p className="mt-6 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-            Documentaries, deep dives, and ideas worth your time — submitted by
-            people, curated by moderators, ranked by the community. No
-            subscription. No algorithm chasing your attention.
+            Documentaries, deep dives, and ideas worth your time — submitted by people, curated by moderators, ranked by
+            the community. No subscription. No algorithm chasing your attention.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
@@ -257,9 +230,7 @@ function Landing() {
             </Button>
           </div>
 
-          <p className="mt-6 text-xs text-muted-foreground">
-            Built in the open · No ads · No tracking by default
-          </p>
+          <p className="mt-6 text-xs text-muted-foreground">Built in the open · No ads · No tracking by default</p>
         </div>
       </section>
 
