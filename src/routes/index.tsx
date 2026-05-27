@@ -131,7 +131,7 @@ function Landing() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       {/* Header */}
-      <header className="relative z-20 border-b border-border/40 backdrop-blur-md">
+      <header className="relative z-20 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
             CurateTube
