@@ -231,7 +231,7 @@ function Landing() {
             Community-curated YouTube
           </Badge>
 
-          <h1 className="text-balance text-5xl font-semibold tracking-tight md:text-7xl">
+          <h1 className="text-balance pb-2 text-5xl font-semibold leading-[1.1] tracking-tight md:text-7xl">
             <CyclingWord />
             <span className="text-muted-foreground">, but </span>
             <span className="bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
