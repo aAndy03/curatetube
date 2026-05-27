@@ -207,15 +207,18 @@ function Landing() {
           })}
         </div>
 
-        {/* Blur + vignette overlays */}
-        <div aria-hidden className="absolute inset-0 backdrop-blur-2xl" />
+        {/* Soft blur + vignette */}
+        <div aria-hidden className="absolute inset-0 backdrop-blur-md" />
+        <div aria-hidden className="absolute inset-0 bg-background/40" />
         <div
           aria-hidden
-          className="absolute inset-0 bg-background/60"
+          className="absolute inset-0"
           style={{
-            boxShadow: "inset 0 0 240px 80px hsl(var(--background) / 0.95)",
+            background:
+              "radial-gradient(ellipse at center, transparent 30%, hsl(var(--background) / 0.6) 70%, hsl(var(--background)) 100%)",
           }}
         />
+
         <ProceduralBlobs />
 
         {/* Content */}
