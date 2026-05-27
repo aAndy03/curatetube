@@ -60,10 +60,10 @@ function CyclingWord() {
     return () => clearInterval(t);
   }, []);
   return (
-    <span className="relative inline-block align-baseline">
+    <span className="relative inline-flex overflow-hidden align-baseline pb-[0.15em] leading-[1.1]">
       <span
         key={i}
-        className="inline-block animate-fade-in bg-gradient-to-r from-primary via-foreground to-primary bg-clip-text text-transparent"
+        className="inline-block animate-slide-down-in pb-[0.15em] leading-[1.1] text-foreground"
       >
         {CYCLE_NAMES[i]}
       </span>
