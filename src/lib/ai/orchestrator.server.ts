@@ -376,9 +376,9 @@ async function runJob(job: AiJobRow, settings: AiSettings, snapshot: TaxonomySna
   }
 
   await failJob(job.id, lastError);
-  // If all models rate-limited, mark throttled
+  // If all models rate-limited, mark throttled + pause + notify admins.
   if (lastError.startsWith("rate_limited")) {
-    await setThrottled(true);
+    await enterThrottledState("rate_limited");
     return { throttled: true };
   }
   return { throttled: false };
@@ -417,6 +417,9 @@ export async function tick(): Promise<{
   } as never);
   const { data: retriedCount } = await supabaseAdmin.rpc("sweep_ai_retries" as never);
 
+  // Post-batch validator: flag results whose category/tag was deleted/renamed.
+  await supabaseAdmin.rpc("validate_ai_results_deleted_entities" as never);
+
   // Dispatch up to N jobs per tick (one per session slot).
   let ranJobs = 0;
   let throttled = false;
@@ -439,14 +442,9 @@ export async function tick(): Promise<{
     }
   }
 
-  if (!throttled) {
-    // Clear throttle flag opportunistically on success.
-    const { data: flag } = await supabaseAdmin
-      .from("app_settings")
-      .select("value")
-      .eq("key", "ai_all_models_throttled")
-      .maybeSingle();
-    if (flag?.value === true && ranJobs > 0) await setThrottled(false);
+  if (!throttled && ranJobs > 0) {
+    // Successful work → clear throttle flag and resume paused jobs.
+    await exitThrottledStateIfNeeded();
   }
 
   return {
