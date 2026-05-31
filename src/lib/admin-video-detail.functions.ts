@@ -97,13 +97,14 @@ export const dispatchAdminSingleAiJob = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requirePerm(context.userId, "library.manage");
 
-    // Prevent duplicate active jobs of same type for the same video.
+    // Prevent duplicate active jobs of same type for the same video
+    // (matches partial unique index ai_jobs_active_video_type_unique).
     const { data: existing } = await supabaseAdmin
       .from("ai_jobs")
       .select("id")
       .eq("video_id", data.video_id)
       .eq("job_type", data.job_type as never)
-      .in("status", ["pending", "claimed", "running"] as never)
+      .in("status", ["pending", "claimed", "running", "paused"] as never)
       .limit(1);
     if (existing && existing.length > 0) {
       return { ok: true, job_id: existing[0].id, deduped: true };

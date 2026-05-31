@@ -53,14 +53,13 @@ export const dispatchUserSubmitAi = createServerFn({ method: "POST" })
       (setting?.value as { enabled?: boolean } | null)?.enabled === true;
     if (!enabled) return { ok: true, dispatched: 0, skipped: "disabled" };
 
-    // Dedup against any pending/running user_submit job for the same
-    // (video, task) so refreshes don't pile up.
+    // Dedup against any active job (any scope) for the same (video, task) —
+    // matches the partial unique index ai_jobs_active_video_type_unique.
     const { data: existing } = await supabaseAdmin
       .from("ai_jobs")
       .select("video_id, job_type")
       .in("video_id", data.video_ids)
-      .eq("scope", "user_submit" as never)
-      .in("status", ["pending", "claimed", "running"] as never);
+      .in("status", ["pending", "claimed", "running", "paused"] as never);
     const blocked = new Set(
       (existing ?? []).map(
         (r) => `${r.video_id as string}:${r.job_type as string}`,
