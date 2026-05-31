@@ -78,6 +78,57 @@ async function setThrottled(value: boolean) {
     .upsert({ key: "ai_all_models_throttled", value }, { onConflict: "key" });
 }
 
+// On throttle: pause any active jobs and notify admins. Idempotent — only
+// broadcasts on the transition from not-throttled to throttled.
+async function enterThrottledState(reason: string) {
+  const { data: prev } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", "ai_all_models_throttled")
+    .maybeSingle();
+  const wasThrottled = prev?.value === true;
+
+  await setThrottled(true);
+  await supabaseAdmin.rpc("pause_active_ai_jobs", { _reason: reason } as never);
+
+  if (wasThrottled) return;
+
+  // Broadcast in-app notification to admins (anyone with ai.manage).
+  try {
+    const { data: admins } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id, role")
+      .in("role", ["owner", "admin"] as never);
+    const ids = Array.from(
+      new Set((admins ?? []).map((r) => r.user_id as string)),
+    );
+    if (ids.length > 0) {
+      const notifRows = ids.map((uid) => ({
+        user_id: uid,
+        type: "admin_broadcast" as const,
+        title: "AI gateway throttled",
+        body: `All AI models returned rate-limit or error responses (${reason}). AI jobs have been paused and will resume automatically.`,
+        link: "/admin/videos",
+        data: { kind: "ai_throttled", reason },
+      }));
+      await supabaseAdmin.from("notifications").insert(notifRows as never);
+    }
+  } catch (e) {
+    console.error("[ai/enterThrottledState] notify failed", e);
+  }
+}
+
+async function exitThrottledStateIfNeeded() {
+  const { data: flag } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", "ai_all_models_throttled")
+    .maybeSingle();
+  if (flag?.value !== true) return;
+  await setThrottled(false);
+  await supabaseAdmin.rpc("resume_paused_ai_jobs" as never);
+}
+
 type AiJobRow = {
   id: string;
   job_type: AiJobType;
