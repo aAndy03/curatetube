@@ -119,6 +119,8 @@ export async function deleteAccountDataNow(
   }
   await updateWhere("submissions", { decided_by: null }, "decided_by", userId);
   await updateWhere("user_roles", { granted_by: null }, "granted_by", userId);
+  // In-flight AI jobs created by this user: anonymise the FK; results stay on the video.
+  await updateWhere("ai_jobs", { created_by: null }, "created_by", userId);
   await deleteWhere("account_deletion_requests", "user_id", userId);
 
   await recalculateSubmissionCounts(affectedVideoIds);

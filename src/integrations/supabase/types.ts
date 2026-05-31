@@ -1960,7 +1960,9 @@ export type Database = {
         Returns: boolean
       }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      pause_active_ai_jobs: { Args: { _reason?: string }; Returns: number }
       refresh_mv: { Args: { _name: string }; Returns: Json }
+      resume_paused_ai_jobs: { Args: never; Returns: number }
       sweep_ai_retries: { Args: never; Returns: number }
       sweep_stale_ai_sessions: {
         Args: { _timeout_s?: number }
@@ -1970,6 +1972,7 @@ export type Database = {
         Args: { _video_id: string }
         Returns: undefined
       }
+      validate_ai_results_deleted_entities: { Args: never; Returns: number }
     }
     Enums: {
       ai_job_scope:

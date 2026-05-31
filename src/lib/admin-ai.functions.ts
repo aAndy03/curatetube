@@ -78,11 +78,28 @@ export const dispatchBatchAiJobs = createServerFn({ method: "POST" })
       warning = `Batch capped at ${maxBatch} jobs (${allowedVideos.length} of ${data.video_ids.length} videos queued).`;
     }
 
-    // Create batch_id by inserting first row then reusing.
+    // Pre-filter: skip (video, job_type) pairs that already have an active job
+    // (matches the partial unique index ai_jobs_active_video_type_unique).
+    const { data: activeRows } = await supabaseAdmin
+      .from("ai_jobs")
+      .select("video_id, job_type")
+      .in("video_id", allowedVideos)
+      .in("status", ["pending", "claimed", "running", "paused"] as never);
+    const blocked = new Set(
+      (activeRows ?? []).map(
+        (r) => `${r.video_id as string}:${r.job_type as string}`,
+      ),
+    );
+
     const batchId = crypto.randomUUID();
     const rows: Array<Record<string, unknown>> = [];
+    let dedupedCount = 0;
     for (const vid of allowedVideos) {
       for (const t of data.task_types) {
+        if (blocked.has(`${vid}:${t}`)) {
+          dedupedCount++;
+          continue;
+        }
         rows.push({
           job_type: t,
           scope: "admin_batch",
@@ -101,9 +118,14 @@ export const dispatchBatchAiJobs = createServerFn({ method: "POST" })
         });
       }
     }
+    if (dedupedCount > 0) {
+      warning = `${warning ? warning + " " : ""}Skipped ${dedupedCount} duplicate active job(s).`;
+    }
 
-    const { error } = await supabaseAdmin.from("ai_jobs").insert(rows as never);
-    if (error) throw new Error(error.message);
+    if (rows.length > 0) {
+      const { error } = await supabaseAdmin.from("ai_jobs").insert(rows as never);
+      if (error) throw new Error(error.message);
+    }
 
     await writeAudit(supabaseAdmin, {
       actorId: context.userId,
