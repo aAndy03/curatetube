@@ -95,10 +95,16 @@ async function enterThrottledState(reason: string) {
 
   // Broadcast in-app notification to admins (anyone with ai.manage).
   try {
+    const { data: adminRoles } = await supabaseAdmin
+      .from("roles")
+      .select("id")
+      .in("slug", ["owner", "admin"] as never);
+    const roleIds = (adminRoles ?? []).map((r) => r.id as string);
+    if (roleIds.length === 0) return;
     const { data: admins } = await supabaseAdmin
       .from("user_roles")
-      .select("user_id, role")
-      .in("role", ["owner", "admin"] as never);
+      .select("user_id")
+      .in("role_id", roleIds);
     const ids = Array.from(
       new Set((admins ?? []).map((r) => r.user_id as string)),
     );
