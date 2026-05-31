@@ -53,10 +53,14 @@ function CyclingWord() {
     return () => clearInterval(t);
   }, []);
   return (
-    <span className="relative inline-flex overflow-hidden align-baseline pb-[0.15em] leading-[1.1]">
-      <span key={i} className="inline-block animate-slide-down-in pb-[0.15em] leading-[1.1] text-foreground">
+    <span className="relative inline-flex items-baseline overflow-hidden pb-[0.15em] leading-[1.1] align-baseline">
+      <span
+        key={i}
+        className="inline-block animate-slide-down-in pb-[0.15em] leading-[1.1] text-foreground"
+      >
         {CYCLE_NAMES[i]}
       </span>
+      <span className="text-muted-foreground">,&nbsp;</span>
     </span>
   );
 }
