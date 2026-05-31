@@ -53,10 +53,14 @@ function CyclingWord() {
     return () => clearInterval(t);
   }, []);
   return (
-    <span className="relative inline-flex overflow-hidden align-baseline pb-[0.15em] leading-[1.1]">
-      <span key={i} className="inline-block animate-slide-down-in pb-[0.15em] leading-[1.1] text-foreground">
+    <span className="relative inline-flex items-baseline overflow-hidden pb-[0.15em] leading-[1.1] align-baseline">
+      <span
+        key={i}
+        className="inline-block animate-slide-down-in pb-[0.15em] leading-[1.1] text-foreground"
+      >
         {CYCLE_NAMES[i]}
       </span>
+      <span className="text-muted-foreground">,&nbsp;</span>
     </span>
   );
 }
@@ -182,19 +186,20 @@ function Landing() {
           })}
         </div>
 
+        {/* Procedural blobs behind dim/vignette so they don't wash out text */}
+        <ProceduralBlobs />
+
         {/* Soft blur + vignette */}
-        <div aria-hidden className="absolute inset-0 backdrop-blur-md" />
-        <div aria-hidden className="absolute inset-0 bg-background/40" />
+        <div aria-hidden className="absolute inset-0 backdrop-blur-sm" />
+        <div aria-hidden className="absolute inset-0 bg-background/55" />
         <div
           aria-hidden
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse at center, transparent 30%, hsl(var(--background) / 0.6) 70%, hsl(var(--background)) 100%)",
+              "radial-gradient(ellipse at center, hsl(var(--background) / 0.55) 0%, hsl(var(--background) / 0.7) 45%, hsl(var(--background)) 100%)",
           }}
         />
-
-        <ProceduralBlobs />
 
         {/* Content */}
         <div className="relative z-10 mx-auto flex min-h-[88vh] max-w-4xl flex-col items-center justify-center px-4 py-24 text-center">
@@ -208,11 +213,10 @@ function Landing() {
 
           <h1 className="text-balance pb-2 text-5xl font-semibold leading-[1.1] tracking-tight md:text-7xl">
             <CyclingWord />
-            <span className="text-muted-foreground">, but </span>
-            <span className="bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
-              free.
-            </span>
+            <span className="text-muted-foreground">but </span>
+            <span className="text-foreground">free.</span>
           </h1>
+
 
           <p className="mt-6 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
             Documentaries, deep dives, and ideas worth your time — submitted by people, curated by moderators, ranked by
