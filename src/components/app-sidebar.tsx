@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Megaphone,
   Film,
+  Users,
 } from "lucide-react";
 
 import {
@@ -61,6 +62,7 @@ export function AppSidebar() {
     perms?.isOwner ||
     perms?.has("role.edit") ||
     perms?.has("user.assign_role") ||
+    perms?.has("users.view") ||
     perms?.has("settings.edit");
 
   return (
@@ -142,6 +144,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {[
                   { url: "/admin/videos", icon: Film, title: "Videos", perm: "library.manage" },
+                  { url: "/admin/users", icon: Users, title: "Users", perm: "users.view" },
                   { url: "/admin/roles", icon: Settings, title: "Roles & Permissions" },
                   { url: "/admin/audit", icon: ScrollText, title: "Audit log", perm: "audit.view" },
                   { url: "/admin/recommendations", icon: SlidersHorizontal, title: "Recommendations", perm: "settings.edit" },

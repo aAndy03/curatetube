@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { extractYouTubeId, fetchVideos, fetchChannels } from "./youtube.server";
 import { writeAudit } from "./audit.server";
+import { assertNotSuspended } from "./suspension.server";
 
 const PUBLIC_BROWSE_CACHE = new Headers({
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
@@ -44,6 +45,7 @@ export const submitVideos = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => SubmitInput.parse(d))
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    await assertNotSuspended(userId);
 
     // Permission check: submission.create
     const { data: canSubmit } = await supabaseAdmin.rpc("has_permission", {
@@ -342,7 +344,22 @@ export const listSubmissionQueue = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    return { submissions: rows ?? [] };
+    // Phase 10: hide submissions from suspended users while keeping their
+    // already-approved videos visible elsewhere.
+    const submitterIds = Array.from(
+      new Set((rows ?? []).map((r) => r.submitter_id).filter(Boolean)),
+    );
+    let suspended = new Set<string>();
+    if (submitterIds.length) {
+      const { data: profs } = await supabaseAdmin
+        .from("profiles")
+        .select("id, suspended_at")
+        .in("id", submitterIds)
+        .not("suspended_at", "is", null);
+      suspended = new Set((profs ?? []).map((p) => p.id));
+    }
+    const filtered = (rows ?? []).filter((r) => !suspended.has(r.submitter_id));
+    return { submissions: filtered };
   });
 
 const ModerateInput = z.object({
