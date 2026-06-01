@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Megaphone,
   Film,
+  Users,
 } from "lucide-react";
 
 import {
