@@ -45,6 +45,7 @@ export const submitVideos = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => SubmitInput.parse(d))
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    await assertNotSuspended(userId);
 
     // Permission check: submission.create
     const { data: canSubmit } = await supabaseAdmin.rpc("has_permission", {
