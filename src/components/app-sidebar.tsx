@@ -62,6 +62,7 @@ export function AppSidebar() {
     perms?.isOwner ||
     perms?.has("role.edit") ||
     perms?.has("user.assign_role") ||
+    perms?.has("users.view") ||
     perms?.has("settings.edit");
 
   return (
