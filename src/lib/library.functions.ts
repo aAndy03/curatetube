@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { extractYouTubeId, fetchVideos, fetchChannels } from "./youtube.server";
 import { writeAudit } from "./audit.server";
+import { assertNotSuspended } from "./suspension.server";
 
 const PUBLIC_BROWSE_CACHE = new Headers({
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
