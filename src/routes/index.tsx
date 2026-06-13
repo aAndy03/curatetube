@@ -159,15 +159,30 @@ function Landing() {
           {Array.from({ length: 6 }).map((_, idx) => {
             const v = videos[idx];
             if (!v) return <div key={idx} className="bg-gradient-to-br from-muted/40 to-background" />;
+            // Only top 2 cards autoplay video; remaining 4 use static thumbnails
+            // to keep landing CPU/bandwidth low without losing visual texture.
+            const autoplay = idx < 2;
             return (
               <div key={v.id} className="relative overflow-hidden">
-                <iframe
-                  title={v.title}
-                  src={`https://www.youtube.com/embed/${v.youtube_id}?autoplay=1&mute=1&loop=1&playlist=${v.youtube_id}&controls=0&modestbranding=1&showinfo=0&rel=0&playsinline=1&disablekb=1`}
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  className="pointer-events-none absolute inset-0 h-[120%] w-[120%] -translate-x-[10%] -translate-y-[10%] scale-125"
-                  loading="lazy"
-                />
+                {autoplay ? (
+                  <iframe
+                    title={v.title}
+                    src={`https://www.youtube.com/embed/${v.youtube_id}?autoplay=1&mute=1&loop=1&playlist=${v.youtube_id}&controls=0&modestbranding=1&showinfo=0&rel=0&playsinline=1&disablekb=1`}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    className="pointer-events-none absolute inset-0 h-[120%] w-[120%] -translate-x-[10%] -translate-y-[10%] scale-125"
+                    loading="lazy"
+                  />
+                ) : v.thumbnail_url ? (
+                  <img
+                    src={v.thumbnail_url}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="pointer-events-none absolute inset-0 h-[120%] w-[120%] -translate-x-[10%] -translate-y-[10%] scale-125 object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-muted/40 to-background" />
+                )}
               </div>
             );
           })}

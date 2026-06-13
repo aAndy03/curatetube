@@ -1,178 +1,223 @@
-# CurateTube — Plan 5 (v0.5.0)
+# Plan 6 — Phase 6: Per-page optimisation audit
 
-AI categorisation & tagging orchestration, background monitor, submit‑sheet and moderation queue AI integration, public landing page, and admin users management.
+Sweeping audit + fixes across every route. Each card below maps 1:1 to the uploaded checklist. Items are grouped as **verify** (read code, confirm already done — no change unless missing) or **apply** (implement now). Where a fix has a dedicated phase in plan 6 (e.g. realtime monitor = Phase 1, AI feedback = Phase 2, /feed algo = Phase 3, /suggest = Phase 4, /leaderboard delta = Phase 5), this phase only confirms the per-page wiring; it does not re-implement that phase.
 
-This plan reconciles the original draft to the existing codebase. Key terminology / architecture corrections vs the draft are listed at the bottom.
-
-> Single minor bump: **v0.5.0**, broken into 10 phases. Each phase is one migration + code batch.
+No new migrations in this phase. Two small migrations only if a verify uncovers a missing index or trigger (see "DB / Postgres" group). Audit-log partitioning is **deferred** (row count nowhere near 1M).
 
 ---
 
-## Stack reconciliation (read first)
+## Scope — what gets touched
 
-The draft assumed OpenRouter + Supabase Edge Functions. The actual stack is:
+### Public / unauthenticated
 
-- **AI provider** → **Lovable AI Gateway** (env `LOVABLE_API_KEY`, already present). Default models drawn from the supported list:
-  - `ai_user_submit_model` → `google/gemini-2.5-flash-lite` (fast, cheap)
-  - `ai_admin_model` → `openai/gpt-5-mini`
-  - `ai_batch_model` → `google/gemini-2.5-flash`
-  - `ai_fallback_model_order` → `["google/gemini-2.5-flash-lite","google/gemini-2.5-flash","openai/gpt-5-nano"]`
-  - No OpenRouter key, no per-model concurrency lock — Gateway handles fan-out. The "all models throttled" path becomes "gateway 429/5xx" backoff.
-- **Orchestrator runtime** → TanStack server functions (`createServerFn`) + a `/api/public/cron/ai-orchestrator.ts` HMAC-protected route, polled every 30 s (same pattern as `src/routes/api/public/cron/leaderboard.ts` + `account-deletions.ts`). No new Supabase Edge Function.
-- **Settings storage** → existing `app_settings(key,value jsonb)` table; one row per AI key (consistent with `submit_limit_default`, `trending_min_video_count` from plan 4). No new columns on `app_settings`.
-- **Audit** → `audit_log.action TEXT` already free-form; just add new action strings via `writeAudit()` in `src/lib/audit.server.ts`. No enum migration.
-- **Admin video manager** already exists at `src/routes/_authenticated/admin.videos.tsx` (plan 4 phase 3). Phase 4 below **extends** it and adds a per-id detail route; it does not recreate it.
-- **Submissions** already carries `proposed_category_ids` / `proposed_tag_ids` (plan 4) — AI writes into these at submit time, not into new columns.
-- **MV refresh** → reuse `public.refresh_mv(_name)` pattern; AI doesn't add an MV in this plan.
-- **Profile suspension** → add `suspended_at` to existing `profiles` (which already has `deleted_at`, `audit_privacy_mode`).
-- **Per-account quotas / rate limit** → existing `rate_limit_events` table is reused for AI job rate caps per user.
+**`/` (landing)** — `src/routes/index.tsx`, `src/lib/landing.functions.ts`
+- verify: `Cache-Control: public, s-maxage=300, stale-while-revalidate=3600` on landing data response
+- apply: lazy-load below-fold iframes (`loading="lazy"`, defer `src` until in viewport); cap autoplay to top 2 cards
+- verify: live stats read from `app_settings.landing_stats` (daily cron), no per-request aggregation
+- verify: feature-card animations use IntersectionObserver + CSS only
+- apply: SSR-side redirect to `/feed` when an authenticated session cookie is present (skip the public hero render entirely for logged-in users)
+
+**`/categories`** — `src/routes/_authenticated/categories.index.tsx`, `src/lib/categories.functions.ts`
+- apply: introduce a single shared category tree query (`['categories','tree']`, `staleTime: Infinity`) consumed by all Comboboxes (submit sheet, moderation, admin/videos editor, suggest)
+- verify: `category_ancestors(ancestor_id)` and `(descendant_id)` indexes exist; add if missing
+- verify: `video_categories` insert/delete trigger bumps `categories.video_count` via closure table (not direct only)
+- apply: edit mode — optimistic insert with spinner state until server confirms
+- apply: drag reorder — batch a single `sort_order` upsert array on drop, not per item
+
+**`/categories/[slug]`** — `src/routes/_authenticated/categories.$slug.tsx`, `src/lib/category-feed.functions.ts`
+- verify: descendant fetch uses closure-table join in one query
+- verify: infinite scroll (IntersectionObserver) — replace any button pagination if found
+- verify: breadcrumb resolved from closure table at loader time (not client-side recursion)
+- apply: set `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` on public-shaped category feed response
+- apply: direct/indirect toggle goes through a DB-side `WHERE` (server fn param), not a client filter on a fetched list
+
+**`/tags/[slug]`** — `src/routes/_authenticated/tags.$slug.tsx`, `src/lib/tags.functions.ts`
+- verify: GIN index on `videos.primary_tag_ids` / `videos.secondary_tag_ids` used for slug lookup; add if missing
+- apply: reuse the VideoCard grid + infinite scroll component from `/categories/[slug]`
+- apply: tag name resolved from `useTagsCache()` (no extra fetch on render)
+
+### Core browsing
+
+**`/feed`** — `src/routes/_authenticated/feed.tsx`, `src/lib/sections.functions.ts`, `src/lib/feed-dedup.server.ts`
+- verify (Phase 3 owner): session seed read from `user_feed_state`, not regenerated per request
+- verify (Phase 3 owner): single CTE for all sections
+- verify: `seen_ids` dedup is in the DB (`WHERE NOT IN (...)`), not a JS `.filter()`
+- apply: add `content-visibility: auto; contain-intrinsic-size: <h>` to card rows
+- apply: `React.memo` VideoCard; convert inline handlers to stable `useCallback` refs on the section list
+- apply: recommendation weights read from the session bootstrap payload, not a separate query per feed load
+
+**`/suggest`** — `src/routes/_authenticated/suggest.tsx`, `src/lib/suggest-categories.functions.ts`
+- verify (Phase 4 owner): server-side exclusion of `user_video_status` videos
+- apply: infinite scroll replacing the fixed 30-video limit (20/page, sentinel)
+- apply: category sections share the dedup helper with `/feed`
+- verify: reads from `mv_suggested_feed` (pre-ranked); zero per-request scoring
+
+**`/trending`** — `src/routes/_authenticated/trending.tsx`, `src/lib/trending-categories.functions.ts`
+- verify: reads only `mv_trending` + `mv_category_trending_score`; no per-request aggregation
+- apply: `Cache-Control: public, s-maxage=60` for public-shaped responses; React Query `staleTime: 5 * 60_000`
+- verify: scores pre-normalised 0–100 at MV refresh
+- apply: reuse the `/feed` dedup pattern for category sections
+
+**`/leaderboard`** — `src/routes/_authenticated/leaderboard.tsx`, `src/lib/leaderboard.functions.ts`
+- verify (Phase 5 owner): ETag conditional GET; delta-only payload
+- verify: `leaderboard_current` pre-computed at snapshot time (no rank computation at read)
+- apply: 60 s live-score poll using `refetchInterval`, paused via `document.visibilityState !== 'visible'` and on `visibilitychange`
+- apply: rank-change animations via the View Transitions API where supported (graceful fallback: CSS transition on `transform`)
+
+**`/leaderboard/archive`** — `src/routes/_authenticated/leaderboard.archive.tsx`
+- apply: `Cache-Control: public, max-age=31536000, immutable` on archived snapshot responses
+- verify: calendar in Popover + tier/scope Select all sync via URL search params
+- apply: `staleTime: Infinity` client-side for archived snapshots
+
+**`/creators`** — `src/routes/_authenticated/creators.index.tsx`, `src/lib/creator-categories.functions.ts`
+- verify: "By category" view reads `mv_creator_categories` (no join at request time); add MV if missing — flagged as a follow-up if not present
+- apply: creator-badge hover prefetch with a 50 ms delay (match plan 2 pattern)
+- apply: `staleTime: 10 * 60_000` on creator list
+
+**`/creators/[id]`** — `src/routes/_authenticated/creators.$id.tsx`
+- apply: badge-hover prefetch fires both `getCreator` + `getVideosByCreator`
+- verify: contributors list filtered by `audit_privacy_mode='public'` server-side
+- apply: infinite scroll on the video grid
+
+**`/v/[id]`** — `src/routes/_authenticated/v.$id.tsx`
+- verify: `useHydratedStatus` merges IndexedDB queue state
+- verify: primary tag chips render from `videos.primary_tag_ids` (no extra join)
+- verify: category breadcrumb pre-computed in the loader from the closure table
+- verify (security): non-approved videos hidden from non-staff (plan 5 patch) — confirm RLS + server-fn check
+- apply: hover prefetch from any VideoCard linking here
+
+### Authenticated personal
+
+**`/me` (profile Sheet)** — `src/routes/_authenticated/me.$tab.tsx`, `src/components/profile-settings-sheet.tsx`
+- apply: lazy-load each tab's data on first activation only (Wishlist / Liked / Disliked / Watched / Suggested)
+- verify: `useHydratedStatus` on all list items
+- apply: `staleTime: 2 * 60_000` per tab
+- apply: virtualise long lists with `@tanstack/react-virtual` (threshold: >50 rows)
+
+**Submit Sheet** — `src/components/submit-sheet.tsx`, `src/lib/submit.functions.ts`
+- apply: quota counter — server read on Sheet open with `staleTime: 0`
+- apply (Phase 1 owner): wire AI submit-job auto-start via DB webhook trigger (this phase only confirms the Submit Sheet calls the right server fn)
+- apply: switch category + tag inputs to the shared `staleTime: Infinity` caches; remove any per-open re-fetch
+- verify: multi-URL YouTube metadata fetched via `Promise.all`
+
+**Notification Sheet** — `src/components/notifications-sheet.tsx`
+- apply: virtual list (`@tanstack/react-virtual`) for the notification rows
+- apply: "Past" section data only fetched when the section is expanded
+- verify: bell-badge count comes from session bootstrap (no extra query at mount)
+- verify: "Mark all read" — immediate server write + optimistic badge reset
+
+### Admin
+
+**Admin / Dashboard** — admin landing
+- verify: all metric cards read from pre-computed `app_settings` keys (daily cron)
+- apply (Phase 2 owner): mount the AI accuracy + coverage % card
+- apply: `staleTime: 5 * 60_000` on Recharts data queries
+
+**Admin / Videos** — `src/routes/_authenticated/admin.videos.index.tsx`, `src/lib/admin-videos.functions.ts`
+- apply: convert `select('*')` to explicit column lists matching the DataTable
+- apply: hover prefetch to `/admin/videos/[id]`
+- apply (Phase 1 owner): background monitor uses Supabase Realtime on `ai_jobs` + `ai_agent_sessions`
+- verify: batch assign runs in a single transactional insert (plan 4)
+- apply (Phase 2 owner): mount "AI Insights" tab — acceptance rates per slug
+
+**Admin / Videos / [id]** — `src/routes/_authenticated/admin.videos.$videoId.tsx`
+- verify: `refetchInterval: jobActive ? 5000 : false` on AI-results query
+- apply (Phase 1 owner): streaming JSON parse so results appear progressively (this phase wires the UI to the streaming response)
+- apply: lock three-column grid sizes so no layout shift while AI panel populates
+
+**Moderation queue** — `src/routes/_authenticated/moderation.tsx`
+- apply: virtualise the left list via `@tanstack/react-virtual`
+- apply (out-of-band fix): join `tags` in the queue query so the UI shows tag names, not IDs
+- verify: AI panel shows submit-time results immediately; "Re-run AI" is the only path that re-dispatches
+- apply: bulk approve/reject is a single batch server-fn call
+
+**Admin / Reports** — `src/routes/_authenticated/admin.reports.tsx`, `src/lib/reports.functions.ts`
+- verify: left panel pre-sorted by open count server-side
+- verify: right-panel search is a client filter over the loaded reports (cap ≤200/video)
+- apply: filters URL-param synced
+
+**Admin / Users** — `src/routes/_authenticated/admin.users.tsx`, `src/lib/admin-users.functions.ts`
+- verify: email masking server-side (already implemented plan 5 Phase 10) — confirm
+- verify: role Combobox options filtered server-side by actor level
+- verify: 50/page infinite scroll
+- apply: user-detail Sheet lazy-loads the last 20 audit entries only on Sheet open
+
+**Admin / Broadcasts** — `src/routes/_authenticated/admin.broadcast.tsx`, `src/lib/broadcasts.functions.ts`
+- apply: archive DataTable paginated, filters URL-param synced
+- apply: read counts via `COUNT(user_broadcast_reads)` at query time (sufficient at current volume; promote to an MV only if >100k rows — out-of-scope here, just leave a TODO comment)
+- apply: category list from `app_settings` in-memory (no separate fetch)
+
+**Admin / Audit log** — `src/routes/_authenticated/admin.audit.tsx`
+- defer: monthly partitioning (row count nowhere near 1M) — leave a TODO with the partitioning DDL sketch
+- apply: row-expand uses `Collapsible` with no extra fetch (diff payload included in the initial row)
+- verify: filter by actor / action / date all server-side with indexed columns; add indexes if `EXPLAIN` shows a seq scan
+
+**Admin / Roles & Permissions** — `src/routes/_authenticated/admin.roles.tsx`
+- apply: matrix loaded once, `staleTime: 30 * 60_000`
+- verify: inline checkbox toggle writes immediately per cell
+- verify: plan 5/6 permission keys (`ai.dispatch`, `ai.review`, `ai.manage`, `users.view`, `users.manage`) all render in the matrix
+
+**Admin / Settings** — `src/routes/_authenticated/admin.settings.tsx`
+- verify: all settings auto-save inline + Sonner confirmation (no submit button)
+- apply (Phase 2 owner): AI section adds feedback-threshold sliders alongside existing model selectors and parallel-agent control
+- verify: orchestrator hot-reloads `app_settings` each cron tick
+
+**Recommendation weights**
+- verify (Phase 3 owner): weights are wired into the feed assembly fn
+- verify (Phase 4 owner): weights applied to `/suggest` personalised scoring
+- apply: on weight save → invalidate `user_feed_state` cache row for the user so the next `/feed` load uses the new weights
+
+### Global / cross-cutting
+
+**Action queue (IndexedDB)** — `src/lib/action-queue.ts`
+- verify: 500-entry cap with immediate flush on exceed
+- verify: acknowledged entries evicted after 24 h on each flush
+- verify: `useHydratedStatus` merges queue state for every status-bearing component
+
+**Session bootstrap** — `src/lib/auth-context.tsx`
+- apply: single bootstrap query returning `{ profile, roles, unreadCount, recommendation_settings, app_settings_public }`
+- apply: category tree + tag list fetched once after bootstrap and exposed via context (replaces any per-component fetch)
+- verify: `onAuthStateChange` — `TOKEN_REFRESHED` silent; `SIGNED_OUT` clears IndexedDB queue + redirects
+
+**VideoCard (global)** — `src/components/video-card.tsx`
+- verify: `React.memo` + stable `useCallback` props
+- verify: `primary_tag_ids` resolved from in-memory tag cache
+- apply: 50 ms hover-prefetch on every card link
+- apply: serve thumbnails as AVIF/WebP via YouTube's `hqdefault.webp` URL when available; add `fetchpriority="high"` to the first 4 cards on `/feed`, `/suggest`, `/trending`, `/categories/[slug]`
+
+**DB / Postgres** — migration only if a verify finds a missing piece
+- apply: add `last_refreshed_at timestamptz` column to every MV (`mv_trending`, `mv_suggested_feed`, `mv_category_trending_score`, …) and have `refresh_mv()` write `now()` on success — for the admin health monitor
+- defer: `audit_log` monthly partitioning
+- apply: codemod pass — replace every `select('*')` in `src/lib/**/*.functions.ts` with explicit column lists
+- verify: indexes — closure table `(ancestor_id)` + `(descendant_id)`, GIN on `videos.primary_tag_ids`/`secondary_tag_ids`, partial index on `video_tags(video_id) WHERE rank IS NOT NULL`, composite on `user_video_status(user_id, video_id)`; add any missing in a single small migration
 
 ---
 
-## Phase 1 — Schema: AI job queue, sessions, taxonomy snapshot, video AI metadata (0.5.0)
+## Execution order (single batch where safe)
 
-Single migration. Tables follow public-schema GRANT rules.
-
-- `**ai_jobs**` — `id uuid pk`, `job_type ai_job_type` enum(`categorise`,`tag_primary`,`tag_secondary`,`tag_rest`), `scope ai_job_scope` enum(`user_submit`,`admin_single`,`admin_batch`,`admin_queue`), `video_id uuid`, `batch_id uuid null`, `assigned_session_id uuid null`, `taxonomy_snapshot_id uuid null`, `status ai_job_status` enum(`pending`,`claimed`,`running`,`paused`,`completed`,`failed`,`cancelled`), `model_used text`, `prompt_tokens int`, `completion_tokens int`, `retry_count int default 0`, `max_retries int default 3`, `max_duration_s int`, `max_results int`, `priority int default 5`, `created_by uuid null`, `error_text text`, `started_at/paused_at/resumed_at/completed_at/failed_at timestamptz`, `created_at timestamptz default now()`, `updated_at timestamptz default now()`. RLS: select staff (`has_permission audit.view`) OR `created_by = auth.uid()` when `scope='user_submit'`; insert/update via service role only (server fn).
-- `**ai_job_results**` — `id`, `job_id`, `video_id`, `result_type` (same enum as `job_type`), `entity_id uuid`, `entity_name text`, `confidence float`, `was_accepted bool null`, `accepted_by uuid null`, `accepted_at timestamptz`, `rejection_reason text`, `run_version int default 1`, `entity_deleted bool default false`, `deleted_at timestamptz null` (soft delete for re-runs). RLS: read for `has_permission video.edit_metadata` OR job owner.
-- `**ai_agent_sessions**` — `id`, `agent_index int`, `model text`, `scope`, `context_snapshot_id uuid` (FK → `ai_taxonomy_snapshot`), `last_heartbeat timestamptz`, `current_job_id`, `total_jobs_completed`, `total_prompt_tokens`, `total_completion_tokens`, `session_started_at`, `session_ended_at`, `end_reason text`. RLS: staff read.
-- `**ai_taxonomy_snapshot**` — `id`, `snapshot_at timestamptz`, `categories_compact text` (TSV `slug|name|parent_slug|depth`), `platform_tags_compact text`, `secondary_tags_compact text`, `total_categories int`, `total_tags int`, `is_current bool`. Refreshed by `refresh_ai_taxonomy_snapshot()` server fn, invoked from triggers on `categories` and `tags` AFTER INSERT/UPDATE/DELETE (debounced via `pg_notify` consumed by the orchestrator cron — avoid synchronous heavy rebuild inside DDL triggers).
-- `**videos` additions** — `ai_categorised_at`, `ai_tagged_at`, `ai_categorisation_model`, `ai_tagging_model`, `ai_confidence_avg float`, `ai_review_status` enum(`none`,`pending_review`,`accepted`,`partially_accepted`,`rejected`) default `none`.
-- `**profiles.suspended_at timestamptz null**` (used by phase 10).
-- `**app_settings` seeds**: `ai_max_parallel_agents=2`, `ai_user_submit_model`, `ai_admin_model`, `ai_batch_model`, `ai_fallback_model_order`, `ai_max_categories_per_video=30`, `ai_min_tags_secondary=50`, `ai_session_max_jobs=20`, `ai_heartbeat_timeout_s=90`, `ai_user_submit_auto=true`, `ai_stale_threshold_days=365`, `ai_max_batch_size=500`, `show_ai_attribution_on_videos=false`.
-- **Permission keys (`permissions` seed)**: `ai.dispatch`, `ai.review`, `ai.manage`, `users.view`, `users.manage`. Granted to `owner` + `admin` roles via `role_permissions`. Refactor-map row 3 (new permission key) applies — update `admin.roles.tsx` matrix.
-
-GRANTs for every new table: `select` to `authenticated` (staff-filtered by RLS), `all` to `service_role`.
+1. **DB sweep first** — one migration adding any missing indexes + MV `last_refreshed_at` columns + the `refresh_mv()` update. Nothing else depends on it.
+2. **Shared infra** — session bootstrap consolidation, shared category/tag caches, dedup helper extraction, hover-prefetch helper. Everything else uses these.
+3. **Public pages** — landing, categories, tags (smallest blast radius).
+4. **Core browsing** — `/feed`, `/suggest`, `/trending`, `/leaderboard(/archive)`, `/creators(/$id)`, `/v/$id`.
+5. **Personal pages** — `/me`, Submit Sheet, Notification Sheet.
+6. **Admin pages** — dashboard, videos (+ $id), moderation, reports, users, broadcasts, audit, roles, settings, recommendation weights.
+7. **Global polish** — VideoCard thumbnail format + fetchpriority pass, `select('*')` codemod, final verify pass.
 
 ---
 
-## Phase 2 — Prompt builder + Lovable AI Gateway client (0.5.0)
+## Out of scope (explicit, won't touch)
 
-`src/lib/ai/` server-only:
-
-- `taxonomy-snapshot.server.ts` — builds the compact TSV taxonomy + platform/secondary tag tables; persists as the current snapshot; exposes `getCurrentSnapshot()` cached in-process for the cron tick.
-- `prompt.server.ts` — shared base system prompt (identity + idempotency rule "only output results for the supplied video_id") + four task suffixes, each with a strict JSON output schema. The per-job user message is `{video_id,title,description(≤500c),channel_name,youtube_tags(top 20),duration_seconds,published_at,existing_categories,existing_primary_tags}`.
-- `gateway.server.ts` — POSTs to Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`, bearer `LOVABLE_API_KEY`), structured JSON output, parses with try/catch, validates every returned slug against the snapshot. Unknown slugs dropped; >50 % unknown → `error="taxonomy_mismatch"`, job failed (sweeper reissues).
-- Session reuse: the conversation array (system + taxonomy injected once, then appended user messages per job) is rebuilt server-side from the session's `id` + `context_snapshot_id` on each tick — no in-memory state needed across cron invocations.
-
-Edge cases retained from draft: malformed JSON → `error="malformed_output"`, retryable up to `max_retries`; context-length 400 → end session with `end_reason='context_exceeded'`, start fresh; over-classification check after each batch (single slug >80 % of batch → monitor warning).
-
----
-
-## Phase 3 — Orchestrator: dispatcher, runner, heartbeat & retry sweepers (0.5.0)
-
-- `src/lib/ai/orchestrator.server.ts`:
-  - `dispatchNextJob(scope)` — `SELECT ... FOR UPDATE SKIP LOCKED` on `ai_jobs`, claim atomically.
-  - `runJob(job, session)` — invokes gateway, writes `ai_job_results` (was_accepted=true for `scope='user_submit'` auto-accept; null otherwise for human review), bumps session counters, updates `videos.ai_*`.
-  - `pauseBatch(batch_id)` / `resumeBatch(batch_id)` / `cancelBatch(batch_id)` — set status transitions; in-flight jobs check pause flag between jobs.
-  - `sweepStaleSessions()` (90 s heartbeat default) — re-queue running jobs whose session heartbeat is stale.
-  - `sweepRetries()` — re-queue `failed` jobs with `retry_count < max_retries` and non-permanent errors.
-- HMAC cron route `src/routes/api/public/cron/ai-orchestrator.ts` — same `LEADERBOARD_CRON_SECRET`-style bearer pattern as existing cron routes. Every 30 s: refresh in-process taxonomy if `is_current` changed, fill up to `ai_max_parallel_agents` sessions across the model pool, dispatch + run one job per session per tick, run sweepers every Nth tick.
-- pg_cron schedules (via `supabase--insert`, not migration): orchestrator every 30 s, retry sweep every 2 min, heartbeat sweep every 60 s.
-
----
-
-## Phase 4 — `/admin/videos/$videoId` single-video detail with AI panel (0.5.0)
-
-New route `src/routes/_authenticated/admin.videos.$videoId.tsx`, gated `library.manage`. Three-column desktop layout, stacked on mobile.
-
-- Left: embedded YouTube player + read-only stats (title, channel, duration, submission_count, suggest_count, category breadcrumb, tag chips).
-- Centre: inline-save metadata editor (categories ≤5, tag rank reorder, curator note, content warnings, AI metadata block with stale-warning chip when `ai_*_at < now() - ai_stale_threshold_days`).
-- Right: AI panel with tabs (Categories / Primary tags / Secondary tags / All tags). Each tab shows current assignments + "Request AI suggestion" button (dispatches `admin_single` priority=3 job) + result chips with confidence colour (>0.8 green, 0.5–0.8 amber, <0.5 red) + per-result accept/reject toggle. TanStack Query `refetchInterval: jobActive ? 5000 : false`.
-- Hover-prefetch from the admin/videos DataTable row (`getVideoDetail` + `getAiJobResults`).
-
----
-
-## Phase 5 — `/admin/videos` batch AI + background monitor Sheet (0.5.0)
-
-- Extend existing `admin.videos.tsx` DataTable batch toolbar with **"Run AI on selected"** popover (task checkboxes, max categories slider, min secondary tags slider, max duration select). Single `INSERT INTO ai_jobs VALUES (...),(...),...` transaction, server-capped at `ai_max_batch_size` (500); excess returns a sonner warning.
-- New header icon button (brain) opens a right-side **Background Monitor Sheet** (640 px). Sections:
-  - **Active sessions** card list: model, scope, jobs completed, prompt/completion tokens, elapsed, current job title, heartbeat (relative), health colour.
-  - **Batch queue** DataTable: batch_id (short), scope, task type chips, totals (pending/running/paused/completed/failed), success %, avg confidence, elapsed/ETA (client-derived), created_by, actions (pause/resume/cancel(AlertDialog)/view).
-  - Adaptive polling: 5 s when active jobs exist, 30 s when idle, paused when sheet closed.
-- `max_duration_s` reached mid-batch → pause remaining jobs + notification to `created_by`.
-
----
-
-## Phase 6 — Submit sheet + moderation queue AI integration (0.5.0)
-
-- **Submit sheet** (`src/components/submit-sheet.tsx`): after YouTube metadata loads per URL, immediately create `user_submit` jobs (`categorise`, `tag_primary`, `tag_secondary` only — never `tag_rest`). Inline "Categorising with AI…" indicator per URL. Returned suggestions pre-fill the category/tag pickers (still capped by plan 4 limits). Submitting before AI completes is allowed; AI results land in `ai_job_results` for the moderator to consult. AI is gated by `ai_user_submit_auto` and never blocks the submit button.
-- **Moderation queue** (`src/routes/_authenticated/moderation.tsx`): below the existing proposed category/tag checkbox sections add an **AI suggestions** panel reading the latest non-soft-deleted `ai_job_results` for the candidate video, with confidence chips + accept/reject. "Re-run AI" button creates `admin_queue` priority=7 jobs and soft-deletes prior results (`deleted_at`), bumping `run_version`. Audit actions: `ai.rerun_requested`.
-
----
-
-## Phase 7 — AI observability: stale chips, dashboard widget, audit, admin settings (0.5.0)
-
-- Stale chips in `admin/videos` DataTable, `admin/videos/$id`, and moderation when `ai_*_at` exceeds `ai_stale_threshold_days`.
-- New toggleable columns in the admin/videos DataTable: `ai_review_status`, `ai_confidence_avg` (colour-coded, sortable). Filter "Pending AI review only".
-- Audit actions (new strings, no enum migration): `ai.job_dispatched`, `ai.job_completed`, `ai.result_accepted`, `ai.result_rejected`, `ai.batch_paused`, `ai.batch_resumed`, `ai.batch_cancelled`, `ai.rerun_requested`.
-- **Admin Settings → AI section** (`admin.settings.tsx`): selects for each model slot (sourced from the supported-models list), sliders for parallel agents (1–6), session max jobs (5–50), heartbeat timeout (30–180 s), max categories (1–30), min secondary tags (10–200), stale threshold days, auto-categorise switch. Hot-reloaded by the orchestrator on each tick.
-- `LOVABLE_API_KEY` is already a managed secret — no UI rotation in this plan; if rotation is needed it goes through `lovable_api_key--rotate_lovable_api_key`.
-- **Dashboard widget** (extend admin landing): "AI coverage" = `count(videos where ai_categorised_at > now()-stale)/count(approved)`. Stored daily into `app_settings.ai_coverage_metric` by a small pg_cron job — no per-request aggregation.
-- "Queue all stale AI videos" button (owner/admin only) → dispatch `admin_batch` for `ai_categorised_at IS NULL OR < now()-stale`.
-- Optional public attribution chip on `/v/$id` gated by `show_ai_attribution_on_videos`, respecting `audit_privacy_mode` of the accepting curator.
-
----
-
-## Phase 8 — Edge cases (0.5.0)
-
-- Account hard-delete (plan 1): `ai_jobs.created_by = NULL` for any in-flight `user_submit` jobs; results retained on the video. Add to `src/lib/account-deletion.server.ts`.
-- Taxonomy renamed/deleted mid-batch: snapshot is immutable per batch; post-batch validator marks `ai_job_results.entity_deleted=true` so the monitor surfaces "review affected results".
-- Gateway 429/5xx across all models: pause all running jobs, set `app_settings.ai_all_models_throttled=true`, broadcast notification to admins; retry sweep clears it on next success.
-- Concurrent `user_submit` + `admin_single` for same video: keyed by `(video_id, job_type, run_version)` — no overwrite; UI shows latest run_version per `job_type`.
-
----
-
-## Phase 9 — Public landing page `/` (0.5.0)
-
-Replace current authenticated-only index behaviour: public landing, redirect to `/feed` when authenticated.
-
-- **Section 1** — Full-viewport ambient video wall: 3×2 grid of muted/looping YouTube iframe previews from the top 6 of `mv_suggested_feed` (no auth needed). Overlaid monochrome wordmark + tagline + CTAs (Browse → `/categories`, Sign in → `/login`). Vignette via inset radial box-shadow on a pseudo-element. `prefers-reduced-motion` → static thumbnails.
-- **Section 2** — Three feature cards animated in via IntersectionObserver + CSS (Suggest counter, Leaderboard rank, Community curation flow). Monochrome.
-- **Section 3** — Three live stat cards: approved videos, total categories, public contributors (only profiles with `audit_privacy_mode='public'`). Read from denormalised `app_settings.landing_stats` refreshed daily by pg_cron.
-- **Section 4** — Minimal footer: wordmark, tagline, sign-in, links (Categories, Leaderboard, Privacy, Terms).
-- Cache `Cache-Control: public, s-maxage=300, stale-while-revalidate=3600`. If `mv_suggested_feed` has <6 rows: fill with monochrome wordmark placeholders.
-- SEO (per existing pattern in `index.tsx`): keep `WebSite` + `Organization` JSON-LD, add `ItemList` of the 6 featured videos.
-
----
-
-## Phase 10 — `/admin/users` with role hierarchy + suspension (0.5.0)
-
-New route `src/routes/_authenticated/admin.users.tsx`, gated `users.view`. New sidebar item "Users" under Admin.
-
-- DataTable: avatar, display name, masked email (server-side mask unless actor has `audit.view`), roles (chips), joined, last active (from `auth.users.last_sign_in_at` via server fn), submission count, AI pending-review count. Server-side search (debounced 300 ms), 50/page Intersection Observer infinite scroll.
-- **Role assignment server fn** with hierarchy rules:
-  1. Only `owner` can grant `owner`; capped at **2 concurrent owners** (`max_owners_reached` error).
-  2. `admin` can grant any non-admin, non-owner role.
-  3. Other roles cannot grant.
-  4. Last owner cannot be demoted (existing plan 1 rule preserved).
-  Combobox options are filtered **server-side** based on the actor's level — never just hidden in the client.
-- Remove role: `X` chip → AlertDialog (within the 5-dialog budget).
-- **User detail Sheet** (right side): profile info, roles + timestamps, last 20 audit entries (`target_id=user.id OR actor_id=user.id`), submission count, AI jobs created. Email shown fully only when actor has `audit.view`.
-- **Suspend / unsuspend** — uses new `profiles.suspended_at`. Auth middleware (`src/integrations/supabase/auth-middleware.ts`) rejects suspended users with a clear error. Suspended users' submissions hidden from moderation queue; their approved videos remain visible. Audit actions `user.suspended` / `user.unsuspended` + in-app notification to the user.
-- Edge cases: assigning role ≥ actor's level → `insufficient_role_level` (server-enforced + filtered from combobox).
-
----
-
-## Refactor-map additions
-
-Append to `.lovable/refactor-map.md`:
-
-
-| Row | Change                                                                                    | Touch-set                                                                                                                                                                |
-| --- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 17  | `ai_jobs` status change                                                                   | background monitor, admin/videos AI column, admin/videos/$id AI panel, audit (`ai.*`), notifications (admin batches), submit sheet inline indicator, moderation AI panel |
-| 18  | `ai_taxonomy_snapshot` rebuild                                                            | triggers on `categories`+`tags`, `refresh_ai_taxonomy_snapshot()` server fn, gateway prompt builder, all active sessions (next tick)                                     |
-| 19  | AI `app_settings` keys                                                                    | `admin.settings.tsx` AI section, orchestrator tick (hot reload), monitor defaults, dashboard "AI coverage" widget                                                        |
-| 20  | `profiles.suspended_at`                                                                   | `auth-middleware.ts`, moderation queue filter, `admin/users` DataTable, notifications, audit (`user.suspended/unsuspended`)                                              |
-| 21  | New permission keys `ai.dispatch`, `ai.review`, `ai.manage`, `users.view`, `users.manage` | `role_permissions` seed, `admin.roles.tsx` matrix, every `has_permission()` call in `admin.users`, `admin.videos`, orchestrator routes                                   |
-
+- AI Phase 1 (auto-start + token budget) — only the per-page wiring (Submit Sheet, monitor) is touched here; the orchestrator/webhook lives in Phase 1.
+- AI Phase 2 (feedback loop + `ai_feedback_log`) — only the UI mount points are added here.
+- Feed algorithm (Phase 3), Suggest exclusion (Phase 4), Leaderboard delta/ETag (Phase 5) — verified, not re-implemented.
+- `audit_log` partitioning — deferred, TODO comment only.
+- Creator MV (`mv_creator_categories`) creation if missing — flagged as a follow-up, not built in this phase.
 
 ---
 
 ## Open questions
 
-1. Public landing replaces the current `/` — anything you want kept from the existing index (logged-out shell, partner logos, etc.)? Answer: Not really. But the new landing has to not scroll. Just the viewport. 
-2. Auto-accept policy for `user_submit` AI results: draft says auto-accept at submit time. Keep, or require explicit user click on the suggested chips before they count as accepted?
-3. Owner cap of 2: hard cap, or a configurable `app_settings.max_owners`? Asnwer: Configurable. 
-4. AI attribution chip on public video pages: default off in plan — leave off until you opt in per-instance?
+1. **AVIF/WebP thumbnails**: YouTube serves `…hqdefault.webp`; do you also want a tiny self-hosted AVIF resize pipeline (Worker + KV) for sharper thumbs at 2× DPR, or stick to YouTube's WebP for now?
+2. **Virtualisation threshold** for `/me` lists and the moderation queue — keep my default of >50 rows, or always virtualise?
+3. **Landing SSR redirect for authed users**: do via cookie sniff in the loader (fast, no JS flash) or client-side `<Navigate>` (simpler, brief flash)?
+4. **`select('*')` codemod** — happy with a mechanical pass where I replace every `*` with an explicit list inferred from current usage, or do you want me to PR it as a separate review-only change?

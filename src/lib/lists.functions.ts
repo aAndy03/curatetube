@@ -227,7 +227,7 @@ export const listNotifications = createServerFn({ method: "POST" })
     const [{ data: rows }, { count: unread }] = await Promise.all([
       supabase
         .from("notifications")
-        .select("*")
+        .select("id, title, body, link, read_at, created_at, type, data")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(50),
