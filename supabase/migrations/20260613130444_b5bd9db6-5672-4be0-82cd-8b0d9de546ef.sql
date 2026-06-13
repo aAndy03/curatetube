@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS videos_primary_tag_ids_gin ON public.videos USING gin (primary_tag_ids);
