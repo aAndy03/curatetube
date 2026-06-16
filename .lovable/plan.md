@@ -83,7 +83,9 @@ Smallest blast radius. Uses helpers from step 1.
 
 ---
 
-## Step 3 — Core browsing
+## Step 3a — Core browsing: feeds (`/feed`, `/suggest`, `/trending`)
+
+Shared-shape rails. All three consume the step-1 dedup helper and bootstrap weights; ship together so the dedup cycle stays consistent.
 
 **`/feed` — `src/routes/_authenticated/feed.tsx`, `src/lib/sections.functions.ts`, `src/lib/feed-dedup.server.ts`**
 - verify (Phase 3 owner): session seed read from `user_feed_state`, not regenerated per request.
@@ -104,6 +106,12 @@ Smallest blast radius. Uses helpers from step 1.
 - apply: `Cache-Control: public, s-maxage=60`; React Query `staleTime: 5 * 60_000`.
 - verify: scores pre-normalised 0–100 at MV refresh.
 - apply: reuse the `/feed` dedup pattern for category sections.
+
+---
+
+## Step 3b — Core browsing: discovery + detail (`/leaderboard`, `/creators`, `/v/[id]`)
+
+Different data shape (ranked snapshots, creator joins, single-video detail). Ship after 3a so the dedup helper and hover-prefetch are battle-tested.
 
 **`/leaderboard` — `src/routes/_authenticated/leaderboard.tsx`, `src/lib/leaderboard.functions.ts`**
 - verify (Phase 5 owner): ETag conditional GET; delta-only payload.
