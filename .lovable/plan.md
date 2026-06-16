@@ -165,9 +165,9 @@ Different data shape (ranked snapshots, creator joins, single-video detail). Shi
 
 ---
 
-## Step 5 — Admin + global polish
+## Step 5a — Admin: content surfaces (Dashboard, Videos, Moderation)
 
-Largest surface; ship last so the helpers from steps 1–4 are settled.
+The high-traffic admin views: read-heavy DataTables, AI panels, and the moderation queue. Ship before 5b so the codemod + recommendation-weight invalidation land against settled callers.
 
 **Admin / Dashboard**
 - verify: metric cards read from `app_settings` (daily cron).
@@ -191,6 +191,12 @@ Largest surface; ship last so the helpers from steps 1–4 are settled.
 - apply (out-of-band fix): join `tags` in the queue query so the UI shows tag names, not IDs.
 - verify: AI panel shows submit-time results immediately; "Re-run AI" is the only re-dispatch path.
 - apply: bulk approve/reject is a single batch server-fn call.
+
+---
+
+## Step 5b — Admin: governance + global polish
+
+Lower-traffic admin views (reports/users/broadcasts/audit/roles/settings) plus the cross-cutting polish that touches every page (VideoCard, action queue, recommendation invalidation, `select('*')` codemod). Ship last.
 
 **Admin / Reports — `src/routes/_authenticated/admin.reports.tsx`, `src/lib/reports.functions.ts`**
 - verify: left panel pre-sorted by open count server-side.
