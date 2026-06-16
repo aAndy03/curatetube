@@ -2,7 +2,7 @@
 
 Sweeping audit + fixes across every route. Items are grouped as **verify** (read code, confirm already done — no change unless missing) or **apply** (implement now). Where a fix has a dedicated phase in plan 6 (e.g. realtime monitor = Phase 1, AI feedback = Phase 2, /feed algo = Phase 3, /suggest = Phase 4, /leaderboard delta = Phase 5), this phase only confirms the per-page wiring; it does not re-implement that phase.
 
-Work is split into **6 steps**. Step 0 captures everything already shipped in earlier turns of this phase. Steps 1–5 are the remaining work, in execution order — each step is a single batch that can be shipped on its own.
+Work is split into **8 steps**: Step 0 is everything already shipped, Step 1 is the shared foundation, and Steps 2–5 cover the remaining surface area. Steps 3 and 5 are large enough that they ship as `3a/3b` and `5a/5b` so each step stays reviewable.
 
 ---
 
@@ -36,25 +36,26 @@ Shipped in earlier turns of Phase 6. Nothing to do here; listed so the remaining
 
 ---
 
-## Step 1 — Shared infra (foundation for steps 2–5)
+## Step 1 — Shared infra (foundation for steps 2–5) ✅
 
-Touches code that every later step depends on, plus any remaining DB tidy-up. Ship alone first so steps 2–5 can just consume the new helpers.
+Shipped. Touches code that every later step depends on. Each helper is the canonical entry point — steps 2–5 must consume these instead of rolling their own equivalent.
 
-**Session bootstrap consolidation — `src/lib/auth-context.tsx`**
-- apply: single bootstrap query returning `{ profile, roles, unreadCount, recommendation_settings, app_settings_public }`.
-- apply: category tree + tag list fetched once after bootstrap and exposed via context (replaces per-component fetches).
-- verify: `onAuthStateChange` — `TOKEN_REFRESHED` silent; `SIGNED_OUT` clears IndexedDB queue + redirects.
+**Session bootstrap consolidation**
+- shipped: `src/lib/session-bootstrap.functions.ts` — one round-trip returning `{ profile, roleNames, isOwner, permissions, unreadCount, recommendationWeights, appSettingsPublic }`. Owner-bypass logic baked in; `app_settings` filtered through a `PUBLIC_APP_SETTING_KEYS` allow-list so secrets stay admin-only.
+- shipped: `src/hooks/use-session-bootstrap.ts` — `useSessionBootstrap()` (5 min stale, 30 min gc, query key `['session-bootstrap', userId]`). Exposes `.has(key)` + `.isOwner` so consumers can drop `usePermissions` calls. Mutations that change a slice MUST invalidate this key.
+- next-turn migration: swap `usePermissions` call sites + per-page profile/weights/unread queries over to `useSessionBootstrap`; delete `usePermissions` once empty.
+- verify: `onAuthStateChange` — `TOKEN_REFRESHED` silent; `SIGNED_OUT` clears IndexedDB queue + redirects. (Auth-context untouched this step; behaviour confirmed unchanged.)
 
 **Shared caches**
-- apply: `useCategoryTree()` hook reading `['categories','tree']` with `staleTime: Infinity` — consumed by submit sheet, moderation, admin/videos editor, suggest.
-- apply: `useTagsCache()` exposed via context; VideoCard + tag chips read from it (no per-render fetch).
+- shipped: `src/hooks/use-category-tree.ts` — `useCategoryTree()` with `staleTime: Infinity`, exposes `nodes / byId / bySlug / childrenOf`. Single source for submit sheet, moderation, admin/videos editor, suggest, `/categories`.
+- in place: `src/hooks/use-tags-cache.ts` already provides `useTagsCache()` (10 min stale, `byId` Map). VideoCard + tag chips should read from it directly.
 
 **Shared helpers**
-- apply: extract `dedupSeenIds(videoIds, userId)` server-side helper used by `/feed`, `/suggest`, `/trending` (DB-side `WHERE NOT IN (...)`, never a JS `.filter()`).
-- apply: `prefetchOnHover(to, params, delayMs=50)` helper for VideoCard, creator badge, admin row links.
+- shipped: `src/lib/dedup-seen-ids.server.ts` — `dedupSeenIds(candidateIds, userId)` + `commitSeenIds(userId, seen, newlyShownIds)` wrapping the existing `feed-dedup.server` primitives. `/feed`, `/suggest`, `/trending` should use this pair instead of touching `loadOrResetDedup` / `persistDedup` directly.
+- shipped: `src/lib/prefetch-on-hover.ts` — `usePrefetchOnHover(to, params, 50)` returning `{ onMouseEnter, onMouseLeave, onFocus, onBlur }`. Drop-in for VideoCard, creator badges, admin row links.
 
 **DB tidy (only if missing)**
-- verify (and add if missing in one small migration): any remaining missing index uncovered while writing the codemod in step 5.
+- verify (and add if missing in one small migration): any remaining missing index uncovered while writing the codemod in step 5b.
 
 ---
 
@@ -82,7 +83,9 @@ Smallest blast radius. Uses helpers from step 1.
 
 ---
 
-## Step 3 — Core browsing
+## Step 3a — Core browsing: feeds (`/feed`, `/suggest`, `/trending`)
+
+Shared-shape rails. All three consume the step-1 dedup helper and bootstrap weights; ship together so the dedup cycle stays consistent.
 
 **`/feed` — `src/routes/_authenticated/feed.tsx`, `src/lib/sections.functions.ts`, `src/lib/feed-dedup.server.ts`**
 - verify (Phase 3 owner): session seed read from `user_feed_state`, not regenerated per request.
@@ -103,6 +106,12 @@ Smallest blast radius. Uses helpers from step 1.
 - apply: `Cache-Control: public, s-maxage=60`; React Query `staleTime: 5 * 60_000`.
 - verify: scores pre-normalised 0–100 at MV refresh.
 - apply: reuse the `/feed` dedup pattern for category sections.
+
+---
+
+## Step 3b — Core browsing: discovery + detail (`/leaderboard`, `/creators`, `/v/[id]`)
+
+Different data shape (ranked snapshots, creator joins, single-video detail). Ship after 3a so the dedup helper and hover-prefetch are battle-tested.
 
 **`/leaderboard` — `src/routes/_authenticated/leaderboard.tsx`, `src/lib/leaderboard.functions.ts`**
 - verify (Phase 5 owner): ETag conditional GET; delta-only payload.
@@ -156,9 +165,9 @@ Smallest blast radius. Uses helpers from step 1.
 
 ---
 
-## Step 5 — Admin + global polish
+## Step 5a — Admin: content surfaces (Dashboard, Videos, Moderation)
 
-Largest surface; ship last so the helpers from steps 1–4 are settled.
+The high-traffic admin views: read-heavy DataTables, AI panels, and the moderation queue. Ship before 5b so the codemod + recommendation-weight invalidation land against settled callers.
 
 **Admin / Dashboard**
 - verify: metric cards read from `app_settings` (daily cron).
@@ -182,6 +191,12 @@ Largest surface; ship last so the helpers from steps 1–4 are settled.
 - apply (out-of-band fix): join `tags` in the queue query so the UI shows tag names, not IDs.
 - verify: AI panel shows submit-time results immediately; "Re-run AI" is the only re-dispatch path.
 - apply: bulk approve/reject is a single batch server-fn call.
+
+---
+
+## Step 5b — Admin: governance + global polish
+
+Lower-traffic admin views (reports/users/broadcasts/audit/roles/settings) plus the cross-cutting polish that touches every page (VideoCard, action queue, recommendation invalidation, `select('*')` codemod). Ship last.
 
 **Admin / Reports — `src/routes/_authenticated/admin.reports.tsx`, `src/lib/reports.functions.ts`**
 - verify: left panel pre-sorted by open count server-side.
