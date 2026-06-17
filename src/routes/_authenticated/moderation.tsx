@@ -85,7 +85,7 @@ function ModerationPage() {
       qc.invalidateQueries({ queryKey: ["mod-queue"] });
       qc.invalidateQueries({ queryKey: ["videos"] });
       qc.invalidateQueries({ queryKey: ["categories-browse"] });
-      qc.invalidateQueries({ queryKey: ["categories-tree"] });
+      qc.invalidateQueries({ queryKey: ["categories", "tree"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
