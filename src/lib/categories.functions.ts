@@ -94,12 +94,14 @@ export const reorderCategories = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ReorderInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    for (let i = 0; i < data.ordered_ids.length; i++) {
-      await supabase
-        .from("categories")
-        .update({ sort_order: i })
-        .eq("id", data.ordered_ids[i]);
-    }
+    // Single round-trip wave: fire all sibling updates in parallel.
+    const results = await Promise.all(
+      data.ordered_ids.map((id, i) =>
+        supabase.from("categories").update({ sort_order: i }).eq("id", id),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw new Error(failed.error.message);
     return { ok: true };
   });
 
