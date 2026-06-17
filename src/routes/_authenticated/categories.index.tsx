@@ -321,41 +321,29 @@ function PinnedTracker() {
 
 // ============ List (hierarchical, read-only) ============
 function BrowseList({ search }: { search: string }) {
-  const getTree = useServerFn(getCategoryTree);
-  const { data, isLoading } = useQuery({
-    queryKey: ["categories-tree"],
-    queryFn: () => getTree(),
-    staleTime: Infinity,
-  });
+  const { nodes, childrenOf, isLoading } = useCategoryTree();
 
-  const tree = useMemo(() => buildTree(data?.categories ?? []), [data]);
+  const tree = useMemo(() => buildTree(nodes), [nodes]);
   // Rollup video_count: sum of self + all descendants (so parents reflect children).
   const rollup = useMemo(() => {
-    const all = data?.categories ?? [];
-    const byParent = new Map<string | null, CategoryNode[]>();
-    for (const n of all) {
-      const arr = byParent.get(n.parent_id) ?? [];
-      arr.push(n);
-      byParent.set(n.parent_id, arr);
-    }
     const memo = new Map<string, number>();
     const sum = (id: string, direct: number): number => {
       const cached = memo.get(id);
       if (cached !== undefined) return cached;
-      const kids = byParent.get(id) ?? [];
+      const kids = childrenOf.get(id) ?? [];
       let total = direct;
       for (const k of kids) total += sum(k.id, k.video_count);
       memo.set(id, total);
       return total;
     };
-    for (const n of all) sum(n.id, n.video_count);
+    for (const n of nodes) sum(n.id, n.video_count);
     return memo;
-  }, [data]);
+  }, [nodes, childrenOf]);
   const flat = useMemo(() => {
     if (!search.trim()) return null;
     const q = search.toLowerCase();
-    return (data?.categories ?? []).filter((c) => c.name.toLowerCase().includes(q));
-  }, [data, search]);
+    return nodes.filter((c) => c.name.toLowerCase().includes(q));
+  }, [nodes, search]);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
