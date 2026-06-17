@@ -1,7 +1,14 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import * as React from "react";
+import {
+  queryOptions,
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronLeft, FolderTree, Pin, PinOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderTree, Pin, PinOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { listVideosByCategorySlug } from "@/lib/library.functions";
@@ -10,15 +17,19 @@ import {
   pinCategory,
   unpinCategory,
 } from "@/lib/category-feed.functions";
-import { VideoCard, type VideoCardData } from "@/components/video-card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { type VideoCardData } from "@/components/video-card";
+import { InfiniteVideoGrid } from "@/components/infinite-video-grid";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-const categoryQuery = (slug: string) =>
+const PAGE_SIZE = 24;
+
+const categoryLoaderQuery = (slug: string) =>
   queryOptions({
-    queryKey: ["category", slug],
-    queryFn: () => listVideosByCategorySlug({ data: { slug, limit: 60 } }),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["category", slug, "head", "all"],
+    queryFn: () =>
+      listVideosByCategorySlug({ data: { slug, limit: PAGE_SIZE, cursor: 0, scope: "all" } }),
+    staleTime: 5 * 60_000,
   });
 
 const clamp = (s: string, max: number) =>
@@ -26,14 +37,17 @@ const clamp = (s: string, max: number) =>
 
 export const Route = createFileRoute("/_authenticated/categories/$slug")({
   loader: ({ params, context }) =>
-    context.queryClient.ensureQueryData(categoryQuery(params.slug)),
+    context.queryClient.ensureQueryData(categoryLoaderQuery(params.slug)),
   head: ({ loaderData, params }) => {
     const cat = loaderData?.category;
     const name = cat?.name ?? params.slug;
     const title = clamp(`${name} — Curated videos on CurateTube`, 60);
     const desc = cat?.description
       ? clamp(cat.description.replace(/\s+/g, " ").trim(), 160)
-      : clamp(`Browse community-curated YouTube videos in the ${name} category on CurateTube.`, 160);
+      : clamp(
+          `Browse community-curated YouTube videos in the ${name} category on CurateTube.`,
+          160,
+        );
     const url = `https://curatetube.lovable.app/categories/${params.slug}`;
     return {
       meta: [
@@ -62,21 +76,27 @@ function CategoryDetailPage() {
   const pinFn = useServerFn(pinCategory);
   const unpinFn = useServerFn(unpinCategory);
   const qc = useQueryClient();
+  const [scope, setScope] = React.useState<"all" | "direct">("all");
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["category", slug],
-    queryFn: () => fn({ data: { slug, limit: 60 } }),
-    staleTime: 5 * 60 * 1000,
+  const query = useInfiniteQuery({
+    queryKey: ["category", slug, "infinite", scope],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      fn({ data: { slug, limit: PAGE_SIZE, cursor: pageParam as number, scope } }),
+    getNextPageParam: (last) => last.nextCursor,
+    staleTime: 5 * 60_000,
   });
+
+  const head = query.data?.pages[0];
+  if (!query.isLoading && head && !head.category) throw notFound();
+
   const { data: pinsData } = useQuery({
     queryKey: ["pinned-categories"],
     queryFn: () => pinsFn(),
     staleTime: 60_000,
   });
 
-  if (!isLoading && data && !data.category) throw notFound();
-
-  const categoryId = data?.category?.id as string | undefined;
+  const categoryId = head?.category?.id as string | undefined;
   const isPinned = Boolean(
     categoryId && pinsData?.pinned.some((p) => p.category.id === categoryId),
   );
@@ -102,63 +122,87 @@ function CategoryDetailPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const videos = React.useMemo(
+    () => (query.data?.pages.flatMap((p) => p.videos) ?? []) as VideoCardData[],
+    [query.data],
+  );
+  const breadcrumb = head?.breadcrumb ?? [];
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
       <header className="space-y-2">
-        <Link
-          to="/categories"
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" /> All categories
-        </Link>
+        <nav className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+          <Link to="/categories" className="hover:text-foreground">
+            <span className="inline-flex items-center gap-1">
+              <ChevronLeft className="h-3.5 w-3.5" /> All categories
+            </span>
+          </Link>
+          {breadcrumb.map((b) => (
+            <React.Fragment key={b.id}>
+              <ChevronRight className="h-3 w-3" />
+              <Link
+                to="/categories/$slug"
+                params={{ slug: b.slug }}
+                className="hover:text-foreground"
+              >
+                {b.name}
+              </Link>
+            </React.Fragment>
+          ))}
+        </nav>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
               <FolderTree className="h-5 w-5" />
-              {data?.category?.name ?? slug}
+              {head?.category?.name ?? slug}
             </h1>
-            {data?.category?.description ? (
-              <p className="mt-1 text-sm text-muted-foreground">{data.category.description}</p>
+            {head?.category?.description ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {head.category.description}
+              </p>
             ) : null}
           </div>
-          {categoryId ? (
-            <Button
-              variant={isPinned ? "outline" : "default"}
+          <div className="flex items-center gap-3">
+            <ToggleGroup
+              type="single"
               size="sm"
-              onClick={() => (isPinned ? unpin.mutate() : pin.mutate())}
-              disabled={pin.isPending || unpin.isPending}
+              value={scope}
+              onValueChange={(v) => v && setScope(v as "all" | "direct")}
+              aria-label="Scope"
             >
-              {isPinned ? (
-                <>
-                  <PinOff className="mr-1 h-4 w-4" /> Unpin from feed
-                </>
-              ) : (
-                <>
-                  <Pin className="mr-1 h-4 w-4" /> Pin to feed
-                </>
-              )}
-            </Button>
-          ) : null}
+              <ToggleGroupItem value="all">Incl. sub-categories</ToggleGroupItem>
+              <ToggleGroupItem value="direct">Direct only</ToggleGroupItem>
+            </ToggleGroup>
+            {categoryId ? (
+              <Button
+                variant={isPinned ? "outline" : "default"}
+                size="sm"
+                onClick={() => (isPinned ? unpin.mutate() : pin.mutate())}
+                disabled={pin.isPending || unpin.isPending}
+              >
+                {isPinned ? (
+                  <>
+                    <PinOff className="mr-1 h-4 w-4" /> Unpin from feed
+                  </>
+                ) : (
+                  <>
+                    <Pin className="mr-1 h-4 w-4" /> Pin to feed
+                  </>
+                )}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </header>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-video w-full" />
-          ))}
-        </div>
-      ) : (data?.videos.length ?? 0) === 0 ? (
-        <div className="rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground">
-          No videos in this category yet.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {data!.videos.map((v) => (
-            <VideoCard key={v.id} video={v as VideoCardData} />
-          ))}
-        </div>
-      )}
+      <InfiniteVideoGrid
+        videos={videos}
+        isLoading={query.isLoading}
+        isFetchingNextPage={query.isFetchingNextPage}
+        hasNextPage={Boolean(query.hasNextPage)}
+        onLoadMore={() => query.fetchNextPage()}
+        emptyMessage="No videos in this category yet."
+      />
     </div>
   );
 }
