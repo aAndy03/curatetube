@@ -1,11 +1,15 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import * as React from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, Tag as TagIcon } from "lucide-react";
 
 import { listVideosByTagSlug } from "@/lib/tags.functions";
-import { VideoCard, type VideoCardData } from "@/components/video-card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { type VideoCardData } from "@/components/video-card";
+import { InfiniteVideoGrid } from "@/components/infinite-video-grid";
+import { useTagsCache } from "@/hooks/use-tags-cache";
+
+const PAGE_SIZE = 24;
 
 export const Route = createFileRoute("/_authenticated/tags/$slug")({
   head: () => ({
@@ -22,13 +26,31 @@ export const Route = createFileRoute("/_authenticated/tags/$slug")({
 function TagDetailPage() {
   const { slug } = Route.useParams();
   const fn = useServerFn(listVideosByTagSlug);
-  const { data, isLoading } = useQuery({
-    queryKey: ["tag", slug],
-    queryFn: () => fn({ data: { slug, limit: 60 } }),
+  const { byId: tagsById } = useTagsCache();
+
+  const query = useInfiniteQuery({
+    queryKey: ["tag", slug, "infinite"],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      fn({ data: { slug, limit: PAGE_SIZE, cursor: pageParam as number } }),
+    getNextPageParam: (last) => last.nextCursor,
     staleTime: 5 * 60_000,
   });
 
-  if (!isLoading && data && !data.tag) throw notFound();
+  const head = query.data?.pages[0];
+  if (!query.isLoading && head && !head.tag) throw notFound();
+
+  // Prefer cached tag (resolves instantly when /feed → tag chip → /tags/[slug]).
+  const cachedTag = React.useMemo(() => {
+    for (const t of tagsById.values()) if (t.slug === slug) return t;
+    return null;
+  }, [tagsById, slug]);
+  const tag = head?.tag ?? cachedTag;
+
+  const videos = React.useMemo(
+    () => (query.data?.pages.flatMap((p) => p.videos) ?? []) as VideoCardData[],
+    [query.data],
+  );
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -41,32 +63,23 @@ function TagDetailPage() {
         </Link>
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <TagIcon className="h-5 w-5" />
-          {data?.tag?.name ?? slug}
+          {tag?.name ?? slug}
         </h1>
-        {data?.tag ? (
+        {tag ? (
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            {data.tag.source} · {data.tag.tier}
+            {tag.source} · {tag.tier}
           </p>
         ) : null}
       </header>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-video w-full" />
-          ))}
-        </div>
-      ) : (data?.videos.length ?? 0) === 0 ? (
-        <div className="rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground">
-          No approved videos use this tag yet.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {data!.videos.map((v) => (
-            <VideoCard key={v.id} video={v as VideoCardData} />
-          ))}
-        </div>
-      )}
+      <InfiniteVideoGrid
+        videos={videos}
+        isLoading={query.isLoading}
+        isFetchingNextPage={query.isFetchingNextPage}
+        hasNextPage={Boolean(query.hasNextPage)}
+        onLoadMore={() => query.fetchNextPage()}
+        emptyMessage="No approved videos use this tag yet."
+      />
     </div>
   );
 }
