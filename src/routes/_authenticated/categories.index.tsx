@@ -22,7 +22,6 @@ import { toast } from "sonner";
 
 import { listCategoriesWithStats } from "@/lib/library.functions";
 import {
-  getCategoryTree,
   createCategory,
   renameCategory,
   reorderCategories,
@@ -30,6 +29,7 @@ import {
   deleteCategory,
   type CategoryNode,
 } from "@/lib/categories.functions";
+import { useCategoryTree, CATEGORY_TREE_KEY } from "@/hooks/use-category-tree";
 import {
   listPinnedCategories,
   unpinCategoriesBatch,
