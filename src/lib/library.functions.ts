@@ -765,33 +765,77 @@ export const listCategoriesWithStats = createServerFn({ method: "GET" })
   });
 
 export const listVideosByCategorySlug = createServerFn({ method: "GET" })
-  .inputValidator((d: { slug: string; limit?: number }) =>
-    z.object({ slug: z.string().min(1).max(80), limit: z.number().min(1).max(60).optional() }).parse(d),
+  .inputValidator((d: { slug: string; limit?: number; cursor?: number; scope?: "all" | "direct" }) =>
+    z
+      .object({
+        slug: z.string().min(1).max(80),
+        limit: z.number().min(1).max(48).optional(),
+        cursor: z.number().min(0).max(10_000).optional(),
+        scope: z.enum(["all", "direct"]).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
-    const limit = Math.min(data.limit ?? 36, 60);
+    setResponseHeaders(PUBLIC_BROWSE_CACHE);
+    const limit = Math.min(data.limit ?? 24, 48);
+    const cursor = data.cursor ?? 0;
+    const scope = data.scope ?? "all";
+
     const { data: cat } = await supabaseAdmin
       .from("categories")
       .select("id, name, description, slug")
       .eq("slug", data.slug)
       .maybeSingle();
-    if (!cat) return { category: null, videos: [] };
+    if (!cat)
+      return { category: null, videos: [], breadcrumb: [], nextCursor: null as number | null };
 
-    // Include the category and all its descendants via the closure table.
-    const { data: descRows } = await supabaseAdmin
+    // Breadcrumb (parents only, root→leaf) via closure table.
+    const { data: ancRows } = await supabaseAdmin
       .from("category_ancestors")
-      .select("descendant_id")
-      .eq("ancestor_id", cat.id as string);
-    const catIds = Array.from(
-      new Set([(cat.id as string), ...((descRows ?? []).map((r) => r.descendant_id as string))]),
-    );
+      .select("ancestor_id, depth")
+      .eq("descendant_id", cat.id as string)
+      .gt("depth", 0);
+    const ancIds = (ancRows ?? []).map((r) => r.ancestor_id as string);
+    let breadcrumb: Array<{ id: string; slug: string; name: string }> = [];
+    if (ancIds.length) {
+      const { data: ancCats } = await supabaseAdmin
+        .from("categories")
+        .select("id, slug, name")
+        .in("id", ancIds);
+      const byId = new Map(
+        (ancCats ?? []).map((c) => [
+          c.id as string,
+          { id: c.id as string, slug: c.slug as string, name: c.name as string },
+        ]),
+      );
+      breadcrumb = (ancRows ?? [])
+        .slice()
+        .sort((a, b) => (b.depth as number) - (a.depth as number))
+        .map((r) => byId.get(r.ancestor_id as string))
+        .filter(Boolean) as typeof breadcrumb;
+    }
+
+    // Scope: descendants ("all") or self only ("direct") — DB-side WHERE.
+    let catIds: string[];
+    if (scope === "direct") {
+      catIds = [cat.id as string];
+    } else {
+      const { data: descRows } = await supabaseAdmin
+        .from("category_ancestors")
+        .select("descendant_id")
+        .eq("ancestor_id", cat.id as string);
+      catIds = Array.from(
+        new Set([(cat.id as string), ...((descRows ?? []).map((r) => r.descendant_id as string))]),
+      );
+    }
 
     const { data: links } = await supabaseAdmin
       .from("video_categories")
       .select("video_id")
       .in("category_id", catIds);
     const ids = Array.from(new Set((links ?? []).map((l) => l.video_id as string)));
-    if (ids.length === 0) return { category: cat, videos: [] };
+    if (ids.length === 0)
+      return { category: cat, videos: [], breadcrumb, nextCursor: null as number | null };
 
     const { data: vids, error } = await supabaseAdmin
       .from("videos")
@@ -801,7 +845,10 @@ export const listVideosByCategorySlug = createServerFn({ method: "GET" })
       .in("id", ids)
       .eq("status", "approved")
       .order("suggest_count", { ascending: false })
-      .limit(limit);
+      .order("id", { ascending: true })
+      .range(cursor, cursor + limit - 1);
     if (error) throw new Error(error.message);
-    return { category: cat, videos: vids ?? [] };
+    const videos = vids ?? [];
+    const nextCursor = videos.length === limit ? cursor + limit : null;
+    return { category: cat, videos, breadcrumb, nextCursor };
   });

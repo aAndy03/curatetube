@@ -59,27 +59,28 @@ Shipped. Touches code that every later step depends on. Each helper is the canon
 
 ---
 
-## Step 2 — Public pages
+## Step 2 — Public pages ✅
 
-Smallest blast radius. Uses helpers from step 1.
+Shipped. Helpers from step 1 (`useCategoryTree`, `useTagsCache`) are now the single source for these surfaces.
 
 **`/categories` — `src/routes/_authenticated/categories.index.tsx`, `src/lib/categories.functions.ts`**
-- apply: swap all Comboboxes to `useCategoryTree()` from step 1.
-- verify: `video_categories` insert/delete trigger bumps `categories.video_count` via closure table.
-- apply: edit mode — optimistic insert with spinner state until server confirms.
-- apply: drag reorder — batch a single `sort_order` upsert array on drop, not per item.
+- shipped: `BrowseList` + `EditorTree` consume `useCategoryTree()` (shared `CATEGORY_TREE_KEY`). Old `["categories-tree"]` key removed (moderation invalidation also updated).
+- shipped: edit-mode `createMut` does an optimistic insert under the chosen parent and rolls back on server error; dialog spinner stays via `loading` prop already in `NameDialog`.
+- shipped: drag-reorder server fn parallelised — one round-trip wave of sibling `UPDATE`s via `Promise.all` instead of N sequential awaits.
+- verify: `video_categories` insert/delete trigger bumps `categories.video_count` via closure table (existing trigger, untouched).
 
-**`/categories/[slug]` — `src/routes/_authenticated/categories.$slug.tsx`, `src/lib/category-feed.functions.ts`**
-- verify: descendant fetch uses closure-table join in one query.
-- verify: infinite scroll (IntersectionObserver) — replace any button pagination if found.
-- verify: breadcrumb resolved from closure table at loader time (not client-side recursion).
-- apply: `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` on public-shaped responses.
-- apply: direct/indirect toggle goes through a DB-side `WHERE` (server-fn param), not a client filter.
+**`/categories/[slug]` — `src/routes/_authenticated/categories.$slug.tsx`, `src/lib/library.functions.ts`**
+- shipped: `listVideosByCategorySlug` accepts `{cursor, scope}` and returns `{breadcrumb, nextCursor}`; descendants resolved DB-side via `category_ancestors`.
+- shipped: `useInfiniteQuery` + IntersectionObserver sentinel (24/page) — no Load-more button.
+- shipped: breadcrumb pre-computed in the server fn from the closure table; rendered as chips at the route head.
+- shipped: scope toggle (`all` ↔ `direct`) drives a server-fn param (DB `WHERE`), not a client filter.
+- shipped: `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` (the shared `PUBLIC_BROWSE_CACHE` header).
 
 **`/tags/[slug]` — `src/routes/_authenticated/tags.$slug.tsx`, `src/lib/tags.functions.ts`**
-- verify: GIN index used for slug lookup (step 0 confirmed `primary_tag_ids_gin`).
-- apply: reuse the VideoCard grid + infinite scroll component from `/categories/[slug]`.
-- apply: tag name resolved from `useTagsCache()` (no extra fetch on render).
+- shipped: reuses the new `<InfiniteVideoGrid>` component (also used by `/categories/[slug]`).
+- shipped: `listVideosByTagSlug` paginates via `{cursor, nextCursor}`; deterministic `(suggest_count desc, id asc)` order.
+- shipped: tag name resolved from `useTagsCache()` first (instant) with server data as fallback.
+- verify: GIN index already in place (step 0 confirmed `videos_primary_tag_ids_gin`).
 
 ---
 

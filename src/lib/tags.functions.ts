@@ -73,30 +73,32 @@ export const getVideoTags = createServerFn({ method: "GET" })
  * Powers `/tags/$slug`.
  */
 export const listVideosByTagSlug = createServerFn({ method: "GET" })
-  .inputValidator((d: { slug: string; limit?: number }) =>
+  .inputValidator((d: { slug: string; limit?: number; cursor?: number }) =>
     z
       .object({
         slug: z.string().min(1).max(120),
-        limit: z.number().min(1).max(60).optional(),
+        limit: z.number().min(1).max(48).optional(),
+        cursor: z.number().min(0).max(10_000).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     setResponseHeaders(BROWSE_CACHE_HEADERS);
-    const limit = Math.min(data.limit ?? 36, 60);
+    const limit = Math.min(data.limit ?? 24, 48);
+    const cursor = data.cursor ?? 0;
     const { data: tag } = await supabaseAdmin
       .from("tags")
       .select("id, name, slug, source, tier")
       .eq("slug", data.slug)
       .maybeSingle();
-    if (!tag) return { tag: null, videos: [] };
+    if (!tag) return { tag: null, videos: [], nextCursor: null as number | null };
 
     const { data: links } = await supabaseAdmin
       .from("video_tags")
       .select("video_id")
       .eq("tag_id", tag.id as string);
     const ids = Array.from(new Set((links ?? []).map((l) => l.video_id as string)));
-    if (ids.length === 0) return { tag, videos: [] };
+    if (ids.length === 0) return { tag, videos: [], nextCursor: null as number | null };
 
     const { data: vids, error } = await supabaseAdmin
       .from("videos")
@@ -106,8 +108,10 @@ export const listVideosByTagSlug = createServerFn({ method: "GET" })
       .in("id", ids)
       .eq("status", "approved")
       .order("suggest_count", { ascending: false })
-      .order("published_at", { ascending: false, nullsFirst: false })
-      .limit(limit);
+      .order("id", { ascending: true })
+      .range(cursor, cursor + limit - 1);
     if (error) throw new Error(error.message);
-    return { tag, videos: vids ?? [] };
+    const videos = vids ?? [];
+    const nextCursor = videos.length === limit ? cursor + limit : null;
+    return { tag, videos, nextCursor };
   });
