@@ -541,27 +541,22 @@ function buildTree(nodes: CategoryNode[]): TreeRow[] {
 
 function EditorTree({ search }: { search: string }) {
   const qc = useQueryClient();
-  const getTree = useServerFn(getCategoryTree);
-  const { data, isLoading } = useQuery({
-    queryKey: ["categories-tree"],
-    queryFn: () => getTree(),
-    staleTime: Infinity,
-  });
+  const { nodes, isLoading } = useCategoryTree();
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [addUnder, setAddUnder] = useState<{ parent: CategoryNode | null } | null>(null);
   const [renaming, setRenaming] = useState<CategoryNode | null>(null);
   const [deleting, setDeleting] = useState<CategoryNode | null>(null);
 
-  const tree = useMemo(() => buildTree(data?.categories ?? []), [data]);
+  const tree = useMemo(() => buildTree(nodes), [nodes]);
   const flatVisible = useMemo(() => {
     if (!search.trim()) return null;
     const q = search.toLowerCase();
-    return (data?.categories ?? []).filter((c) => c.name.toLowerCase().includes(q));
-  }, [data, search]);
+    return nodes.filter((c) => c.name.toLowerCase().includes(q));
+  }, [nodes, search]);
 
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["categories-tree"] });
+    qc.invalidateQueries({ queryKey: CATEGORY_TREE_KEY });
     qc.invalidateQueries({ queryKey: ["categories-browse"] });
   };
 
@@ -574,12 +569,37 @@ function EditorTree({ search }: { search: string }) {
   const createMut = useMutation({
     mutationFn: (input: { name: string; parent_id: string | null }) =>
       createFn({ data: { ...input, sort_order: 9999 } }),
+    // Optimistic insert — the new node appears in the tree under the chosen
+    // parent immediately; rolled back if the server rejects.
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: CATEGORY_TREE_KEY });
+      const prev = qc.getQueryData<{ categories: CategoryNode[] }>(CATEGORY_TREE_KEY);
+      const parentDepth = input.parent_id
+        ? (prev?.categories.find((c) => c.id === input.parent_id)?.depth ?? 0)
+        : -1;
+      const optimistic: CategoryNode = {
+        id: `optimistic-${Date.now()}`,
+        slug: input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        name: input.name,
+        parent_id: input.parent_id,
+        depth: parentDepth + 1,
+        sort_order: 9999,
+        video_count: 0,
+      };
+      qc.setQueryData<{ categories: CategoryNode[] }>(CATEGORY_TREE_KEY, (cur) => ({
+        categories: [...(cur?.categories ?? []), optimistic],
+      }));
+      return { prev };
+    },
+    onError: (e: Error, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(CATEGORY_TREE_KEY, ctx.prev);
+      toast.error(e.message);
+    },
     onSuccess: () => {
       toast.success("Category created");
-      invalidate();
       setAddUnder(null);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onSettled: () => invalidate(),
   });
 
   const renameMut = useMutation({
@@ -624,7 +644,7 @@ function EditorTree({ search }: { search: string }) {
   });
 
   const move = (node: CategoryNode, dir: -1 | 1) => {
-    const siblings = (data?.categories ?? [])
+    const siblings = nodes
       .filter((c) => c.parent_id === node.parent_id)
       .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
     const idx = siblings.findIndex((s) => s.id === node.id);
@@ -648,7 +668,7 @@ function EditorTree({ search }: { search: string }) {
     );
   }
 
-  const allCategories = data?.categories ?? [];
+  const allCategories = nodes;
 
   return (
     <div className="rounded-xl border bg-card">
