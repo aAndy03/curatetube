@@ -68,8 +68,8 @@ export const getSuggestCategoryRails = createServerFn({ method: "GET" })
       const { videos } = await fetchCategoryFeedVideos(c.category_id, excludeIds, VIDEOS_PER_RAIL);
       if (videos.length === 0) continue;
       for (const v of videos) {
-        seen.add(v.id);
         excludeIds.push(v.id);
+        newlyShown.push(v.id);
       }
       rails.push({
         category: { id: c.category_id, slug: c.slug, name: c.name },
