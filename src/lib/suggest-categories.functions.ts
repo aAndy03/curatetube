@@ -80,6 +80,6 @@ export const getSuggestCategoryRails = createServerFn({ method: "GET" })
     }
 
     const finalRails = rails.length >= MIN_RAILS ? rails : [];
-    if (finalRails.length > 0) await persistDedup(userId, seen);
+    if (finalRails.length > 0) await commitSeenIds(userId, seen, newlyShown);
     return { rails: finalRails, is_cold_start: isColdStart };
   });
