@@ -61,22 +61,24 @@ function FeedPage() {
   const sections = sectionsQ.data?.sections ?? [];
   const templates = sectionsQ.data?.templates ?? [];
 
-  const move = (id: string, dir: -1 | 1) => {
-    const ids = sections.map((s) => s.id);
-    const i = ids.indexOf(id);
-    const j = i + dir;
-    if (j < 0 || j >= ids.length) return;
-    [ids[i], ids[j]] = [ids[j], ids[i]];
-    // Optimistic local reorder
-    const reordered = ids
-      .map((sid) => sections.find((s) => s.id === sid))
-      .filter(Boolean) as FeedSection[];
-    qc.setQueryData<{ sections: FeedSection[]; templates: FeedSection[] } | undefined>(
-      ["my-sections"],
-      (prev) => (prev ? { ...prev, sections: reordered } : prev),
-    );
-    void enqueue({ type: "feed_reorder", orderedIds: ids });
-  };
+  const move = React.useCallback(
+    (id: string, dir: -1 | 1) => {
+      const ids = sections.map((s) => s.id);
+      const i = ids.indexOf(id);
+      const j = i + dir;
+      if (j < 0 || j >= ids.length) return;
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+      const reordered = ids
+        .map((sid) => sections.find((s) => s.id === sid))
+        .filter(Boolean) as FeedSection[];
+      qc.setQueryData<{ sections: FeedSection[]; templates: FeedSection[] } | undefined>(
+        ["my-sections"],
+        (prev) => (prev ? { ...prev, sections: reordered } : prev),
+      );
+      void enqueue({ type: "feed_reorder", orderedIds: ids });
+    },
+    [sections, qc],
+  );
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-8">
