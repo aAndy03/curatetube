@@ -94,7 +94,10 @@ export function FeedSectionView({
   const includeDescendants = filters.includeDescendants !== false;
 
   return (
-    <section className="space-y-3">
+    <section
+      className="space-y-3"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "600px" } as React.CSSProperties}
+    >
       <header className="flex items-center justify-between gap-3">
         <div className="flex items-baseline gap-2">
           <h2 className="text-lg font-semibold tracking-tight">{section.name}</h2>
