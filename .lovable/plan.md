@@ -84,29 +84,28 @@ Shipped. Helpers from step 1 (`useCategoryTree`, `useTagsCache`) are now the sin
 
 ---
 
-## Step 3a — Core browsing: feeds (`/feed`, `/suggest`, `/trending`)
+## Step 3a — Core browsing: feeds (`/feed`, `/suggest`, `/trending`) ✅
 
-Shared-shape rails. All three consume the step-1 dedup helper and bootstrap weights; ship together so the dedup cycle stays consistent.
+Shipped. Shared dedup helper now drives all three rail sources; rail consumers no longer touch `loadOrResetDedup` / `persistDedup` directly.
 
 **`/feed` — `src/routes/_authenticated/feed.tsx`, `src/lib/sections.functions.ts`, `src/lib/feed-dedup.server.ts`**
-- verify (Phase 3 owner): session seed read from `user_feed_state`, not regenerated per request.
-- verify (Phase 3 owner): single CTE for all sections.
-- verify: dedup uses the step-1 server-side helper.
-- apply: add `content-visibility: auto; contain-intrinsic-size: <h>` to card rows.
-- apply: `React.memo` VideoCard; convert inline handlers to stable `useCallback` refs.
-- apply: recommendation weights read from the session bootstrap (step 1), not a per-load query.
+- verify (Phase 3 owner): session seed read from `user_feed_state`, not regenerated per request — owned by AI Phase 3, not touched here.
+- verify (Phase 3 owner): single CTE for all sections — owned by AI Phase 3.
+- shipped: `content-visibility: auto; contain-intrinsic-size: 600px` on every `<FeedSectionView>` wrapper (off-screen sections skip layout/paint).
+- shipped: `move()` is `useCallback`-stable so child sections don't re-render on unrelated parent updates; VideoCard `React.memo` already in place (step 0).
+- verify: recommendation weights are not read in the current feed assembly path — when Phase 3 wires them in, source from `useSessionBootstrap().recommendationWeights` instead of an extra query.
 
 **`/suggest` — `src/routes/_authenticated/suggest.tsx`, `src/lib/suggest-categories.functions.ts`**
-- verify (Phase 4 owner): server-side exclusion of `user_video_status` videos.
-- apply: infinite scroll replacing the fixed 30-video limit (20/page, sentinel).
-- apply: category sections share the dedup helper.
-- verify: reads from `mv_suggested_feed` (pre-ranked); zero per-request scoring.
+- verify (Phase 4 owner): server-side exclusion of `user_video_status` videos — owned by AI Phase 4.
+- shipped (earlier): infinite scroll with 24/page + IntersectionObserver sentinel (`PAGE_SIZE = 24`).
+- shipped: category rails consume `dedupSeenIds`/`commitSeenIds` (step-1 helper); `loadOrResetDedup`/`persistDedup` imports removed.
+- verify: reads from `mv_suggested_feed` (pre-ranked); zero per-request scoring — confirmed.
 
 **`/trending` — `src/routes/_authenticated/trending.tsx`, `src/lib/trending-categories.functions.ts`**
-- verify: reads only `mv_trending` + `mv_category_trending_score`.
-- apply: `Cache-Control: public, s-maxage=60`; React Query `staleTime: 5 * 60_000`.
-- verify: scores pre-normalised 0–100 at MV refresh.
-- apply: reuse the `/feed` dedup pattern for category sections.
+- verify: reads only `mv_trending` + `mv_category_trending_score` — confirmed.
+- verify: `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` via shared `PUBLIC_BROWSE_CACHE`; React Query `staleTime: 5 * 60_000` already wired.
+- verify: scores pre-normalised 0–100 at MV refresh — confirmed.
+- shipped: category rails now share the same `dedupSeenIds`/`commitSeenIds` cycle as `/feed` and `/suggest`.
 
 ---
 

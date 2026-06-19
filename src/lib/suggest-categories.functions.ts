@@ -5,10 +5,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   fetchCategoryFeedVideos,
-  loadOrResetDedup,
-  persistDedup,
   type FeedRailVideo,
 } from "./feed-dedup.server";
+import { dedupSeenIds, commitSeenIds } from "./dedup-seen-ids.server";
 
 const MAX_RAILS = 4;
 const MIN_RAILS = 2;
@@ -27,8 +26,9 @@ export const getSuggestCategoryRails = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
-    const seen = await loadOrResetDedup(userId);
-    const excludeIds = Array.from(seen);
+    const { seen } = await dedupSeenIds([], userId);
+    const excludeIds: string[] = Array.from(seen);
+    const newlyShown: string[] = [];
 
     const { data: scored } = await supabaseAdmin
       .from("mv_category_suggest_score" as never)
@@ -68,8 +68,8 @@ export const getSuggestCategoryRails = createServerFn({ method: "GET" })
       const { videos } = await fetchCategoryFeedVideos(c.category_id, excludeIds, VIDEOS_PER_RAIL);
       if (videos.length === 0) continue;
       for (const v of videos) {
-        seen.add(v.id);
         excludeIds.push(v.id);
+        newlyShown.push(v.id);
       }
       rails.push({
         category: { id: c.category_id, slug: c.slug, name: c.name },
@@ -80,6 +80,6 @@ export const getSuggestCategoryRails = createServerFn({ method: "GET" })
     }
 
     const finalRails = rails.length >= MIN_RAILS ? rails : [];
-    if (finalRails.length > 0) await persistDedup(userId, seen);
+    if (finalRails.length > 0) await commitSeenIds(userId, seen, newlyShown);
     return { rails: finalRails, is_cold_start: isColdStart };
   });
