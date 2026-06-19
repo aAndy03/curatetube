@@ -27,8 +27,9 @@ export const getTrendingCategoryRails = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
-    const seen = await loadOrResetDedup(userId);
-    const excludeIds = Array.from(seen);
+    const { seen } = await dedupSeenIds([], userId);
+    const excludeIds: string[] = Array.from(seen);
+    const newlyShown: string[] = [];
 
     const { data: scored } = await supabaseAdmin
       .from("mv_category_trending_score" as never)
