@@ -5,10 +5,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   fetchCategoryFeedVideos,
-  loadOrResetDedup,
-  persistDedup,
   type FeedRailVideo,
 } from "./feed-dedup.server";
+import { dedupSeenIds, commitSeenIds } from "./dedup-seen-ids.server";
 
 const MAX_RAILS = 4;
 const MIN_RAILS = 2;
