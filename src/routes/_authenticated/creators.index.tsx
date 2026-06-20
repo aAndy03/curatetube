@@ -184,10 +184,12 @@ function CreatorCard(props: {
   subscriber_count: number | null;
   videosInCategory?: number;
 }) {
+  const prefetch = usePrefetchOnHover("/creators/$id", { id: props.id });
   return (
     <Link
       to="/creators/$id"
       params={{ id: props.id }}
+      {...prefetch}
       className="group flex items-center gap-3 rounded-lg border bg-card p-3 transition hover:border-foreground/30"
     >
       <Avatar className="h-12 w-12">
