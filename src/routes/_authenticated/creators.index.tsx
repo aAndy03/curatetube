@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
+import { usePrefetchOnHover } from "@/lib/prefetch-on-hover";
 
 export const Route = createFileRoute("/_authenticated/creators/")({
   head: () => ({
