@@ -133,6 +133,12 @@ function LeaderboardPage() {
     }
   }, [entriesKey]);
 
+  const next = lbQ.data?.snapshot?.next_refresh_at
+    ? new Date(lbQ.data.snapshot.next_refresh_at).getTime()
+    : null;
+  const remainingMs = next ? Math.max(0, next - now) : null;
+  const countdown = remainingMs == null ? "" : formatCountdown(remainingMs);
+
   const setTier = (t: string) =>
     navigate({ search: (s: z.infer<typeof Search>) => ({ ...s, tier: t }) });
   const setScope = (s: string) =>
