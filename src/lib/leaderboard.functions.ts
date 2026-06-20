@@ -139,6 +139,7 @@ export const listArchive = createServerFn({ method: "GET" })
 export const getSnapshotEntries = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ snapshotId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
+    setResponseHeaders(IMMUTABLE_CACHE);
     const { data: entries, error } = await supabaseAdmin
       .from("leaderboard_entries")
       .select(
