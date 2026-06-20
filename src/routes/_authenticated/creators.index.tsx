@@ -36,14 +36,14 @@ function CreatorsPage() {
     queryKey: ["creators"],
     queryFn: () => list({ data: { limit: 60 } }),
     enabled: view === "all",
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
   });
 
   const catQ = useQuery({
     queryKey: ["creators-by-category"],
     queryFn: () => byCategoryFn({ data: { perCategory: 24 } }),
     enabled: view === "by-category",
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
   });
 
   return (
