@@ -78,13 +78,22 @@ function LeaderboardPage() {
     queryKey: ["lb-tiers"],
     queryFn: () => listTiers(),
   });
+  const [pollEnabled, setPollEnabled] = React.useState(
+    typeof document === "undefined" ? true : document.visibilityState === "visible",
+  );
+  React.useEffect(() => {
+    const onVis = () => setPollEnabled(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
   const lbQ = useQuery({
     queryKey: ["lb-current", tier, scopeType, scopeValue],
     queryFn: () =>
       getCurrentLeaderboard({
         data: { tierSlug: tier, scopeType, scopeValue },
       }),
-    refetchInterval: 60_000,
+    refetchInterval: pollEnabled ? 60_000 : false,
+    refetchIntervalInBackground: false,
   });
 
   const { data: perms } = usePermissions();
