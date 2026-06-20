@@ -1,8 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { rebuildSnapshot } from "./leaderboard.server";
+
+// Archived snapshots are immutable — once published they never change, so
+// allow long-lived edge + browser caching.
+const IMMUTABLE_CACHE = new Headers({
+  "Cache-Control": "public, max-age=31536000, immutable",
+});
 
 export const rebuildSnapshotNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
