@@ -6,6 +6,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { VideoActions } from "@/components/video-actions";
 import { useHydratedSuggestCount } from "@/hooks/use-hydrated-status";
 import { useTagsCache } from "@/hooks/use-tags-cache";
+import { usePrefetchOnHover } from "@/lib/prefetch-on-hover";
 
 export type VideoCardData = {
   id: string;
