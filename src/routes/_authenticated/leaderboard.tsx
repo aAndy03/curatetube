@@ -78,13 +78,22 @@ function LeaderboardPage() {
     queryKey: ["lb-tiers"],
     queryFn: () => listTiers(),
   });
+  const [pollEnabled, setPollEnabled] = React.useState(
+    typeof document === "undefined" ? true : document.visibilityState === "visible",
+  );
+  React.useEffect(() => {
+    const onVis = () => setPollEnabled(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
   const lbQ = useQuery({
     queryKey: ["lb-current", tier, scopeType, scopeValue],
     queryFn: () =>
       getCurrentLeaderboard({
         data: { tierSlug: tier, scopeType, scopeValue },
       }),
-    refetchInterval: 60_000,
+    refetchInterval: pollEnabled ? 60_000 : false,
+    refetchIntervalInBackground: false,
   });
 
   const { data: perms } = usePermissions();
@@ -106,6 +115,23 @@ function LeaderboardPage() {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Phase 6 Step 3b — animate rank changes via the View Transitions API when
+  // the entry set updates (falls back to CSS transition on `transform`).
+  const entriesKey = (lbQ.data?.entries ?? [])
+    .map((e) => `${e.video?.id ?? "x"}:${e.rank}`)
+    .join("|");
+  const prevKey = React.useRef(entriesKey);
+  React.useEffect(() => {
+    if (prevKey.current === entriesKey) return;
+    prevKey.current = entriesKey;
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => void) => unknown;
+    };
+    if (typeof doc.startViewTransition === "function") {
+      doc.startViewTransition(() => {});
+    }
+  }, [entriesKey]);
 
   const next = lbQ.data?.snapshot?.next_refresh_at
     ? new Date(lbQ.data.snapshot.next_refresh_at).getTime()
@@ -240,10 +266,14 @@ function LeaderboardPage() {
         <ol className="divide-y rounded-lg border bg-card">
           {lbQ.data.entries.map((e) => {
             const delta = rankDelta(e.rank, e.prev_rank);
+            const vtName = e.video?.id
+              ? `lb-${e.video.id.replace(/[^a-zA-Z0-9_-]/g, "")}`
+              : undefined;
             return (
               <li
-                key={e.rank}
-                className="flex items-center gap-4 px-4 py-3 hover:bg-accent/40"
+                key={e.video?.id ?? `rank-${e.rank}`}
+                style={vtName ? ({ viewTransitionName: vtName } as React.CSSProperties) : undefined}
+                className="flex items-center gap-4 px-4 py-3 transition-transform hover:bg-accent/40"
               >
                 <div className="w-10 text-right font-mono text-lg font-semibold tabular-nums">
                   {e.rank}

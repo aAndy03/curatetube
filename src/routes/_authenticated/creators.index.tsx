@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
+import { usePrefetchOnHover } from "@/lib/prefetch-on-hover";
 
 export const Route = createFileRoute("/_authenticated/creators/")({
   head: () => ({
@@ -35,14 +36,14 @@ function CreatorsPage() {
     queryKey: ["creators"],
     queryFn: () => list({ data: { limit: 60 } }),
     enabled: view === "all",
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
   });
 
   const catQ = useQuery({
     queryKey: ["creators-by-category"],
     queryFn: () => byCategoryFn({ data: { perCategory: 24 } }),
     enabled: view === "by-category",
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
   });
 
   return (
@@ -183,10 +184,12 @@ function CreatorCard(props: {
   subscriber_count: number | null;
   videosInCategory?: number;
 }) {
+  const prefetch = usePrefetchOnHover("/creators/$id", { id: props.id });
   return (
     <Link
       to="/creators/$id"
       params={{ id: props.id }}
+      {...prefetch}
       className="group flex items-center gap-3 rounded-lg border bg-card p-3 transition hover:border-foreground/30"
     >
       <Avatar className="h-12 w-12">

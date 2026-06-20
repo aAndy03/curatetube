@@ -1,8 +1,8 @@
 import * as React from "react";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronLeft, ChevronRight, ExternalLink, Sparkles } from "lucide-react";
+import { ExternalLink, Sparkles } from "lucide-react";
 
 import { getCreatorContributors, getCreatorDetail } from "@/lib/library.functions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -87,29 +87,53 @@ function CreatorDetailPage() {
   const fetchContribs = useServerFn(getCreatorContributors);
 
   const [sort, setSort] = React.useState<SortKey>("recent");
-  const [page, setPage] = React.useState(0);
 
-  // Reset to page 0 whenever the sort changes.
-  React.useEffect(() => {
-    setPage(0);
-  }, [sort]);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["creator", id, sort, page],
-    queryFn: () => fetchDetail({ data: { id, page, sort, pageSize: PAGE_SIZE } }),
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["creator", id, sort],
+    queryFn: ({ pageParam }) =>
+      fetchDetail({ data: { id, page: pageParam as number, sort, pageSize: PAGE_SIZE } }),
+    initialPageParam: 0,
+    getNextPageParam: (last, all) => {
+      const loaded = all.reduce((s, p) => s + (p.videos?.length ?? 0), 0);
+      return loaded < (last.totalVideos ?? 0) ? all.length : undefined;
+    },
   });
+
   const contribsQ = useQuery({
     queryKey: ["creator-contributors", id],
     queryFn: () => fetchContribs({ data: { creatorId: id } }),
   });
 
+  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasNextPage || isFetchingNextPage) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) fetchNextPage();
+      },
+      { rootMargin: "600px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   if (isLoading && !data) {
     return <Skeleton className="h-32 w-full max-w-3xl" />;
   }
-  const creator = data?.creator;
+  const firstPage = data?.pages[0];
+  const creator = firstPage?.creator;
   if (!creator) throw notFound();
 
-  const totalPages = Math.max(1, Math.ceil((data?.totalVideos ?? 0) / PAGE_SIZE));
+  const totalVideos = firstPage?.totalVideos ?? 0;
+  const avgSuggestCount = firstPage?.avgSuggestCount ?? 0;
+  const videos = (data?.pages ?? []).flatMap((p) => p.videos);
   const contributors = contribsQ.data?.contributors ?? [];
 
   return (
@@ -132,12 +156,12 @@ function CreatorDetailPage() {
               </span>
             ) : null}
             <span>
-              {data?.totalVideos ?? 0} in library
+              {totalVideos} in library
               {creator.video_count ? ` · ${creator.video_count} on YouTube` : ""}
             </span>
             <span className="inline-flex items-center gap-1">
               <Sparkles className="h-3 w-3" />
-              avg {data?.avgSuggestCount ?? 0} suggestions
+              avg {avgSuggestCount} suggestions
             </span>
             {creator.country ? <span>{creator.country}</span> : null}
           </div>
@@ -177,7 +201,6 @@ function CreatorDetailPage() {
           <h2 className="text-lg font-medium">In the library</h2>
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
             <SelectTrigger aria-label="Sort videos" className="w-44">
-
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>
@@ -188,14 +211,14 @@ function CreatorDetailPage() {
           </Select>
         </div>
 
-        {(data?.videos.length ?? 0) === 0 ? (
+        {videos.length === 0 ? (
           <p className="rounded-md border bg-card p-6 text-sm text-muted-foreground">
             No approved videos for this creator yet.
           </p>
         ) : (
           <>
             <div className="grid grid-cols-1 gap-x-4 gap-y-6 [content-visibility:auto] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {data!.videos.map((v, i) => (
+              {videos.map((v, i) => (
                 <VideoCard
                   key={v.id}
                   priority={i < 4}
@@ -211,28 +234,12 @@ function CreatorDetailPage() {
                 />
               ))}
             </div>
-
-            {totalPages > 1 ? (
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                >
-                  <ChevronLeft className="h-4 w-4" /> Prev
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Page {page + 1} of {totalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={page >= totalPages - 1}
-                >
-                  Next <ChevronRight className="h-4 w-4" />
-                </Button>
+            <div ref={sentinelRef} className="h-8" aria-hidden />
+            {isFetchingNextPage ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="aspect-video w-full" />
+                ))}
               </div>
             ) : null}
           </>

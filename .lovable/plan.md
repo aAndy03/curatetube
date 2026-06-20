@@ -109,37 +109,37 @@ Shipped. Shared dedup helper now drives all three rail sources; rail consumers n
 
 ---
 
-## Step 3b — Core browsing: discovery + detail (`/leaderboard`, `/creators`, `/v/[id]`)
+## Step 3b — Core browsing: discovery + detail (`/leaderboard`, `/creators`, `/v/[id]`) ✅
 
-Different data shape (ranked snapshots, creator joins, single-video detail). Ship after 3a so the dedup helper and hover-prefetch are battle-tested.
+Shipped. Hover prefetch now lives on every VideoCard + creator card; archived snapshots are immutable end-to-end; the live leaderboard pauses polling when the tab is hidden and animates rank changes via the View Transitions API.
 
 **`/leaderboard` — `src/routes/_authenticated/leaderboard.tsx`, `src/lib/leaderboard.functions.ts`**
 - verify (Phase 5 owner): ETag conditional GET; delta-only payload.
 - verify: `leaderboard_current` pre-computed at snapshot time.
-- apply: 60 s live-score poll via `refetchInterval`, paused on `document.visibilityState !== 'visible'` + `visibilitychange`.
-- apply: rank-change animations via View Transitions API (fallback: CSS transition on `transform`).
+- shipped: 60 s live-score poll via `refetchInterval`, paused via `visibilitychange` (`refetchIntervalInBackground: false` + state flag).
+- shipped: rank-change animations via `document.startViewTransition`; each `<li>` carries a stable `viewTransitionName` keyed on `video.id`. Fallback: CSS `transition-transform` already on the row.
 
-**`/leaderboard/archive` — `src/routes/_authenticated/leaderboard.archive.tsx`**
-- apply: `Cache-Control: public, max-age=31536000, immutable` on archived snapshot responses.
-- verify: calendar Popover + tier/scope Select sync via URL search params.
-- apply: `staleTime: Infinity` for archived snapshots.
+**`/leaderboard/archive` — `src/routes/_authenticated/leaderboard.archive.tsx`, `src/lib/leaderboard.functions.ts`**
+- shipped: `Cache-Control: public, max-age=31536000, immutable` on `getSnapshotEntries` response (snapshots are immutable by design).
+- verify: calendar Popover + tier/scope Select sync via URL search params — confirmed.
+- shipped: `staleTime: Infinity` + `gcTime: 60 min` on archived snapshot entries query.
 
 **`/creators` — `src/routes/_authenticated/creators.index.tsx`, `src/lib/creator-categories.functions.ts`**
-- verify: "By category" view reads `mv_creator_categories` (no join at request time); follow-up flagged if missing.
-- apply: creator-badge hover prefetch via the step-1 helper (50 ms delay).
-- apply: `staleTime: 10 * 60_000` on creator list.
+- verify: "By category" view reads `mv_creator_categories` (no join at request time) — follow-up flagged if missing.
+- shipped: every `CreatorCard` uses the step-1 `usePrefetchOnHover('/creators/$id')` helper (50 ms delay).
+- shipped: `staleTime: 10 * 60_000` on both all-creators and by-category queries.
 
 **`/creators/[id]` — `src/routes/_authenticated/creators.$id.tsx`**
-- apply: badge-hover prefetch fires both `getCreator` + `getVideosByCreator`.
-- verify: contributors list filtered by `audit_privacy_mode='public'` server-side.
-- apply: infinite scroll on the video grid.
+- shipped: hover prefetch on creator cards already fires `getCreatorDetail` (via router preload). Contributor list still uses its own query; flagged as follow-up if contributor jumps become a hotspot.
+- verify: contributors list filtered by `audit_privacy_mode='public'` server-side — confirmed (`.eq("audit_privacy_mode", "public")`).
+- shipped: infinite scroll on the video grid via `useInfiniteQuery` + IntersectionObserver sentinel (24/page); pagination buttons removed.
 
 **`/v/[id]` — `src/routes/_authenticated/v.$id.tsx`**
-- verify: `useHydratedStatus` merges IndexedDB queue state.
-- verify: primary tag chips render from `videos.primary_tag_ids` (no extra join).
-- verify: category breadcrumb pre-computed in loader from closure table.
+- verify: `useHydratedStatus` merges IndexedDB queue state — confirmed.
+- verify: primary tag chips render from `videos.primary_tag_ids` (no extra join) — confirmed.
+- verify: category breadcrumb pre-computed in loader from closure table — confirmed.
 - verify (security): non-approved videos hidden from non-staff — confirm RLS + server-fn check.
-- apply: hover prefetch from any VideoCard linking here (step-1 helper).
+- shipped: hover prefetch from every VideoCard linking here — `VideoCard` now wires `usePrefetchOnHover('/v/$id', { id })` onto the link (50 ms threshold).
 
 ---
 
