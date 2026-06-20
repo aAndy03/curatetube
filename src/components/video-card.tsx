@@ -60,10 +60,12 @@ function VideoCardImpl({
       .filter((t): t is NonNullable<typeof t> => !!t)
       .slice(0, 3);
   }, [video.primary_tag_ids, tagById]);
+  const prefetch = usePrefetchOnHover("/v/$id", { id: video.id });
   return (
     <Link
       to="/v/$id"
       params={{ id: video.id }}
+      {...prefetch}
       className="group block focus:outline-none [content-visibility:auto] [contain-intrinsic-size:1px_320px]"
     >
       <div className="@container/card relative overflow-hidden rounded-md border bg-card transition group-hover:border-foreground/30 group-focus-visible:ring-2 group-focus-visible:ring-ring">
