@@ -77,6 +77,9 @@ function ArchivePage() {
         ? getSnapshotEntries({ data: { snapshotId: selectedSnap } })
         : Promise.resolve({ entries: [] }),
     enabled: !!selectedSnap,
+    // Archived snapshots are immutable — never refetch once loaded.
+    staleTime: Infinity,
+    gcTime: 60 * 60_000,
   });
 
   const update = (patch: Partial<z.infer<typeof Search>>) =>
