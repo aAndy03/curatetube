@@ -1,8 +1,8 @@
 import * as React from "react";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronLeft, ChevronRight, ExternalLink, Sparkles } from "lucide-react";
+import { ExternalLink, Sparkles } from "lucide-react";
 
 import { getCreatorContributors, getCreatorDetail } from "@/lib/library.functions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
