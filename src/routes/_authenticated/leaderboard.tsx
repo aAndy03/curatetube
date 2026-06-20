@@ -116,11 +116,22 @@ function LeaderboardPage() {
     return () => clearInterval(t);
   }, []);
 
-  const next = lbQ.data?.snapshot?.next_refresh_at
-    ? new Date(lbQ.data.snapshot.next_refresh_at).getTime()
-    : null;
-  const remainingMs = next ? Math.max(0, next - now) : null;
-  const countdown = remainingMs == null ? "" : formatCountdown(remainingMs);
+  // Phase 6 Step 3b — animate rank changes via the View Transitions API when
+  // the entry set updates (falls back to CSS transition on `transform`).
+  const entriesKey = (lbQ.data?.entries ?? [])
+    .map((e) => `${e.video?.id ?? "x"}:${e.rank}`)
+    .join("|");
+  const prevKey = React.useRef(entriesKey);
+  React.useEffect(() => {
+    if (prevKey.current === entriesKey) return;
+    prevKey.current = entriesKey;
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => void) => unknown;
+    };
+    if (typeof doc.startViewTransition === "function") {
+      doc.startViewTransition(() => {});
+    }
+  }, [entriesKey]);
 
   const setTier = (t: string) =>
     navigate({ search: (s: z.infer<typeof Search>) => ({ ...s, tier: t }) });
