@@ -266,10 +266,14 @@ function LeaderboardPage() {
         <ol className="divide-y rounded-lg border bg-card">
           {lbQ.data.entries.map((e) => {
             const delta = rankDelta(e.rank, e.prev_rank);
+            const vtName = e.video?.id
+              ? `lb-${e.video.id.replace(/[^a-zA-Z0-9_-]/g, "")}`
+              : undefined;
             return (
               <li
-                key={e.rank}
-                className="flex items-center gap-4 px-4 py-3 hover:bg-accent/40"
+                key={e.video?.id ?? `rank-${e.rank}`}
+                style={vtName ? ({ viewTransitionName: vtName } as React.CSSProperties) : undefined}
+                className="flex items-center gap-4 px-4 py-3 transition-transform hover:bg-accent/40"
               >
                 <div className="w-10 text-right font-mono text-lg font-semibold tabular-nums">
                   {e.rank}
