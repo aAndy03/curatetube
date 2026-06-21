@@ -62,7 +62,8 @@ export function SubmitSheet({ open, onOpenChange }: SubmitSheetProps) {
     queryKey: ["submit-quota"],
     queryFn: () => quotaFn(),
     enabled: open,
-    staleTime: 30_000,
+    // Always fetch fresh on Sheet open so the counter never lies.
+    staleTime: 0,
   });
 
   const reset = () => {
