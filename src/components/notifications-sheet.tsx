@@ -174,7 +174,10 @@ export function NotificationsSheet({
     onSuccess: () => {
       toast.success("All caught up.");
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["session-bootstrap"] });
+    },
   });
 
   const markOne = useMutation({
