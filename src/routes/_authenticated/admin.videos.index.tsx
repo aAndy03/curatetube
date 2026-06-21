@@ -17,6 +17,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/lib/use-permissions";
+import { usePrefetchOnHover } from "@/lib/prefetch-on-hover";
 import { getCategoryTree, type CategoryNode } from "@/lib/categories.functions";
 import {
   listAdminVideos,
@@ -639,13 +640,7 @@ function VideoRow({
         )}
       </td>
       <td className="px-3 py-2">
-        <Link
-          to="/admin/videos/$videoId"
-          params={{ videoId: video.id }}
-          className="line-clamp-2 font-medium hover:underline"
-        >
-          {video.title}
-        </Link>
+        <AdminVideoTitleLink id={video.id} title={video.title} />
         <div className="mt-0.5 flex items-center gap-2 text-xs">
           <Link
             to="/v/$id"
@@ -979,5 +974,23 @@ function TagPicker({
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+/**
+ * Admin video title link with hover-prefetch on the `/admin/videos/$videoId`
+ * route, so a click into a row feels instant for moderators scanning the list.
+ */
+function AdminVideoTitleLink({ id, title }: { id: string; title: string }) {
+  const prefetch = usePrefetchOnHover("/admin/videos/$videoId", { videoId: id });
+  return (
+    <Link
+      to="/admin/videos/$videoId"
+      params={{ videoId: id }}
+      className="line-clamp-2 font-medium hover:underline"
+      {...prefetch}
+    >
+      {title}
+    </Link>
   );
 }

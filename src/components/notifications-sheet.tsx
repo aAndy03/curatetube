@@ -38,7 +38,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { listNotifications, markNotificationsRead } from "@/lib/lists.functions";
+import {
+  listNotifications,
+  listPastNotifications,
+  markNotificationsRead,
+} from "@/lib/lists.functions";
 import {
   listActiveBroadcasts,
   listBroadcastHistory,
@@ -98,7 +102,11 @@ export function NotificationsSheet({
   const { user } = useAuth();
   const qc = useQueryClient();
   const fetchList = useServerFn(listNotifications);
+  const fetchPast = useServerFn(listPastNotifications);
   const markReadFn = useServerFn(markNotificationsRead);
+
+  // "Past" is gated behind an expand click — see <NotifList> below.
+  const [pastEnabled, setPastEnabled] = React.useState(false);
 
   const q = useQuery({
     queryKey: ["notifications"],
@@ -108,7 +116,15 @@ export function NotificationsSheet({
     refetchOnWindowFocus: true,
   });
 
-  // Realtime — invalidate badge + list on any change
+  const pastQ = useQuery({
+    queryKey: ["notifications", "past"],
+    enabled: !!user && pastEnabled,
+    queryFn: () => fetchPast(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Realtime — invalidate badge + list + session bootstrap on any change so
+  // the sidebar bell badge (which reads from useSessionBootstrap) stays live.
   React.useEffect(() => {
     if (!user) return;
     const ch = supabase
@@ -121,7 +137,10 @@ export function NotificationsSheet({
           table: "notifications",
           filter: `user_id=eq.${user.id}`,
         },
-        () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+        () => {
+          qc.invalidateQueries({ queryKey: ["notifications"] });
+          qc.invalidateQueries({ queryKey: ["session-bootstrap"] });
+        },
       )
       .subscribe();
     return () => {
@@ -155,7 +174,10 @@ export function NotificationsSheet({
     onSuccess: () => {
       toast.success("All caught up.");
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["session-bootstrap"] });
+    },
   });
 
   const markOne = useMutation({
@@ -181,28 +203,33 @@ export function NotificationsSheet({
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["notifications"], ctx.prev);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["session-bootstrap"] });
+    },
   });
 
+  // Recent buckets come from `q` (server already filters out >4d items).
+  // Past comes from `pastQ`, which is only enabled once the user expands.
   const grouped = React.useMemo(() => {
     const today: Notification[] = [];
     const yesterday: Notification[] = [];
     const last3: Notification[] = [];
-    const pastByWeek = new Map<string, Notification[]>();
     for (const n of q.data?.notifications ?? []) {
       const b = bucketOf(n.created_at);
       if (b === "today") today.push(n);
       else if (b === "yesterday") yesterday.push(n);
       else if (b === "last3") last3.push(n);
-      else {
-        const key = weekKey(n.created_at);
-        const arr = pastByWeek.get(key) ?? [];
-        arr.push(n);
-        pastByWeek.set(key, arr);
-      }
+    }
+    const pastByWeek = new Map<string, Notification[]>();
+    for (const n of pastQ.data?.notifications ?? []) {
+      const key = weekKey(n.created_at);
+      const arr = pastByWeek.get(key) ?? [];
+      arr.push(n);
+      pastByWeek.set(key, arr);
     }
     return { today, yesterday, last3, pastByWeek };
-  }, [q.data?.notifications]);
+  }, [q.data?.notifications, pastQ.data?.notifications]);
 
   // History panel state
   const [historyOpen, setHistoryOpen] = React.useState(false);
@@ -275,6 +302,8 @@ export function NotificationsSheet({
                   yesterday={grouped.yesterday}
                   last3={grouped.last3}
                   pastByWeek={grouped.pastByWeek}
+                  onLoadPast={() => setPastEnabled(true)}
+                  pastLoading={pastEnabled && pastQ.isLoading}
                   onMarkRead={(id) => markOne.mutate([id])}
                   onClose={() => onOpenChange(false)}
                 />
@@ -547,6 +576,8 @@ function NotifList({
   yesterday,
   last3,
   pastByWeek,
+  onLoadPast,
+  pastLoading,
   onMarkRead,
   onClose,
 }: {
@@ -554,6 +585,8 @@ function NotifList({
   yesterday: Notification[];
   last3: Notification[];
   pastByWeek: Map<string, Notification[]>;
+  onLoadPast: () => void;
+  pastLoading: boolean;
   onMarkRead: (id: string) => void;
   onClose: () => void;
 }) {
@@ -618,21 +651,36 @@ function NotifList({
           })}
         </div>
 
-        {pastEntries.length > 0 ? (
-          <Collapsible open={pastOpen} onOpenChange={setPastOpen} className="mt-3">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-between">
-                <span>Past</span>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 transition-transform",
-                    pastOpen && "rotate-180",
-                  )}
-                />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pt-2">
-              {pastEntries.map(([wk, items]) => (
+        <Collapsible
+          open={pastOpen}
+          onOpenChange={(o) => {
+            setPastOpen(o);
+            if (o) onLoadPast();
+          }}
+          className="mt-3"
+        >
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between">
+              <span>Past</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  pastOpen && "rotate-180",
+                )}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-2">
+            {pastLoading ? (
+              <p className="px-1 py-3 text-center text-xs text-muted-foreground">
+                Loading…
+              </p>
+            ) : pastEntries.length === 0 ? (
+              <p className="px-1 py-3 text-center text-xs text-muted-foreground">
+                No older notifications.
+              </p>
+            ) : (
+              pastEntries.map(([wk, items]) => (
                 <div key={wk}>
                   <p className="px-1 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     {wk}
@@ -648,10 +696,10 @@ function NotifList({
                     ))}
                   </ul>
                 </div>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-        ) : null}
+              ))
+            )}
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );

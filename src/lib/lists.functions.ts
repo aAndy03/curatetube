@@ -220,15 +220,26 @@ export const getMySuggestedList = createServerFn({ method: "POST" })
 
 // ============ NOTIFICATIONS ============
 
+/**
+ * Recent notifications + unread count for the bell badge.
+ * "Past" entries (older than 4 days) are fetched separately via
+ * `listPastNotifications` only when the user expands that section.
+ */
+const RECENT_WINDOW_DAYS = 4;
+
 export const listNotifications = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId, supabase } = context;
+    const since = new Date(
+      Date.now() - RECENT_WINDOW_DAYS * 24 * 3600 * 1000,
+    ).toISOString();
     const [{ data: rows }, { count: unread }] = await Promise.all([
       supabase
         .from("notifications")
         .select("id, title, body, link, read_at, created_at, type, data")
         .eq("user_id", userId)
+        .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(50),
       supabase
@@ -239,6 +250,28 @@ export const listNotifications = createServerFn({ method: "POST" })
     ]);
     return { notifications: rows ?? [], unread: unread ?? 0 };
   });
+
+/**
+ * Lazy-loaded "Past" notifications (older than the 4-day recent window).
+ * Only fetched when the user expands the Past section in the sheet.
+ */
+export const listPastNotifications = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId, supabase } = context;
+    const before = new Date(
+      Date.now() - RECENT_WINDOW_DAYS * 24 * 3600 * 1000,
+    ).toISOString();
+    const { data: rows } = await supabase
+      .from("notifications")
+      .select("id, title, body, link, read_at, created_at, type, data")
+      .eq("user_id", userId)
+      .lt("created_at", before)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    return { notifications: rows ?? [] };
+  });
+
 
 export const markNotificationsRead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

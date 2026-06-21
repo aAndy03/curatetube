@@ -143,54 +143,53 @@ Shipped. Hover prefetch now lives on every VideoCard + creator card; archived sn
 
 ---
 
-## Step 4 — Authenticated personal
+## Step 4 — Authenticated personal ✅
 
-**`/me` (profile Sheet) — `src/routes/_authenticated/me.$tab.tsx`, `src/components/profile-settings-sheet.tsx`**
-- apply: lazy-load each tab's data on first activation only (Wishlist / Liked / Disliked / Watched / Suggested).
-- verify: `useHydratedStatus` on all list items.
-- apply: `staleTime: 2 * 60_000` per tab.
-- apply: virtualise long lists with `@tanstack/react-virtual` (threshold >50 rows).
+Shipped. `/me/[tab]` tab data lazy-loads with a 2 min staleTime and switches to a virtualised grid past 50 rows; the Submit Sheet's quota counter is now always fresh on open; the Notifications Sheet only fetches the "Past" bucket when expanded; the sidebar bell badge reads from `useSessionBootstrap()` so there's no second mount-time `listNotifications` poll.
+
+**`/me` — `src/routes/_authenticated/me.$tab.tsx`**
+- shipped: per-tab query (`["my-list", tab]`) only runs when the tab is active (route-level code-split). `staleTime: 2 * 60_000` so tab switches stay snappy without going stale.
+- verify: list items wrap `VideoCard` which already merges `useHydratedStatus` via the action queue.
+- shipped: long lists (>50 rows) render through a windowed `VirtualVideoGrid` (row-virtualised, 4 cards/row, `@tanstack/react-virtual`). Short lists fall back to the plain grid so the empty-state and small-library experience is unchanged.
 
 **Submit Sheet — `src/components/submit-sheet.tsx`, `src/lib/submit.functions.ts`**
-- apply: quota counter — server read on Sheet open with `staleTime: 0`.
-- apply (Phase 1 owner): confirm Submit Sheet calls the right server fn for AI submit-job auto-start.
-- apply: category + tag inputs use the shared step-1 caches; remove any per-open re-fetch.
-- verify: multi-URL YouTube metadata fetched via `Promise.all`.
+- shipped: `getSubmitQuota` query now has `staleTime: 0` so each Sheet open re-reads the counter (no stale "5/10" after a successful submit elsewhere).
+- verify (Phase 1 owner): `dispatchUserSubmitAi` is already wired in `onSuccess` for every returned video id.
+- verify: per-URL category/tag suggestions come from the debounced `previewSubmission` server fn, not a per-open shared category/tag fetch — already lazy.
+- verify: multi-URL YouTube metadata fetched via parallel `useQuery`s per `<UrlRow>`, which TanStack Query dedupes — equivalent to `Promise.all` without a manual gather.
 
-**Notification Sheet — `src/components/notifications-sheet.tsx`**
-- apply: "Past" section data only fetched when expanded.
-- verify: bell-badge count from session bootstrap (no extra mount-time query).
-- verify: "Mark all read" — immediate server write + optimistic badge reset.
-- (virtualisation already shipped — see step 0.)
+**Notification Sheet — `src/components/notifications-sheet.tsx`, `src/lib/lists.functions.ts`**
+- shipped: `listNotifications` now returns only items from the last 4 days (the "recent" window the UI displays by default). A new `listPastNotifications` server fn returns older items and is only invoked when the Past collapsible is opened.
+- shipped: bell-badge count reads from `useSessionBootstrap().unreadCount` in `src/routes/_authenticated.tsx`; the old 60 s `listNotifications` poll in the header is gone.
+- shipped: notifications realtime channel + mark-all/one mutations invalidate `['session-bootstrap']` so the badge updates instantly across tabs.
+- verify: "Mark all read" — immediate server write + optimistic badge reset (unchanged from earlier).
 
 ---
 
-## Step 5a — Admin: content surfaces (Dashboard, Videos, Moderation)
+## Step 5a — Admin: content surfaces (Dashboard, Videos, Moderation) ✅
 
-The high-traffic admin views: read-heavy DataTables, AI panels, and the moderation queue. Ship before 5b so the codemod + recommendation-weight invalidation land against settled callers.
+Shipped. Moderation queue is virtualised, admin video rows hover-prefetch the detail route, and the detail page's AI column is height-locked to prevent layout shift while results stream in. The dashboard surface still doesn't exist as a dedicated route — Phase 2 owns its creation; nothing else to do here.
 
 **Admin / Dashboard**
-- verify: metric cards read from `app_settings` (daily cron).
-- apply (Phase 2 owner): mount the AI accuracy + coverage % card.
-- apply: `staleTime: 5 * 60_000` on Recharts data queries.
+- deferred (Phase 2 owner): no `admin.dashboard.tsx` exists yet; the accuracy + coverage card lands when that route ships.
 
 **Admin / Videos — `src/routes/_authenticated/admin.videos.index.tsx`, `src/lib/admin-videos.functions.ts`**
-- apply: convert `select('*')` to explicit column lists matching the DataTable.
-- apply: hover prefetch to `/admin/videos/[id]`.
-- apply (Phase 1 owner): background monitor uses Supabase Realtime on `ai_jobs` + `ai_agent_sessions`.
-- verify: batch assign runs in a single transactional insert.
-- apply (Phase 2 owner): mount "AI Insights" tab — acceptance rates per slug.
+- verify: `listAdminVideos` already projects an explicit column list (no `select('*')`) and the AI-coverage / tags / category-tree queries each scope columns.
+- shipped: row titles use a new `AdminVideoTitleLink` that wires `usePrefetchOnHover('/admin/videos/$videoId', { videoId })` (50 ms) so a click into the detail page lands instantly.
+- defer (Phase 1 owner): Realtime monitor on `ai_jobs` + `ai_agent_sessions` (background polling stays for now).
+- verify: `batchUpdateVideos` already performs a single server-fn transaction.
+- defer (Phase 2 owner): "AI Insights" tab — acceptance rates per slug.
 
 **Admin / Videos / [id] — `src/routes/_authenticated/admin.videos.$videoId.tsx`**
-- verify: `refetchInterval: jobActive ? 5000 : false` on AI-results query.
-- apply (Phase 1 owner): streaming JSON parse so results appear progressively.
-- apply: lock three-column grid sizes so no layout shift while AI panel populates.
+- verify: `refetchInterval` already toggles `5000 ↔ false` based on `activeJobs.length`.
+- defer (Phase 1 owner): streaming JSON parse.
+- shipped: AI column now carries `min-h-[480px]` so the right pane reserves its full height before AI results arrive — no shift when tabs/results populate.
 
 **Moderation queue — `src/routes/_authenticated/moderation.tsx`**
-- apply: virtualise the left list via `@tanstack/react-virtual`.
-- apply (out-of-band fix): join `tags` in the queue query so the UI shows tag names, not IDs.
-- verify: AI panel shows submit-time results immediately; "Re-run AI" is the only re-dispatch path.
-- apply: bulk approve/reject is a single batch server-fn call.
+- shipped: left-rail list rendered via a new `SubmissionList` component using `@tanstack/react-virtual` (80 px row estimate, overscan 6) — pending/approved/rejected tabs all stay smooth at hundreds of rows.
+- verify: tag names already resolved client-side from `useTagsCache()`; category names from the shared `useCategoryTree` data.
+- verify: AI panel shows submit-time results immediately; "Re-run AI" is the only re-dispatch path (unchanged).
+- defer: bulk approve/reject — no multi-select UI exists in moderation today; adding the picker is a feature, not a per-page perf fix. Flagged for a follow-up if the queue grows large enough to warrant it.
 
 ---
 

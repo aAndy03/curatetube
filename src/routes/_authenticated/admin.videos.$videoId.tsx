@@ -268,7 +268,9 @@ function AdminVideoDetailPage() {
 
         {/* Right: AI panel */}
         <section className="lg:col-span-4">
-          <div className="rounded-xl border bg-card">
+          {/* Min-height locks the column so the page doesn't jump as the AI
+              panel streams in. */}
+          <div className="rounded-xl border bg-card min-h-[480px]">
             <div className="border-b p-4">
               <h2 className="flex items-center gap-2 text-sm font-semibold">
                 <Sparkles className="h-4 w-4" /> AI suggestions
