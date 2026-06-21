@@ -38,7 +38,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { listNotifications, markNotificationsRead } from "@/lib/lists.functions";
+import {
+  listNotifications,
+  listPastNotifications,
+  markNotificationsRead,
+} from "@/lib/lists.functions";
 import {
   listActiveBroadcasts,
   listBroadcastHistory,
