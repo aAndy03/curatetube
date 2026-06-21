@@ -203,7 +203,10 @@ export function NotificationsSheet({
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["notifications"], ctx.prev);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["session-bootstrap"] });
+    },
   });
 
   const grouped = React.useMemo(() => {
