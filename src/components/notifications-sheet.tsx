@@ -651,21 +651,36 @@ function NotifList({
           })}
         </div>
 
-        {pastEntries.length > 0 ? (
-          <Collapsible open={pastOpen} onOpenChange={setPastOpen} className="mt-3">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-between">
-                <span>Past</span>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 transition-transform",
-                    pastOpen && "rotate-180",
-                  )}
-                />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pt-2">
-              {pastEntries.map(([wk, items]) => (
+        <Collapsible
+          open={pastOpen}
+          onOpenChange={(o) => {
+            setPastOpen(o);
+            if (o) onLoadPast();
+          }}
+          className="mt-3"
+        >
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between">
+              <span>Past</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  pastOpen && "rotate-180",
+                )}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-2">
+            {pastLoading ? (
+              <p className="px-1 py-3 text-center text-xs text-muted-foreground">
+                Loading…
+              </p>
+            ) : pastEntries.length === 0 ? (
+              <p className="px-1 py-3 text-center text-xs text-muted-foreground">
+                No older notifications.
+              </p>
+            ) : (
+              pastEntries.map(([wk, items]) => (
                 <div key={wk}>
                   <p className="px-1 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     {wk}
@@ -681,10 +696,10 @@ function NotifList({
                     ))}
                   </ul>
                 </div>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-        ) : null}
+              ))
+            )}
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
