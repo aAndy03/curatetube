@@ -302,6 +302,8 @@ export function NotificationsSheet({
                   yesterday={grouped.yesterday}
                   last3={grouped.last3}
                   pastByWeek={grouped.pastByWeek}
+                  onLoadPast={() => setPastEnabled(true)}
+                  pastLoading={pastEnabled && pastQ.isLoading}
                   onMarkRead={(id) => markOne.mutate([id])}
                   onClose={() => onOpenChange(false)}
                 />
