@@ -134,15 +134,11 @@ function Header() {
   const { setOpen } = useSubmitSheet();
   const { data: perms } = usePermissions();
   const canSubmit = perms?.has("submission.create");
-  const fetchNotifs = useServerFn(listNotifications);
-  const { user } = useAuth();
-  const notifQ = useQuery({
-    queryKey: ["notifications"],
-    enabled: !!user,
-    queryFn: () => fetchNotifs(),
-    refetchInterval: 60_000,
-  });
-  const unread = notifQ.data?.unread ?? 0;
+  // Bell badge: single source via session bootstrap. Notifications-sheet's
+  // realtime channel invalidates the bootstrap key, so the badge stays live
+  // without a separate mount-time poll.
+  const { data: bootstrap } = useSessionBootstrap();
+  const unread = bootstrap?.unreadCount ?? 0;
 
   return (
     <>
