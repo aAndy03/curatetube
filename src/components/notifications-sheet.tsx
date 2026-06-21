@@ -576,6 +576,8 @@ function NotifList({
   yesterday,
   last3,
   pastByWeek,
+  onLoadPast,
+  pastLoading,
   onMarkRead,
   onClose,
 }: {
@@ -583,6 +585,8 @@ function NotifList({
   yesterday: Notification[];
   last3: Notification[];
   pastByWeek: Map<string, Notification[]>;
+  onLoadPast: () => void;
+  pastLoading: boolean;
   onMarkRead: (id: string) => void;
   onClose: () => void;
 }) {
