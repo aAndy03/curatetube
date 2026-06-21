@@ -209,25 +209,27 @@ export function NotificationsSheet({
     },
   });
 
+  // Recent buckets come from `q` (server already filters out >4d items).
+  // Past comes from `pastQ`, which is only enabled once the user expands.
   const grouped = React.useMemo(() => {
     const today: Notification[] = [];
     const yesterday: Notification[] = [];
     const last3: Notification[] = [];
-    const pastByWeek = new Map<string, Notification[]>();
     for (const n of q.data?.notifications ?? []) {
       const b = bucketOf(n.created_at);
       if (b === "today") today.push(n);
       else if (b === "yesterday") yesterday.push(n);
       else if (b === "last3") last3.push(n);
-      else {
-        const key = weekKey(n.created_at);
-        const arr = pastByWeek.get(key) ?? [];
-        arr.push(n);
-        pastByWeek.set(key, arr);
-      }
+    }
+    const pastByWeek = new Map<string, Notification[]>();
+    for (const n of pastQ.data?.notifications ?? []) {
+      const key = weekKey(n.created_at);
+      const arr = pastByWeek.get(key) ?? [];
+      arr.push(n);
+      pastByWeek.set(key, arr);
     }
     return { today, yesterday, last3, pastByWeek };
-  }, [q.data?.notifications]);
+  }, [q.data?.notifications, pastQ.data?.notifications]);
 
   // History panel state
   const [historyOpen, setHistoryOpen] = React.useState(false);
