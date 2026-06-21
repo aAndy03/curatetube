@@ -18,7 +18,6 @@ import { SubmitSheetProvider, useSubmitSheet } from "@/lib/use-submit-sheet";
 import { usePermissions } from "@/lib/use-permissions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionBootstrap } from "@/hooks/use-session-bootstrap";
-import { useAuth } from "@/lib/auth-context";
 import { initActionQueue, subscribeQueue, flushNow, clearQueue } from "@/lib/action-queue";
 import { toast } from "sonner";
 
