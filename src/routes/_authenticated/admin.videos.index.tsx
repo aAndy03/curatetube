@@ -975,3 +975,21 @@ function TagPicker({
     </Popover>
   );
 }
+
+/**
+ * Admin video title link with hover-prefetch on the `/admin/videos/$videoId`
+ * route, so a click into a row feels instant for moderators scanning the list.
+ */
+function AdminVideoTitleLink({ id, title }: { id: string; title: string }) {
+  const prefetch = usePrefetchOnHover("/admin/videos/$videoId", { videoId: id });
+  return (
+    <Link
+      to="/admin/videos/$videoId"
+      params={{ videoId: id }}
+      className="line-clamp-2 font-medium hover:underline"
+      {...prefetch}
+    >
+      {title}
+    </Link>
+  );
+}
