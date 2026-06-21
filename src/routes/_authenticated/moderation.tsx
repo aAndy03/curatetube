@@ -516,3 +516,114 @@ function AiSuggestionsPanel({ videoId, readOnly }: { videoId: string; readOnly: 
     </div>
   );
 }
+
+/**
+ * Virtualised left-rail list for the moderation queue. With pending+approved
+ * sets sometimes hitting hundreds of rows, plain rendering hurt scroll perf
+ * and TTFI on slower machines.
+ */
+function SubmissionList({
+  isLoading,
+  submissions,
+  selectedId,
+  onSelect,
+}: {
+  isLoading: boolean;
+  submissions: Submission[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const parentRef = React.useRef<HTMLDivElement | null>(null);
+  const virt = useVirtualizer({
+    count: submissions.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 80,
+    overscan: 6,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="h-full overflow-hidden">
+        <div className="space-y-2 p-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (submissions.length === 0) {
+    return (
+      <p className="p-6 text-center text-sm text-muted-foreground">
+        Nothing to review.
+      </p>
+    );
+  }
+
+  return (
+    <div ref={parentRef} className="h-full overflow-y-auto">
+      <div
+        style={{
+          height: virt.getTotalSize(),
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {virt.getVirtualItems().map((vi) => {
+          const s = submissions[vi.index];
+          const v = s.video;
+          const active = s.id === selectedId;
+          return (
+            <div
+              key={vi.key}
+              ref={virt.measureElement}
+              data-index={vi.index}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${vi.start}px)`,
+              }}
+            >
+              <button
+                onClick={() => onSelect(s.id)}
+                className={`flex w-full items-start gap-3 border-b p-3 text-left transition ${
+                  active ? "bg-accent" : "hover:bg-muted/40"
+                }`}
+              >
+                {v?.thumbnail_url ? (
+                  <img
+                    src={v.thumbnail_url}
+                    alt=""
+                    className="h-14 w-24 flex-shrink-0 rounded object-cover"
+                  />
+                ) : (
+                  <div className="h-14 w-24 flex-shrink-0 rounded bg-muted" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-sm font-medium">
+                    {v?.title ?? s.youtube_url}
+                  </p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                    {v?.creator ? <span>{v.creator.title}</span> : null}
+                    {v ? (
+                      <span className="inline-flex items-center gap-0.5">
+                        <Users className="h-3 w-3" /> {v.submission_count}
+                      </span>
+                    ) : null}
+                    {s.anonymous ? (
+                      <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                        anon
+                      </Badge>
+                    ) : null}
+                  </div>
+                </div>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
