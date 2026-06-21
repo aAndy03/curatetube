@@ -102,7 +102,11 @@ export function NotificationsSheet({
   const { user } = useAuth();
   const qc = useQueryClient();
   const fetchList = useServerFn(listNotifications);
+  const fetchPast = useServerFn(listPastNotifications);
   const markReadFn = useServerFn(markNotificationsRead);
+
+  // "Past" is gated behind an expand click — see <NotifList> below.
+  const [pastEnabled, setPastEnabled] = React.useState(false);
 
   const q = useQuery({
     queryKey: ["notifications"],
@@ -112,7 +116,15 @@ export function NotificationsSheet({
     refetchOnWindowFocus: true,
   });
 
-  // Realtime — invalidate badge + list on any change
+  const pastQ = useQuery({
+    queryKey: ["notifications", "past"],
+    enabled: !!user && pastEnabled,
+    queryFn: () => fetchPast(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Realtime — invalidate badge + list + session bootstrap on any change so
+  // the sidebar bell badge (which reads from useSessionBootstrap) stays live.
   React.useEffect(() => {
     if (!user) return;
     const ch = supabase
@@ -125,7 +137,10 @@ export function NotificationsSheet({
           table: "notifications",
           filter: `user_id=eq.${user.id}`,
         },
-        () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+        () => {
+          qc.invalidateQueries({ queryKey: ["notifications"] });
+          qc.invalidateQueries({ queryKey: ["session-bootstrap"] });
+        },
       )
       .subscribe();
     return () => {
