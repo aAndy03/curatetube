@@ -17,6 +17,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/lib/use-permissions";
+import { usePrefetchOnHover } from "@/lib/prefetch-on-hover";
 import { getCategoryTree, type CategoryNode } from "@/lib/categories.functions";
 import {
   listAdminVideos,
