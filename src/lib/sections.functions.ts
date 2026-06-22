@@ -68,12 +68,12 @@ export const listMySections = createServerFn({ method: "GET" })
     const [own, templates] = await Promise.all([
       supabase
         .from("feed_sections")
-        .select("*")
+        .select(FEED_SECTION_COLS)
         .eq("owner_id", userId)
         .order("position", { ascending: true }),
       supabase
         .from("feed_sections")
-        .select("*")
+        .select(FEED_SECTION_COLS)
         .eq("is_template", true)
         .order("position", { ascending: true }),
     ]);
@@ -94,7 +94,7 @@ export const adoptTemplate = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: tpl, error } = await supabase
       .from("feed_sections")
-      .select("*")
+      .select(FEED_SECTION_COLS)
       .eq("id", data.templateId)
       .eq("is_template", true)
       .maybeSingle();
@@ -122,7 +122,7 @@ export const adoptTemplate = createServerFn({ method: "POST" })
         position: count ?? 0,
         is_template: false,
       })
-      .select("*")
+      .select(FEED_SECTION_COLS)
       .single();
     if (insErr) throw new Error(insErr.message);
     return { section: created as unknown as FeedSection };
@@ -289,7 +289,7 @@ export const getSectionVideos = createServerFn({ method: "GET" })
     // to private sections owned by other users.
     const { data: section, error: sErr } = await context.supabase
       .from("feed_sections")
-      .select("*")
+      .select(FEED_SECTION_COLS)
       .eq("id", data.sectionId)
       .maybeSingle();
     if (sErr) throw new Error(sErr.message);
