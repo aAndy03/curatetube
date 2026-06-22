@@ -86,7 +86,7 @@ function VideoCardImpl({
         <AspectRatio ratio={16 / 9}>
           {video.thumbnail_url ? (
             <img
-              src={video.thumbnail_url}
+              src={toWebpThumbnail(video.thumbnail_url) ?? video.thumbnail_url}
               alt=""
               loading={priority ? "eager" : "lazy"}
               decoding="async"
