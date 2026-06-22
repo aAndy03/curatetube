@@ -72,7 +72,10 @@ function AdminReportsPage() {
   const setStatus = (next: StatusFilter) =>
     navigate({ search: { status: next === "open" ? undefined : next, videoId: undefined }, replace: true });
   const setSelectedVideoId = (id: string | null) =>
-    navigate({ search: (s) => ({ ...s, videoId: id ?? undefined }), replace: true });
+    navigate({
+      search: (s: z.infer<typeof ReportsSearchSchema>) => ({ ...s, videoId: id ?? undefined }),
+      replace: true,
+    });
 
   const [search, setSearch] = React.useState("");
   const [checked, setChecked] = React.useState<Set<string>>(new Set());
