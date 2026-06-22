@@ -67,8 +67,15 @@ import {
 } from "@/lib/broadcasts.functions";
 import { cn } from "@/lib/utils";
 
+const BroadcastsSearchSchema = z.object({
+  status: z.enum(["all", "active", "archived", "expired"]).optional(),
+  category: z.string().optional(),
+  q: z.string().optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/admin/broadcast")({
   head: () => ({ meta: [{ title: "Broadcasts — CurateTube" }] }),
+  validateSearch: (s) => BroadcastsSearchSchema.parse(s),
   component: BroadcastsPage,
 });
 
