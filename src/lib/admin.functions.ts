@@ -88,6 +88,17 @@ export const setRecommendationWeights = createServerFn({ method: "POST" })
         updated_by: context.userId,
       });
     if (error) throw new Error(error.message);
+    // Global weights changed → invalidate every cached personalised feed seed
+    // so the next /feed render re-scores against the new weights. Cheap because
+    // user_feed_state holds tiny per-user JSON, and Phase 3 rebuilds lazily.
+    const { error: flushErr } = await supabaseAdmin
+      .from("user_feed_state")
+      .delete()
+      .gte("created_at", "1970-01-01");
+    if (flushErr) {
+      // Non-fatal: log and continue so the weight save still succeeds.
+      console.warn("[setRecommendationWeights] user_feed_state flush failed", flushErr.message);
+    }
     await writeAudit(supabaseAdmin, {
       actorId: context.userId,
       action: "recommendation.weights_update",
