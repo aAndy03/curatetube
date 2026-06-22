@@ -36,6 +36,7 @@ function RolesAdmin() {
 
   const rolesQ = useQuery({
     queryKey: ["roles"],
+    staleTime: 30 * 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("roles")
@@ -48,6 +49,7 @@ function RolesAdmin() {
 
   const permsQ = useQuery({
     queryKey: ["permissions-catalog"],
+    staleTime: 30 * 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("permissions")
@@ -61,6 +63,7 @@ function RolesAdmin() {
 
   const matrixQ = useQuery({
     queryKey: ["role-permissions"],
+    staleTime: 30 * 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("role_permissions")
