@@ -1,6 +1,7 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Megaphone,
@@ -66,8 +67,15 @@ import {
 } from "@/lib/broadcasts.functions";
 import { cn } from "@/lib/utils";
 
+const BroadcastsSearchSchema = z.object({
+  status: z.enum(["all", "active", "archived", "expired"]).optional(),
+  category: z.string().optional(),
+  q: z.string().optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/admin/broadcast")({
   head: () => ({ meta: [{ title: "Broadcasts — CurateTube" }] }),
+  validateSearch: (s) => BroadcastsSearchSchema.parse(s),
   component: BroadcastsPage,
 });
 
@@ -270,19 +278,49 @@ function ArchivePanel() {
   const catsFn = useServerFn(getBroadcastCategories);
   const setCatsFn = useServerFn(setBroadcastCategories);
 
-  const [status, setStatus] = React.useState<StatusFilter>("all");
-  const [category, setCategory] = React.useState<string>("__all");
-  const [search, setSearch] = React.useState("");
-  const [debounced, setDebounced] = React.useState("");
+  const navigate = useNavigate({ from: Route.fullPath });
+  const search_ = Route.useSearch();
+  const status = (search_.status ?? "all") as StatusFilter;
+  const category = search_.category ?? "__all";
+  const [search, setSearch] = React.useState(search_.q ?? "");
+  const [debounced, setDebounced] = React.useState(search_.q ?? "");
   const [dateFrom, setDateFrom] = React.useState<Date | undefined>();
   const [dateTo, setDateTo] = React.useState<Date | undefined>();
   const [page, setPage] = React.useState(0);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = React.useState<string[] | null>(null);
 
+  const setStatus = (next: StatusFilter) =>
+    navigate({
+      search: (s: z.infer<typeof BroadcastsSearchSchema>) => ({
+        ...s,
+        status: next === "all" ? undefined : next,
+      }),
+      replace: true,
+    });
+  const setCategory = (next: string) =>
+    navigate({
+      search: (s: z.infer<typeof BroadcastsSearchSchema>) => ({
+        ...s,
+        category: next === "__all" ? undefined : next,
+      }),
+      replace: true,
+    });
+
   React.useEffect(() => {
-    const t = setTimeout(() => setDebounced(search.trim()), 250);
+    const t = setTimeout(() => {
+      const trimmed = search.trim();
+      setDebounced(trimmed);
+      navigate({
+        search: (s: z.infer<typeof BroadcastsSearchSchema>) => ({
+          ...s,
+          q: trimmed || undefined,
+        }),
+        replace: true,
+      });
+    }, 250);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   React.useEffect(() => {

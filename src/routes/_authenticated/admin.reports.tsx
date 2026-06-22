@@ -1,9 +1,10 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { z } from "zod";
 
 import {
   listReportedVideos,
@@ -31,8 +32,14 @@ import { usePermissions } from "@/lib/use-permissions";
 
 type StatusFilter = "all" | "open" | "reviewed" | "dismissed";
 
+const ReportsSearchSchema = z.object({
+  status: z.enum(["all", "open", "reviewed", "dismissed"]).optional(),
+  videoId: z.string().uuid().optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/admin/reports")({
   head: () => ({ meta: [{ title: "Reports — CurateTube" }] }),
+  validateSearch: (s) => ReportsSearchSchema.parse(s),
   component: AdminReportsPage,
 });
 
@@ -57,9 +64,19 @@ function AdminReportsPage() {
   const detailFn = useServerFn(listReportsForVideo);
   const updateFn = useServerFn(updateReportStatus);
   const qc = useQueryClient();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const search_ = Route.useSearch();
 
-  const [status, setStatus] = React.useState<StatusFilter>("open");
-  const [selectedVideoId, setSelectedVideoId] = React.useState<string | null>(null);
+  const status = (search_.status ?? "open") as StatusFilter;
+  const selectedVideoId = search_.videoId ?? null;
+  const setStatus = (next: StatusFilter) =>
+    navigate({ search: { status: next === "open" ? undefined : next, videoId: undefined }, replace: true });
+  const setSelectedVideoId = (id: string | null) =>
+    navigate({
+      search: (s: z.infer<typeof ReportsSearchSchema>) => ({ ...s, videoId: id ?? undefined }),
+      replace: true,
+    });
+
   const [search, setSearch] = React.useState("");
   const [checked, setChecked] = React.useState<Set<string>>(new Set());
 
@@ -72,6 +89,7 @@ function AdminReportsPage() {
     if (!selectedVideoId && list.data?.videos.length) {
       setSelectedVideoId(list.data.videos[0].video.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.data, selectedVideoId]);
 
   const detail = useQuery({

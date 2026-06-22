@@ -193,57 +193,61 @@ Shipped. Moderation queue is virtualised, admin video rows hover-prefetch the de
 
 ---
 
-## Step 5b — Admin: governance + global polish
+## Step 5b — Admin: governance + global polish ✅
 
-Lower-traffic admin views (reports/users/broadcasts/audit/roles/settings) plus the cross-cutting polish that touches every page (VideoCard, action queue, recommendation invalidation, `select('*')` codemod). Ship last.
+Shipped. Reports + Broadcasts now URL-param sync their filters; Roles matrix is cached for 30 min; the recommendation weight save flushes the per-user feed seed cache; VideoCard serves WebP thumbnails for every YouTube-hosted image; and `select('*')` is gone from `sections.functions.ts` and `library.functions.ts`.
 
 **Admin / Reports — `src/routes/_authenticated/admin.reports.tsx`, `src/lib/reports.functions.ts`**
-- verify: left panel pre-sorted by open count server-side.
-- verify: right-panel search is a client filter (cap ≤200/video).
-- apply: filters URL-param synced.
+- verify: `listReportedVideos` already returns rows sorted by open count server-side (`ORDER BY open_count DESC NULLS LAST`).
+- verify: right-panel search is a `.filter()` on `reason_text` over the per-video reports already capped at 200 rows server-side.
+- shipped: `status` + `videoId` URL-param synced via `validateSearch` + `navigate({ replace: true })` (Zod-validated, defaults stay implicit).
 
 **Admin / Users — `src/routes/_authenticated/admin.users.tsx`, `src/lib/admin-users.functions.ts`**
-- verify: email masking server-side (plan 5 Phase 10).
-- verify: role Combobox options filtered server-side by actor level.
-- verify: 50/page infinite scroll.
-- apply: user-detail Sheet lazy-loads the last 20 audit entries only on Sheet open.
+- verify: email masking server-side via `maskEmail()` gated on `users.view_email` permission.
+- verify: `listAssignableRoles` filters by actor `level_rank` server-side.
+- verify: 50/page infinite scroll via `useInfiniteQuery` + IntersectionObserver sentinel.
+- verify: user-detail Sheet `useQuery` only mounts when `openUserId` is set; `getUserDetail` already caps audit to the last 20 entries server-side — lazy-on-open behaviour confirmed, no extra work needed.
 
 **Admin / Broadcasts — `src/routes/_authenticated/admin.broadcast.tsx`, `src/lib/broadcasts.functions.ts`**
-- apply: archive DataTable paginated, filters URL-param synced.
-- apply: read counts via `COUNT(user_broadcast_reads)` at query time (TODO comment to promote to MV at >100k rows).
-- apply: category list from `app_settings` in-memory (no separate fetch).
+- verify: archive DataTable already paginated (`PAGE_SIZE=25`).
+- shipped: `status`, `category`, `q` URL-param synced via `validateSearch`; deep-linking + back-button now restore filter state.
+- verify: read counts already computed at query time in `listBroadcasts` (no MV needed yet — flagged TODO when archive grows past ~100k rows).
+- defer: "category list from `app_settings` in-memory" — current `getBroadcastCategories` server fn is cached with `staleTime: 5 min`; folding categories into `app_settings` would force a separate write path. Keep as-is until categories prove to be the hot path.
 
 **Admin / Audit log — `src/routes/_authenticated/admin.audit.tsx`**
-- defer: monthly partitioning — leave a TODO with partitioning DDL sketch.
-- apply: row-expand uses `Collapsible` with no extra fetch (diff payload included).
-- verify: filter by actor / action / date server-side with indexed columns; add indexes if `EXPLAIN` shows a seq scan.
+- defer: monthly partitioning — TODO; not worth doing before the table grows past a few million rows.
+- verify: row-expand already uses `<Collapsible>` with no extra fetch (diff payload travels with the list response).
+- verify: filter by actor / action / date already runs server-side; existing indexes cover the predicates.
 
 **Admin / Roles & Permissions — `src/routes/_authenticated/admin.roles.tsx`**
-- apply: matrix loaded once, `staleTime: 30 * 60_000`.
-- verify: inline checkbox toggle writes immediately per cell.
-- verify: plan 5/6 keys (`ai.dispatch`, `ai.review`, `ai.manage`, `users.view`, `users.manage`) all render.
+- shipped: `roles`, `permissions-catalog`, `role-permissions` queries all carry `staleTime: 30 * 60_000`.
+- verify: inline checkbox toggle writes per cell via `upsert` (existing `togglePermission` mutation).
+- verify: plan 5/6 keys (`ai.dispatch`, `ai.review`, `ai.manage`, `users.view`, `users.manage`) all render from the permissions catalogue.
 
 **Admin / Settings — `src/routes/_authenticated/admin.settings.tsx`**
-- verify: all settings auto-save inline + Sonner confirmation.
-- apply (Phase 2 owner): AI section adds feedback-threshold sliders alongside existing model selectors + parallel-agent control.
-- verify: orchestrator hot-reloads `app_settings` each cron tick.
+- verify: all settings auto-save inline with Sonner confirmation (existing behaviour).
+- defer (Phase 2 owner): AI section feedback-threshold sliders.
+- verify: orchestrator hot-reloads `app_settings` per cron tick.
 
-**Recommendation weights**
-- verify (Phase 3 owner): weights wired into feed assembly fn.
-- verify (Phase 4 owner): weights applied to `/suggest` personalised scoring.
-- apply: on weight save → invalidate `user_feed_state` cache row for the user.
+**Recommendation weights — `src/lib/admin.functions.ts`**
+- shipped: `setRecommendationWeights` now flushes every `user_feed_state` row after the upsert so the next personalised feed renders against the new weights (non-fatal if the flush fails; the weight save still commits).
+- verify (Phase 3 owner): weights consumed in feed assembly.
+- verify (Phase 4 owner): weights consumed in `/suggest` scoring.
 
 **Action queue (IndexedDB) — `src/lib/action-queue.ts`**
-- verify: 500-entry cap with immediate flush on exceed.
+- verify: 500-entry cap with immediate flush on exceed (existing `MAX_QUEUE_SIZE` guard).
 - verify: acknowledged entries evicted after 24 h on each flush.
 - verify: `useHydratedStatus` merges queue state for every status-bearing component.
 
 **VideoCard global polish — `src/components/video-card.tsx`**
-- apply: 50 ms hover-prefetch on every card link (step-1 helper).
-- apply: serve thumbnails as WebP via YouTube's `hqdefault.webp` URL when available; `fetchpriority="high"` on the first 4 cards on `/feed`, `/suggest`, `/trending`, `/categories/[slug]`.
+- shipped earlier (step 3b): 50 ms hover-prefetch on every card link via `usePrefetchOnHover('/v/$id', { id })`.
+- shipped: `toWebpThumbnail()` rewrites `i.ytimg.com/vi/<id>/<name>.jpg` to `i.ytimg.com/vi_webp/<id>/<name>.webp` (~30% smaller payload). Non-YouTube thumbnails pass through unchanged.
+- verify: `fetchPriority="high"` on priority cards is already supported via the `priority` prop; consuming routes (`/feed`, `/suggest`, `/trending`, `/categories/[slug]`) pass `priority` for the first 4 cards.
 
 **`select('*')` codemod**
-- apply: replace every `select('*')` in `src/lib/**/*.functions.ts` with explicit column lists (known remaining: `sections.functions.ts` ×5, `library.functions.ts:564`).
+- shipped: `sections.functions.ts` — introduced `FEED_SECTION_COLS` constant; all 5 `select('*')` call sites now project explicit columns.
+- shipped: `library.functions.ts:564` (`getCreatorDetail`) — projects the full `creators` column list explicitly.
+- remaining: `src/lib/ai/taxonomy-snapshot.server.ts:99` is the AI snapshot writer (it intentionally roundtrips the full row) — left as-is; not user-facing.
 
 ---
 

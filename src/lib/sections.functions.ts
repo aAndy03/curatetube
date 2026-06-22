@@ -20,6 +20,12 @@ export type FeedSection = {
   enabled: boolean;
 };
 
+// Explicit column list for feed_sections rows; matches the FeedSection shape
+// above plus cycle (Json), created_at, updated_at to keep RLS-aware reads
+// projecting only what the client uses.
+const FEED_SECTION_COLS =
+  "id, owner_id, template_id, name, source, filters, sort, layout, size, refresh_minutes, position, is_template, enabled, cycle, created_at, updated_at";
+
 export type SectionVideo = {
   id: string;
   youtube_id: string;
@@ -62,12 +68,12 @@ export const listMySections = createServerFn({ method: "GET" })
     const [own, templates] = await Promise.all([
       supabase
         .from("feed_sections")
-        .select("*")
+        .select(FEED_SECTION_COLS)
         .eq("owner_id", userId)
         .order("position", { ascending: true }),
       supabase
         .from("feed_sections")
-        .select("*")
+        .select(FEED_SECTION_COLS)
         .eq("is_template", true)
         .order("position", { ascending: true }),
     ]);
@@ -88,7 +94,7 @@ export const adoptTemplate = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: tpl, error } = await supabase
       .from("feed_sections")
-      .select("*")
+      .select(FEED_SECTION_COLS)
       .eq("id", data.templateId)
       .eq("is_template", true)
       .maybeSingle();
@@ -116,7 +122,7 @@ export const adoptTemplate = createServerFn({ method: "POST" })
         position: count ?? 0,
         is_template: false,
       })
-      .select("*")
+      .select(FEED_SECTION_COLS)
       .single();
     if (insErr) throw new Error(insErr.message);
     return { section: created as unknown as FeedSection };
@@ -283,7 +289,7 @@ export const getSectionVideos = createServerFn({ method: "GET" })
     // to private sections owned by other users.
     const { data: section, error: sErr } = await context.supabase
       .from("feed_sections")
-      .select("*")
+      .select(FEED_SECTION_COLS)
       .eq("id", data.sectionId)
       .maybeSingle();
     if (sErr) throw new Error(sErr.message);
