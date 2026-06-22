@@ -561,7 +561,7 @@ export const getCreatorDetail = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { data: creator, error } = await supabaseAdmin
       .from("creators")
-      .select("*")
+      .select("id, title, handle, thumbnail_url, subscriber_count, video_count, channel_url, description, country, youtube_channel_id, fetched_at, created_at, updated_at")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
