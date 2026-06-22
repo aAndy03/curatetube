@@ -42,6 +42,20 @@ function relativeTime(iso: string | null): string {
   return `${Math.floor(diff / (day * 365))}y ago`;
 }
 
+/**
+ * Convert a YouTube thumbnail URL (i.ytimg.com/vi/<id>/<name>.jpg) into its
+ * WebP variant (i.ytimg.com/vi_webp/<id>/<name>.webp). YouTube serves WebP at
+ * ~30% smaller payload for the same visual quality. Returns the original URL
+ * unchanged for non-YouTube thumbnails so creator/custom hosts keep working.
+ */
+function toWebpThumbnail(url: string | null): string | null {
+  if (!url) return url;
+  const m = url.match(/^(https?:\/\/i\.ytimg\.com)\/vi\/([^/]+)\/([^/?#]+)\.jpg(\?.*)?$/);
+  if (!m) return url;
+  const [, host, id, name, qs] = m;
+  return `${host}/vi_webp/${id}/${name}.webp${qs ?? ""}`;
+}
+
 function VideoCardImpl({
   video,
   priority = false,
