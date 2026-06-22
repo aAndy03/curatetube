@@ -94,7 +94,7 @@ export const setRecommendationWeights = createServerFn({ method: "POST" })
     const { error: flushErr } = await supabaseAdmin
       .from("user_feed_state")
       .delete()
-      .gte("created_at", "1970-01-01");
+      .gte("last_cycled_at", "1970-01-01");
     if (flushErr) {
       // Non-fatal: log and continue so the weight save still succeeds.
       console.warn("[setRecommendationWeights] user_feed_state flush failed", flushErr.message);
