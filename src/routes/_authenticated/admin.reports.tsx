@@ -32,8 +32,14 @@ import { usePermissions } from "@/lib/use-permissions";
 
 type StatusFilter = "all" | "open" | "reviewed" | "dismissed";
 
+const ReportsSearchSchema = z.object({
+  status: z.enum(["all", "open", "reviewed", "dismissed"]).optional(),
+  videoId: z.string().uuid().optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/admin/reports")({
   head: () => ({ meta: [{ title: "Reports — CurateTube" }] }),
+  validateSearch: (s) => ReportsSearchSchema.parse(s),
   component: AdminReportsPage,
 });
 
