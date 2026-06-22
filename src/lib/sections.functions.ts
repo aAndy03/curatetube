@@ -20,6 +20,12 @@ export type FeedSection = {
   enabled: boolean;
 };
 
+// Explicit column list for feed_sections rows; matches the FeedSection shape
+// above plus cycle (Json), created_at, updated_at to keep RLS-aware reads
+// projecting only what the client uses.
+const FEED_SECTION_COLS =
+  "id, owner_id, template_id, name, source, filters, sort, layout, size, refresh_minutes, position, is_template, enabled, cycle, created_at, updated_at";
+
 export type SectionVideo = {
   id: string;
   youtube_id: string;
