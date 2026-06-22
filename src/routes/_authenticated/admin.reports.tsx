@@ -64,9 +64,16 @@ function AdminReportsPage() {
   const detailFn = useServerFn(listReportsForVideo);
   const updateFn = useServerFn(updateReportStatus);
   const qc = useQueryClient();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const search_ = Route.useSearch();
 
-  const [status, setStatus] = React.useState<StatusFilter>("open");
-  const [selectedVideoId, setSelectedVideoId] = React.useState<string | null>(null);
+  const status = (search_.status ?? "open") as StatusFilter;
+  const selectedVideoId = search_.videoId ?? null;
+  const setStatus = (next: StatusFilter) =>
+    navigate({ search: { status: next === "open" ? undefined : next, videoId: undefined }, replace: true });
+  const setSelectedVideoId = (id: string | null) =>
+    navigate({ search: (s) => ({ ...s, videoId: id ?? undefined }), replace: true });
+
   const [search, setSearch] = React.useState("");
   const [checked, setChecked] = React.useState<Set<string>>(new Set());
 
@@ -79,6 +86,7 @@ function AdminReportsPage() {
     if (!selectedVideoId && list.data?.videos.length) {
       setSelectedVideoId(list.data.videos[0].video.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.data, selectedVideoId]);
 
   const detail = useQuery({
