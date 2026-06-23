@@ -40,6 +40,12 @@ function isProtectedPath(pathname: string) {
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );
 }
+function guestRedirect() {
+  return typeof window !== "undefined"
+    ? window.location.pathname + window.location.search
+    : "/";
+}
+
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
