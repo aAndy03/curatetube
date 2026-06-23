@@ -248,7 +248,7 @@ function PasswordForm({
   );
 }
 
-function MagicLinkForm() {
+function MagicLinkForm({ redirectPath }: { redirectPath: string }) {
   const [email, setEmail] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [sent, setSent] = React.useState(false);
@@ -261,9 +261,10 @@ function MagicLinkForm() {
       return;
     }
     setLoading(true);
+    const target = redirectPath.startsWith("/") ? redirectPath : "/feed";
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/feed` },
+      options: { emailRedirectTo: `${window.location.origin}${target}` },
     });
     setLoading(false);
     if (error) {
