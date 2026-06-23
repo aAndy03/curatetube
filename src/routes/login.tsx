@@ -173,9 +173,11 @@ const PasswordSchema = z.object({
 function PasswordForm({
   mode,
   onDone,
+  redirectPath,
 }: {
   mode: "signin" | "signup";
   onDone: () => void;
+  redirectPath: string;
 }) {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -190,11 +192,12 @@ function PasswordForm({
     }
     setLoading(true);
     try {
+      const target = redirectPath.startsWith("/") ? redirectPath : "/feed";
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/feed` },
+          options: { emailRedirectTo: `${window.location.origin}${target}` },
         });
         if (error) throw error;
         toast.success("Account created");
