@@ -507,31 +507,23 @@ export const listApprovedVideos = createServerFn({ method: "GET" })
     return { videos: rows ?? [] };
   });
 
+// Public: anyone (signed-in or anon) can view approved videos.
+// Staff previews of non-approved videos go through the admin routes
+// (admin-video-detail.functions), which still gate on permissions.
+// Curator notes are admin-only and never leak through this endpoint.
 export const getVideoDetail = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    // Staff with submission.view_queue may see non-approved videos and curator_note.
-    const { data: isStaff } = await supabaseAdmin.rpc("has_permission", {
-      _user_id: context.userId,
-      _key: "submission.view_queue",
-    });
-
-    let q = supabaseAdmin
+  .handler(async ({ data }) => {
+    const { data: video, error } = await supabaseAdmin
       .from("videos")
       .select(
-        "id, youtube_id, title, description, thumbnail_url, duration_seconds, published_at, view_count, like_count, language, status, submission_count, suggest_count, content_warnings, curator_note, is_featured, creator:creators(id, title, handle, thumbnail_url, description, channel_url, subscriber_count)",
+        "id, youtube_id, title, description, thumbnail_url, duration_seconds, published_at, view_count, like_count, language, status, submission_count, suggest_count, content_warnings, is_featured, creator:creators(id, title, handle, thumbnail_url, description, channel_url, subscriber_count)",
       )
-      .eq("id", data.id);
-    if (!isStaff) q = q.eq("status", "approved");
-
-    const { data: video, error } = await q.maybeSingle();
+      .eq("id", data.id)
+      .eq("status", "approved")
+      .maybeSingle();
     if (error) throw new Error(error.message);
-    if (video && !isStaff) {
-      // Never leak internal moderation notes to non-staff.
-      (video as { curator_note: string | null }).curator_note = null;
-    }
-    return { video };
+    return { video: video ? { ...video, curator_note: null as string | null } : null };
   });
 
 
@@ -617,7 +609,6 @@ export const getCreatorDetail = createServerFn({ method: "GET" })
 
 // Public-mode contributors for a creator's library; gated by app_settings toggle.
 export const getCreatorContributors = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({

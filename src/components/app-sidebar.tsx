@@ -32,14 +32,20 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { usePermissions } from "@/lib/use-permissions";
+import { useAuth } from "@/lib/auth-context";
 
-const main = [
-  { title: "Home", url: "/feed", icon: Home },
-  { title: "Suggest Feed", url: "/suggest", icon: Flag },
-  { title: "Leaderboard", url: "/leaderboard", icon: Trophy },
+// Public browse links — visible to everyone, signed in or not.
+const publicLinks = [
   { title: "Trending", url: "/trending", icon: TrendingUp },
+  { title: "Leaderboard", url: "/leaderboard", icon: Trophy },
   { title: "Categories", url: "/categories", icon: FolderTree },
   { title: "Creators", url: "/creators", icon: Users2 },
+];
+
+// Personalised — only signed-in users see these.
+const personalBrowse = [
+  { title: "Home", url: "/feed", icon: Home },
+  { title: "Suggest Feed", url: "/suggest", icon: Flag },
 ];
 
 const personal = [
@@ -53,17 +59,21 @@ export function AppSidebar() {
   const pathname = useRouterState({
     select: (s) => s.location.pathname,
   });
+  const { user } = useAuth();
   const { data: perms } = usePermissions();
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + "/");
 
-  const showModeration = perms?.has("submission.view_queue");
+  const showModeration = !!user && perms?.has("submission.view_queue");
   const showAdmin =
-    perms?.isOwner ||
-    perms?.has("role.edit") ||
-    perms?.has("user.assign_role") ||
-    perms?.has("users.view") ||
-    perms?.has("settings.edit");
+    !!user &&
+    (perms?.isOwner ||
+      perms?.has("role.edit") ||
+      perms?.has("user.assign_role") ||
+      perms?.has("users.view") ||
+      perms?.has("settings.edit"));
+
+  const browseLinks = user ? [...personalBrowse, ...publicLinks] : publicLinks;
 
   return (
     <Sidebar collapsible="icon">
@@ -77,7 +87,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Browse</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {main.map((item) => (
+              {browseLinks.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <Link to={item.url}>
@@ -91,23 +101,25 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>You</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {personal.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <Link to={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {user ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>You</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {personal.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <Link to={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
 
         {showModeration ? (
           <SidebarGroup>
@@ -168,7 +180,7 @@ export function AppSidebar() {
         ) : null}
       </SidebarContent>
       <SidebarFooter>
-        <p className="px-2 text-[10px] text-muted-foreground">alpha 0.6.6</p>
+        <p className="px-2 text-[10px] text-muted-foreground">alpha 0.6.7</p>
       </SidebarFooter>
     </Sidebar>
   );

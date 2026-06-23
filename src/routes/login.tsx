@@ -48,6 +48,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  const redirectPath = search.redirect ?? "/feed";
   const [tab, setTab] = React.useState<"signin" | "signup" | "magic">(
     search.mode === "signup" ? "signup" : "signin",
   );
@@ -69,7 +70,8 @@ function LoginPage() {
 
         <div className="rounded-xl border bg-card p-5">
           <GoogleButton
-            onDone={() => navigate({ to: search.redirect ?? "/feed" })}
+            redirectPath={redirectPath}
+            onDone={() => navigate({ to: redirectPath })}
           />
 
           <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
@@ -87,17 +89,19 @@ function LoginPage() {
             <TabsContent value="signin" className="pt-4">
               <PasswordForm
                 mode="signin"
-                onDone={() => navigate({ to: search.redirect ?? "/feed" })}
+                redirectPath={redirectPath}
+                onDone={() => navigate({ to: redirectPath })}
               />
             </TabsContent>
             <TabsContent value="signup" className="pt-4">
               <PasswordForm
                 mode="signup"
-                onDone={() => navigate({ to: search.redirect ?? "/feed" })}
+                redirectPath={redirectPath}
+                onDone={() => navigate({ to: redirectPath })}
               />
             </TabsContent>
             <TabsContent value="magic" className="pt-4">
-              <MagicLinkForm />
+              <MagicLinkForm redirectPath={redirectPath} />
             </TabsContent>
           </Tabs>
         </div>
@@ -122,7 +126,14 @@ function LoginPage() {
   );
 }
 
-function GoogleButton({ onDone }: { onDone: () => void }) {
+
+function GoogleButton({
+  onDone,
+  redirectPath,
+}: {
+  onDone: () => void;
+  redirectPath: string;
+}) {
   const [loading, setLoading] = React.useState(false);
   return (
     <Button
@@ -132,8 +143,10 @@ function GoogleButton({ onDone }: { onDone: () => void }) {
       disabled={loading}
       onClick={async () => {
         setLoading(true);
+        // Preserve the post-login destination through the OAuth round-trip.
+        const target = redirectPath.startsWith("/") ? redirectPath : "/feed";
         const result = await lovable.auth.signInWithOAuth("google", {
-          redirect_uri: window.location.origin + "/feed",
+          redirect_uri: window.location.origin + target,
         });
         if (result.error) {
           setLoading(false);
@@ -160,9 +173,11 @@ const PasswordSchema = z.object({
 function PasswordForm({
   mode,
   onDone,
+  redirectPath,
 }: {
   mode: "signin" | "signup";
   onDone: () => void;
+  redirectPath: string;
 }) {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -177,11 +192,12 @@ function PasswordForm({
     }
     setLoading(true);
     try {
+      const target = redirectPath.startsWith("/") ? redirectPath : "/feed";
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/feed` },
+          options: { emailRedirectTo: `${window.location.origin}${target}` },
         });
         if (error) throw error;
         toast.success("Account created");
@@ -232,7 +248,7 @@ function PasswordForm({
   );
 }
 
-function MagicLinkForm() {
+function MagicLinkForm({ redirectPath }: { redirectPath: string }) {
   const [email, setEmail] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [sent, setSent] = React.useState(false);
@@ -245,9 +261,10 @@ function MagicLinkForm() {
       return;
     }
     setLoading(true);
+    const target = redirectPath.startsWith("/") ? redirectPath : "/feed";
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/feed` },
+      options: { emailRedirectTo: `${window.location.origin}${target}` },
     });
     setLoading(false);
     if (error) {

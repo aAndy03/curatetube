@@ -9,6 +9,8 @@ import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { hasReportedVideo, submitReport } from "@/lib/reports.functions";
+import { SignInGate } from "@/components/sign-in-gate";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 const MAX = 1500;
@@ -24,6 +26,8 @@ export function ReportButton({
   className?: string;
 }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const signedIn = !!user;
   const checkFn = useServerFn(hasReportedVideo);
   const submitFn = useServerFn(submitReport);
 
@@ -36,7 +40,9 @@ export function ReportButton({
     queryKey: ["report-status", videoId],
     queryFn: () => checkFn({ data: { videoId } }),
     staleTime: 30 * 60 * 1000,
+    enabled: signedIn,
   });
+
 
   const mutation = useMutation({
     mutationFn: () => submitFn({ data: { videoId, reasonText: text.trim() } }),
@@ -89,6 +95,15 @@ export function ReportButton({
       </Tooltip>
     );
   }
+
+  if (!signedIn) {
+    return (
+      <SignInGate action="report this video" signedIn={false}>
+        {trigger}
+      </SignInGate>
+    );
+  }
+
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
