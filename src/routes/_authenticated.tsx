@@ -18,16 +18,35 @@ import { SubmitSheetProvider, useSubmitSheet } from "@/lib/use-submit-sheet";
 import { usePermissions } from "@/lib/use-permissions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionBootstrap } from "@/hooks/use-session-bootstrap";
+import { useAuth } from "@/lib/auth-context";
 import { initActionQueue, subscribeQueue, flushNow, clearQueue } from "@/lib/action-queue";
 import { toast } from "sonner";
 
+// Routes inside the _authenticated chrome that REQUIRE a signed-in user.
+// Everything else (video detail, categories, tags, creators, trending,
+// leaderboard, search) renders the same shell but is fully public — guest
+// visitors keep browsing; action buttons surface a "Sign in to …" popover
+// instead of redirecting.
+const PROTECTED_PREFIXES = [
+  "/feed",
+  "/suggest",
+  "/me",
+  "/moderation",
+  "/admin",
+];
+
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+}
+
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
-    // SSR has no access to the browser's localStorage-persisted session, so
-    // getSession() resolves to null on the server and we'd wrongly redirect
-    // an authenticated user to /login on every refresh. Only gate on the
-    // client; the loaders inside protected routes are themselves auth-aware.
+    // SSR has no access to the browser's localStorage-persisted session;
+    // gate on the client only.
     if (typeof window === "undefined") return;
+    if (!isProtectedPath(location.pathname)) return;
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
       throw redirect({
@@ -81,7 +100,9 @@ function AuthNotFound() {
 
 function AuthenticatedLayout() {
   const navigate = Route.useNavigate();
+  const { user } = useAuth();
   React.useEffect(() => {
+    if (!user) return; // Guests don't need the action queue.
     const teardown = initActionQueue();
     let lastErr: string | null = null;
     const unsub = subscribeQueue(({ lastError }) => {
@@ -105,7 +126,7 @@ function AuthenticatedLayout() {
       unsub();
       sub.subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, user]);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -131,11 +152,10 @@ function Header() {
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [notifOpen, setNotifOpen] = React.useState(false);
   const { setOpen } = useSubmitSheet();
+  const { user } = useAuth();
   const { data: perms } = usePermissions();
-  const canSubmit = perms?.has("submission.create");
-  // Bell badge: single source via session bootstrap. Notifications-sheet's
-  // realtime channel invalidates the bootstrap key, so the badge stays live
-  // without a separate mount-time poll.
+  const canSubmit = !!user && perms?.has("submission.create");
+  // Bell badge: single source via session bootstrap (only fetches when signed in).
   const { data: bootstrap } = useSessionBootstrap();
   const unread = bootstrap?.unreadCount ?? 0;
 
@@ -154,52 +174,75 @@ function Header() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {canSubmit ? (
-            <Button size="sm" variant="default" onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Submit</span>
-            </Button>
+          {!user ? (
+            <>
+              <Button size="sm" variant="ghost" asChild>
+                <Link to="/login" search={{ redirect: window.location.pathname + window.location.search }}>
+                  Sign in
+                </Link>
+              </Button>
+              <Button size="sm" variant="default" asChild>
+                <Link to="/login" search={{ mode: "signup", redirect: window.location.pathname + window.location.search }}>
+                  Get started
+                </Link>
+              </Button>
+            </>
           ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button size="sm" variant="ghost" disabled>
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Submit</span>
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>You need the Contributor role to submit.</TooltipContent>
-            </Tooltip>
+            <>
+              {canSubmit ? (
+                <Button size="sm" variant="default" onClick={() => setOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Submit</span>
+                </Button>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button size="sm" variant="ghost" disabled>
+                        <Plus className="h-4 w-4" />
+                        <span className="hidden sm:inline">Submit</span>
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>You need the Contributor role to submit.</TooltipContent>
+                </Tooltip>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="relative"
+                onClick={() => setNotifOpen(true)}
+                aria-label="Notifications"
+              >
+                <Bell className="h-4 w-4" />
+                {unread > 0 ? (
+                  <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-foreground px-1 text-[10px] font-medium leading-none text-background">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                ) : null}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
+                <UserCircle2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Profile</span>
+              </Button>
+            </>
           )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="relative"
-            onClick={() => setNotifOpen(true)}
-            aria-label="Notifications"
-          >
-            <Bell className="h-4 w-4" />
-            {unread > 0 ? (
-              <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-foreground px-1 text-[10px] font-medium leading-none text-background">
-                {unread > 9 ? "9+" : unread}
-              </span>
-            ) : null}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
-            <UserCircle2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Profile</span>
-          </Button>
         </div>
       </header>
-      <ProfileSettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <NotificationsSheet open={notifOpen} onOpenChange={setNotifOpen} />
+      {user ? (
+        <>
+          <ProfileSettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />
+          <NotificationsSheet open={notifOpen} onOpenChange={setNotifOpen} />
+        </>
+      ) : null}
     </>
   );
 }
 
 function SheetMounts() {
+  const { user } = useAuth();
   const { open, setOpen } = useSubmitSheet();
+  if (!user) return null;
   return <SubmitSheet open={open} onOpenChange={setOpen} />;
 }
 

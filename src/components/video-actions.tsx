@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { enqueue } from "@/lib/action-queue";
 import { useHydratedStatus, type ListStatus } from "@/hooks/use-hydrated-status";
 import { ReportButton } from "@/components/report-button";
+import { SignInGate } from "@/components/sign-in-gate";
+import { useAuth } from "@/lib/auth-context";
 
 const ACTIONS: { key: ListStatus; icon: typeof Bookmark; label: string }[] = [
   { key: "wishlist", icon: Bookmark, label: "Wishlist" },
@@ -28,6 +30,8 @@ export function VideoActions({
   className?: string;
 }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const signedIn = !!user;
   const { statuses, suggested } = useHydratedStatus(videoId);
   const has = (s: ListStatus) => statuses.includes(s);
 
@@ -97,19 +101,21 @@ export function VideoActions({
         return (
           <Tooltip key={key}>
             <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant={active ? "default" : "ghost"}
-                className={cn(baseBtn, "shrink-0")}
-                onClick={(e) => {
-                  stop(e);
-                  onStatusClick(key, active);
-                }}
-                aria-pressed={active}
-                aria-label={label}
-              >
-                <Icon className={baseIcon} />
-              </Button>
+              <SignInGate action={label.toLowerCase()} signedIn={signedIn}>
+                <Button
+                  size="icon"
+                  variant={active ? "default" : "ghost"}
+                  className={cn(baseBtn, "shrink-0")}
+                  onClick={(e) => {
+                    stop(e);
+                    onStatusClick(key, active);
+                  }}
+                  aria-pressed={active}
+                  aria-label={label}
+                >
+                  <Icon className={baseIcon} />
+                </Button>
+              </SignInGate>
             </TooltipTrigger>
             <TooltipContent>{active ? `Remove from ${label.toLowerCase()}` : label}</TooltipContent>
           </Tooltip>
@@ -117,22 +123,24 @@ export function VideoActions({
       })}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            size="sm"
-            variant={suggested ? "default" : "outline"}
-            className={cn(suggestBtn, "shrink-0")}
-            onClick={(e) => {
-              stop(e);
-              onSuggestClick();
-            }}
-            aria-pressed={suggested}
-            aria-label={suggested ? "Remove suggestion" : "Suggest"}
-          >
-            <Sparkles className={baseIcon} />
-            <span className="ml-1 hidden text-xs @[260px]/card:inline">
-              {suggested ? "Suggested" : "Suggest"}
-            </span>
-          </Button>
+          <SignInGate action="suggest this video" signedIn={signedIn}>
+            <Button
+              size="sm"
+              variant={suggested ? "default" : "outline"}
+              className={cn(suggestBtn, "shrink-0")}
+              onClick={(e) => {
+                stop(e);
+                onSuggestClick();
+              }}
+              aria-pressed={suggested}
+              aria-label={suggested ? "Remove suggestion" : "Suggest"}
+            >
+              <Sparkles className={baseIcon} />
+              <span className="ml-1 hidden text-xs @[260px]/card:inline">
+                {suggested ? "Suggested" : "Suggest"}
+              </span>
+            </Button>
+          </SignInGate>
         </TooltipTrigger>
         <TooltipContent>
           {suggested ? "Remove your suggestion" : "Suggest this video to the community"}

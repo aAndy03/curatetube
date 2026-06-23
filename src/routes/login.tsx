@@ -48,6 +48,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  const redirectPath = search.redirect ?? "/feed";
   const [tab, setTab] = React.useState<"signin" | "signup" | "magic">(
     search.mode === "signup" ? "signup" : "signin",
   );
@@ -69,7 +70,8 @@ function LoginPage() {
 
         <div className="rounded-xl border bg-card p-5">
           <GoogleButton
-            onDone={() => navigate({ to: search.redirect ?? "/feed" })}
+            redirectPath={redirectPath}
+            onDone={() => navigate({ to: redirectPath })}
           />
 
           <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
@@ -87,17 +89,19 @@ function LoginPage() {
             <TabsContent value="signin" className="pt-4">
               <PasswordForm
                 mode="signin"
-                onDone={() => navigate({ to: search.redirect ?? "/feed" })}
+                redirectPath={redirectPath}
+                onDone={() => navigate({ to: redirectPath })}
               />
             </TabsContent>
             <TabsContent value="signup" className="pt-4">
               <PasswordForm
                 mode="signup"
-                onDone={() => navigate({ to: search.redirect ?? "/feed" })}
+                redirectPath={redirectPath}
+                onDone={() => navigate({ to: redirectPath })}
               />
             </TabsContent>
             <TabsContent value="magic" className="pt-4">
-              <MagicLinkForm />
+              <MagicLinkForm redirectPath={redirectPath} />
             </TabsContent>
           </Tabs>
         </div>
@@ -121,6 +125,7 @@ function LoginPage() {
     </main>
   );
 }
+
 
 function GoogleButton({ onDone }: { onDone: () => void }) {
   const [loading, setLoading] = React.useState(false);
