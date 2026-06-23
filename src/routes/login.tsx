@@ -127,7 +127,13 @@ function LoginPage() {
 }
 
 
-function GoogleButton({ onDone }: { onDone: () => void }) {
+function GoogleButton({
+  onDone,
+  redirectPath,
+}: {
+  onDone: () => void;
+  redirectPath: string;
+}) {
   const [loading, setLoading] = React.useState(false);
   return (
     <Button
@@ -137,8 +143,10 @@ function GoogleButton({ onDone }: { onDone: () => void }) {
       disabled={loading}
       onClick={async () => {
         setLoading(true);
+        // Preserve the post-login destination through the OAuth round-trip.
+        const target = redirectPath.startsWith("/") ? redirectPath : "/feed";
         const result = await lovable.auth.signInWithOAuth("google", {
-          redirect_uri: window.location.origin + "/feed",
+          redirect_uri: window.location.origin + target,
         });
         if (result.error) {
           setLoading(false);
