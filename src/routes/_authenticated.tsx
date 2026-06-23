@@ -177,12 +177,31 @@ function Header() {
           {!user ? (
             <>
               <Button size="sm" variant="ghost" asChild>
-                <Link to="/login" search={{ redirect: window.location.pathname + window.location.search }}>
+                <Link
+                  to="/login"
+                  search={(prev) => ({
+                    ...prev,
+                    redirect:
+                      typeof window !== "undefined"
+                        ? window.location.pathname + window.location.search
+                        : undefined,
+                  })}
+                >
                   Sign in
                 </Link>
               </Button>
               <Button size="sm" variant="default" asChild>
-                <Link to="/login" search={{ mode: "signup", redirect: window.location.pathname + window.location.search }}>
+                <Link
+                  to="/login"
+                  search={(prev) => ({
+                    ...prev,
+                    mode: "signup" as const,
+                    redirect:
+                      typeof window !== "undefined"
+                        ? window.location.pathname + window.location.search
+                        : undefined,
+                  })}
+                >
                   Get started
                 </Link>
               </Button>
