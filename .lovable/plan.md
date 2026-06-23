@@ -266,3 +266,63 @@ Shipped. Reports + Broadcasts now URL-param sync their filters; Roles matrix is 
 1. **AVIF/WebP thumbnails**: YouTube serves `…hqdefault.webp`; also want a self-hosted AVIF pipeline (Worker + KV) for 2× DPR, or stick to YouTube WebP?
 2. **Virtualisation threshold** for `/me` lists + moderation queue — keep >50 rows, or always virtualise?
 3. **`select('*')` codemod** — mechanical pass replacing `*` with inferred column lists, or PR as a separate review-only change?
+
+---
+
+# Plan 7 — Public browsing + fuzzy search + rich link previews
+
+User-requested batch. Sequenced as **Step A** (public browsing) first because the public route surface is what the next two steps target, then **Step B** (search) + **Step C** (OG meta) together.
+
+## Step A — Public browsing (no route renames) ✅
+
+Goal: unauthenticated visitors can view and navigate every non-personal route while every write action surfaces a "Sign in to …" Popover instead of redirecting.
+
+**Layout gate (`src/routes/_authenticated.tsx`)**
+- shipped: `beforeLoad` now whitelists protected prefixes (`/feed`, `/suggest`, `/me`, `/moderation`, `/admin`) instead of redirecting on every match — public routes (`/v/$id`, `/categories`, `/categories/$slug`, `/tags/$slug`, `/creators`, `/creators/$id`, `/trending`, `/leaderboard`, `/leaderboard/archive`, future `/search`) stay inside the shell but skip the auth gate. No file renames needed; the gate decides per-request.
+- shipped: action queue + `onAuthStateChange` listener only mount when a user is present (guests don't enqueue).
+- shipped: Header is guest-aware — Sign-in + Get-started CTAs replace bell + profile + Submit when no session. Bell/profile sheets unmounted for guests.
+
+**Sidebar (`src/components/app-sidebar.tsx`)**
+- shipped: split links into `publicLinks` (Trending, Leaderboard, Categories, Creators) + `personalBrowse` (Home, Suggest Feed). Guests only see the public group + the CurateTube logo header.
+- shipped: "You" group (Wishlist/Liked/Watched/Suggested), Moderation, Admin sections all hide entirely for guests.
+- shipped: sidebar version bumped to **alpha 0.6.7**.
+
+**Action gating (`src/components/sign-in-gate.tsx` — new, plus video-actions + report-button rewired)**
+- shipped: new `<SignInGate action="…" signedIn={…}>` wraps any trigger and, for guests, intercepts the click to open a small Popover with **Sign in** and **Sign up** CTAs that pass `redirect=<current path>` through. Preserves browsing context — no modal, no navigation.
+- shipped: `VideoActions` wraps every status button (wishlist/liked/disliked/watched) and the Suggest button in `SignInGate`. Authenticated users get the original behaviour unchanged.
+- shipped: `ReportButton` short-circuits to a SignInGate-wrapped trigger when no session; the `hasReportedVideo` query is `enabled: signedIn` so guests never hit the auth-only server fn.
+
+**Server fns made public**
+- shipped: `getVideoDetail` (library.functions) — middleware dropped; staff non-approved preview branch removed (admin routes still own that path via `admin-video-detail.functions`). Curator notes never leak through this endpoint.
+- shipped: `getCreatorContributors` (library.functions) — middleware dropped; profile join already filters by `audit_privacy_mode='public'`.
+- shipped: `getVideoAttribution` (admin.functions) — middleware dropped; reads only public attribution settings + masked contributor names.
+- verified: `getVideoTags`, `getVideoCategoryPaths`, `listCreators`, `getCreatorDetail`, `listVideosByCategorySlug`, `listVideosByTagSlug`, `listApprovedVideos`, `listTrendingVideos`, `listSuggestedVideos`, `listCategoriesWithStats`, `getSnapshotEntries` are already public (no middleware).
+
+**RLS**
+- verified: all browse tables (`videos`, `creators`, `categories`, `category_ancestors`, `video_categories`, `video_tags`, `tags`) already grant `SELECT` to `anon` and have RLS policies permitting anon reads. `videos` policy already gates non-approved rows behind `submission.view_queue`. **No migration needed.**
+
+**Login redirect threading (`src/routes/login.tsx`)**
+- shipped: `redirectPath = search.redirect ?? "/feed"` plumbed through `GoogleButton` (`redirect_uri`), `PasswordForm` signup (`emailRedirectTo`), and `MagicLinkForm` (`emailRedirectTo`). Shared-link recipients now land on the page they were sent to after signing in via any method.
+- verified: `beforeLoad` on `/login` already redirects to `search.redirect ?? "/feed"` when a session exists.
+
+**Edge cases**
+- verified: `/feed` and `/suggest` stay protected — guests hitting them get redirected to `/login?redirect=…` (whitelist behaviour).
+- verified: `/v/$id` for a non-approved or deleted video — `getVideoDetail` now returns `{ video: null }` (no staff branch), and the existing `notFoundComponent` renders the "Video not found" graceful state.
+
+## Step B — Fuzzy search (next turn)
+
+- DB: `pg_trgm` + GIN trigram indexes on `videos.title`, `tags.name`; tsvector index on `videos(title||description)`.
+- Server fn: `searchVideos(query, limit, offset)` joining tags, scoring by `ts_rank*2 + similarity`, deduped by `video_id`. Public (no middleware) — RLS already restricts to approved videos.
+- Client: header search input → 300ms debounce → TanStack Query (`enabled: query.length >= 2`, `staleTime: 30s`) → Command-palette dropdown (top 8 + "See all results" link) with bolded match substring, channel name, top-matching tag chip, suggest count.
+- New `/search?q=…` route under the public surface — paginated VideoCard grid mirroring `/tags/$slug` layout.
+- Empty state: 0 results → "Submit this topic?" CTA pre-filling the submit sheet.
+
+## Step C — OG / Twitter meta tags (next turn, alongside B)
+
+- `/v/$id`: extend existing `head()` with `og:image` = `https://img.youtube.com/vi/<youtube_id>/maxresdefault.jpg` (fallback `hqdefault.jpg`), `og:image:width/height`, `twitter:card=summary_large_image`. Today's head() uses `thumbnail_url`; switch to the YouTube CDN URL so WhatsApp/Telegram/iMessage scrape it without auth.
+- `/categories/$slug`: og:title + og:description = "[N] videos in this category", og:image = first thumbnail from `mv_category_stats.top_thumbnails[0]`.
+- `/creators/$id`: og:title + og:image = creator channel thumbnail.
+- `/` landing: static OG image (1200×630 PNG, one-time upload).
+- Edge case: non-approved video → loader returns `{ video: null }`, head() falls back to platform-level defaults — no leaked metadata.
+- Edit-time note in `admin/videos/[id]` about messaging-app cache TTLs (~7 days for WhatsApp).
+
