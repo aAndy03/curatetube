@@ -846,7 +846,7 @@ export const listVideosByCategorySlug = createServerFn({ method: "GET" })
       .in("category_id", catIds);
     const ids = Array.from(new Set((links ?? []).map((l) => l.video_id as string)));
     if (ids.length === 0)
-      return { category: cat, videos: [], breadcrumb, nextCursor: null as number | null };
+      return { category: cat, videos: [], breadcrumb, nextCursor: null as number | null, coverThumbnail };
 
     const { data: vids, error } = await supabaseAdmin
       .from("videos")
@@ -861,5 +861,5 @@ export const listVideosByCategorySlug = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const videos = vids ?? [];
     const nextCursor = videos.length === limit ? cursor + limit : null;
-    return { category: cat, videos, breadcrumb, nextCursor };
+    return { category: cat, videos, breadcrumb, nextCursor, coverThumbnail };
   });
