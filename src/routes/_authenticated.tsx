@@ -1,6 +1,7 @@
 import * as React from "react";
 import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router";
-import { Bell, ChevronRight, Plus, Search, UserCircle2 } from "lucide-react";
+import { Bell, ChevronRight, Plus, UserCircle2 } from "lucide-react";
+import { SearchPopover } from "@/components/search-popover";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
