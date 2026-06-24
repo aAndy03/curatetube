@@ -153,6 +153,11 @@ function AdminVideoDetailPage() {
           </div>
           <div className="rounded-xl border bg-card p-4">
             <h1 className="text-lg font-semibold leading-tight">{v.title}</h1>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Note: shared links may show outdated previews in messaging apps
+              (WhatsApp / iMessage / Telegram) for up to 7 days after edits —
+              they cache the scrape per URL.
+            </p>
             {v.creator ? (
               <Link
                 to="/creators/$id"

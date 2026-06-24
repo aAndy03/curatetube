@@ -56,6 +56,7 @@ export const Route = createFileRoute("/_authenticated/creators/$id")({
     ];
     if (image) {
       meta.push({ property: "og:image", content: image });
+      meta.push({ name: "twitter:card", content: "summary_large_image" });
       meta.push({ name: "twitter:image", content: image });
     }
     const scripts: Array<{ type: string; children: string }> = [];
