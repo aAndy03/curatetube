@@ -17,6 +17,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTrendingRouteImport } from './routes/_authenticated/trending'
 import { Route as AuthenticatedSuggestRouteImport } from './routes/_authenticated/suggest'
+import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedModerationRouteImport } from './routes/_authenticated/moderation'
 import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
@@ -80,6 +81,11 @@ const AuthenticatedTrendingRoute = AuthenticatedTrendingRouteImport.update({
 const AuthenticatedSuggestRoute = AuthenticatedSuggestRouteImport.update({
   id: '/suggest',
   path: '/suggest',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedModerationRoute = AuthenticatedModerationRouteImport.update({
@@ -232,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/feed': typeof AuthenticatedFeedRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/suggest': typeof AuthenticatedSuggestRoute
   '/trending': typeof AuthenticatedTrendingRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -266,6 +273,7 @@ export interface FileRoutesByTo {
   '/feed': typeof AuthenticatedFeedRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/moderation': typeof AuthenticatedModerationRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/suggest': typeof AuthenticatedSuggestRoute
   '/trending': typeof AuthenticatedTrendingRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -302,6 +310,7 @@ export interface FileRoutesById {
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
   '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRouteWithChildren
   '/_authenticated/moderation': typeof AuthenticatedModerationRoute
+  '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/suggest': typeof AuthenticatedSuggestRoute
   '/_authenticated/trending': typeof AuthenticatedTrendingRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/leaderboard'
     | '/moderation'
+    | '/search'
     | '/suggest'
     | '/trending'
     | '/admin/audit'
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/leaderboard'
     | '/moderation'
+    | '/search'
     | '/suggest'
     | '/trending'
     | '/admin/audit'
@@ -407,6 +418,7 @@ export interface FileRouteTypes {
     | '/_authenticated/feed'
     | '/_authenticated/leaderboard'
     | '/_authenticated/moderation'
+    | '/_authenticated/search'
     | '/_authenticated/suggest'
     | '/_authenticated/trending'
     | '/_authenticated/admin/audit'
@@ -503,6 +515,13 @@ declare module '@tanstack/react-router' {
       path: '/suggest'
       fullPath: '/suggest'
       preLoaderRoute: typeof AuthenticatedSuggestRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/search': {
+      id: '/_authenticated/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AuthenticatedSearchRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/moderation': {
@@ -701,6 +720,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRouteWithChildren
   AuthenticatedModerationRoute: typeof AuthenticatedModerationRoute
+  AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSuggestRoute: typeof AuthenticatedSuggestRoute
   AuthenticatedTrendingRoute: typeof AuthenticatedTrendingRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
@@ -725,6 +745,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
   AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRouteWithChildren,
   AuthenticatedModerationRoute: AuthenticatedModerationRoute,
+  AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSuggestRoute: AuthenticatedSuggestRoute,
   AuthenticatedTrendingRoute: AuthenticatedTrendingRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
