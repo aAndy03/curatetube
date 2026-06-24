@@ -26,6 +26,11 @@ export const Route = createFileRoute("/")({
           "Community-curated YouTube database. Contributors submit, moderators curate, and the best videos rise via suggestions and time-anchored leaderboards.",
       },
       { property: "og:url", content: "https://curatetube.lovable.app/" },
+      { property: "og:image", content: "https://curatetube.lovable.app/og-cover.jpg" },
+      { property: "og:image:width", content: "1216" },
+      { property: "og:image:height", content: "640" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://curatetube.lovable.app/og-cover.jpg" },
     ],
     links: [{ rel: "canonical", href: "https://curatetube.lovable.app/" }],
     scripts: [
