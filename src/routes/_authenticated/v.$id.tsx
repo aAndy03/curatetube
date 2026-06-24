@@ -38,7 +38,12 @@ export const Route = createFileRoute("/_authenticated/v/$id")({
         ? clamp(`Watch "${v.title}" on CurateTube — a community-curated YouTube video.`, 160)
         : "Watch a community-curated YouTube video on CurateTube.";
     const url = `https://curatetube.lovable.app/v/${params.id}`;
-    const image = v?.thumbnail_url ?? undefined;
+    // Prefer YouTube's CDN thumbnail for OG — WhatsApp/Telegram/iMessage
+    // scrape it without auth and it's reliably 1280×720. Fall back to the
+    // stored thumbnail_url if we somehow don't have a youtube_id.
+    const image = v?.youtube_id
+      ? `https://img.youtube.com/vi/${v.youtube_id}/maxresdefault.jpg`
+      : (v?.thumbnail_url ?? undefined);
     const meta: Array<Record<string, string>> = [
       { title },
       { name: "description", content: desc },
@@ -49,6 +54,9 @@ export const Route = createFileRoute("/_authenticated/v/$id")({
     ];
     if (image) {
       meta.push({ property: "og:image", content: image });
+      meta.push({ property: "og:image:width", content: "1280" });
+      meta.push({ property: "og:image:height", content: "720" });
+      meta.push({ name: "twitter:card", content: "summary_large_image" });
       meta.push({ name: "twitter:image", content: image });
     }
     const scripts: Array<{ type: string; children: string }> = [];

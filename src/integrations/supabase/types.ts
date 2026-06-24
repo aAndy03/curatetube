@@ -1963,6 +1963,42 @@ export type Database = {
       pause_active_ai_jobs: { Args: { _reason?: string }; Returns: number }
       refresh_mv: { Args: { _name: string }; Returns: Json }
       resume_paused_ai_jobs: { Args: never; Returns: number }
+      search_creators: {
+        Args: { lim?: number; q: string }
+        Returns: {
+          handle: string
+          id: string
+          sim: number
+          thumbnail_url: string
+          title: string
+          video_count: number
+        }[]
+      }
+      search_tags: {
+        Args: { lim?: number; q: string }
+        Returns: {
+          id: string
+          is_platform_tag: boolean
+          name: string
+          sim: number
+          slug: string
+        }[]
+      }
+      search_videos: {
+        Args: { lim?: number; q: string }
+        Returns: {
+          creator_id: string
+          creator_title: string
+          id: string
+          sim: number
+          suggest_count: number
+          thumbnail_url: string
+          title: string
+          youtube_id: string
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       sweep_ai_retries: { Args: never; Returns: number }
       sweep_stale_ai_sessions: {
         Args: { _timeout_s?: number }

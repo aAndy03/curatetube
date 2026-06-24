@@ -1,6 +1,7 @@
 import * as React from "react";
 import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router";
-import { Bell, ChevronRight, Plus, Search, UserCircle2 } from "lucide-react";
+import { Bell, ChevronRight, Plus, UserCircle2 } from "lucide-react";
+import { SearchPopover } from "@/components/search-popover";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -171,13 +172,7 @@ function Header() {
         <SidebarTrigger />
         <Separator orientation="vertical" className="h-6" />
         <div className="flex flex-1 items-center gap-2">
-          <div className="relative max-w-md flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              placeholder="Search videos, creators, tags…"
-              className="h-9 w-full rounded-md border bg-card pl-8 pr-3 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
+          <SearchPopover />
         </div>
         <div className="flex items-center gap-1">
           {!user ? (

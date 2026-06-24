@@ -180,7 +180,7 @@ export function AppSidebar() {
         ) : null}
       </SidebarContent>
       <SidebarFooter>
-        <p className="px-2 text-[10px] text-muted-foreground">alpha 0.6.7</p>
+        <p className="px-2 text-[10px] text-muted-foreground">alpha 0.6.8</p>
       </SidebarFooter>
     </Sidebar>
   );

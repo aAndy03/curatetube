@@ -49,15 +49,22 @@ export const Route = createFileRoute("/_authenticated/categories/$slug")({
           160,
         );
     const url = `https://curatetube.lovable.app/categories/${params.slug}`;
+    const image = loaderData?.coverThumbnail ?? undefined;
+    const meta: Array<Record<string, string>> = [
+      { title },
+      { name: "description", content: desc },
+      { property: "og:title", content: title },
+      { property: "og:description", content: desc },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: url },
+    ];
+    if (image) {
+      meta.push({ property: "og:image", content: image });
+      meta.push({ name: "twitter:card", content: "summary_large_image" });
+      meta.push({ name: "twitter:image", content: image });
+    }
     return {
-      meta: [
-        { title },
-        { name: "description", content: desc },
-        { property: "og:title", content: title },
-        { property: "og:description", content: desc },
-        { property: "og:type", content: "website" },
-        { property: "og:url", content: url },
-      ],
+      meta,
       links: [{ rel: "canonical", href: url }],
     };
   },
