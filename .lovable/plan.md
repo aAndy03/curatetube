@@ -309,20 +309,24 @@ Goal: unauthenticated visitors can view and navigate every non-personal route wh
 - verified: `/feed` and `/suggest` stay protected — guests hitting them get redirected to `/login?redirect=…` (whitelist behaviour).
 - verified: `/v/$id` for a non-approved or deleted video — `getVideoDetail` now returns `{ video: null }` (no staff branch), and the existing `notFoundComponent` renders the "Video not found" graceful state.
 
-## Step B — Fuzzy search (next turn)
+## Step B — Fuzzy search ✅ (0.6.8)
 
-- DB: `pg_trgm` + GIN trigram indexes on `videos.title`, `tags.name`; tsvector index on `videos(title||description)`.
-- Server fn: `searchVideos(query, limit, offset)` joining tags, scoring by `ts_rank*2 + similarity`, deduped by `video_id`. Public (no middleware) — RLS already restricts to approved videos.
-- Client: header search input → 300ms debounce → TanStack Query (`enabled: query.length >= 2`, `staleTime: 30s`) → Command-palette dropdown (top 8 + "See all results" link) with bolded match substring, channel name, top-matching tag chip, suggest count.
-- New `/search?q=…` route under the public surface — paginated VideoCard grid mirroring `/tags/$slug` layout.
-- Empty state: 0 results → "Submit this topic?" CTA pre-filling the submit sheet.
+- shipped: migration enables `pg_trgm`; adds GIN trigram indexes on `videos.title`, `creators.title`, `tags.name`; plus an English `to_tsvector(title || description)` GIN index.
+- shipped: `public.search_videos`, `public.search_creators`, `public.search_tags` SQL RPCs (SECURITY DEFINER, GRANT EXECUTE to anon/authenticated). All three rank by `similarity()`, gate to `status='approved'` for videos, and cap to 50/25/25 rows respectively.
+- shipped: `src/lib/search.functions.ts` — public `searchAll` server fn fans out to the three RPCs in parallel; 30s s-maxage / 120s SWR cache header.
+- shipped: `src/components/search-popover.tsx` — debounced 200ms header input with dropdown (videos / creators / tags) and "See all results" footer link; replaces the static input in the `_authenticated` layout header.
+- shipped: `/search` route (`src/routes/_authenticated/search.tsx`) — public, URL-state synced via `validateSearch` (q param) + 250ms debounce, `noindex,follow` on populated queries, three-section result grid.
+- deferred: "Submit this topic?" empty-state CTA — out of scope for 0.6.8.
 
-## Step C — OG / Twitter meta tags (next turn, alongside B)
+## Step C — OG / Twitter meta tags ✅ (0.6.8)
 
-- `/v/$id`: extend existing `head()` with `og:image` = `https://img.youtube.com/vi/<youtube_id>/maxresdefault.jpg` (fallback `hqdefault.jpg`), `og:image:width/height`, `twitter:card=summary_large_image`. Today's head() uses `thumbnail_url`; switch to the YouTube CDN URL so WhatsApp/Telegram/iMessage scrape it without auth.
-- `/categories/$slug`: og:title + og:description = "[N] videos in this category", og:image = first thumbnail from `mv_category_stats.top_thumbnails[0]`.
-- `/creators/$id`: og:title + og:image = creator channel thumbnail.
-- `/` landing: static OG image (1200×630 PNG, one-time upload).
-- Edge case: non-approved video → loader returns `{ video: null }`, head() falls back to platform-level defaults — no leaked metadata.
-- Edit-time note in `admin/videos/[id]` about messaging-app cache TTLs (~7 days for WhatsApp).
+- shipped: `/v/$id` — `og:image` now points at `https://img.youtube.com/vi/<youtube_id>/maxresdefault.jpg` (WhatsApp/Telegram/iMessage scrape this unauthenticated), with `og:image:width=1280`, `og:image:height=720`, `twitter:card=summary_large_image`. Falls back to stored `thumbnail_url` if no `youtube_id`.
+- shipped: `/categories/$slug` — `listVideosByCategorySlug` now returns `coverThumbnail` from `mv_category_stats.top_thumbnails[0]`; head() wires it into `og:image` + `twitter:card`.
+- shipped: `/creators/$id` — added `twitter:card=summary_large_image` alongside the existing creator-thumbnail `og:image`.
+- shipped: `/` landing — added static `/og-cover.jpg` (1216×640 branded card) with og:image:width/height + twitter:card.
+- verified: non-approved/deleted video edge — `getVideoDetail` returns `{ video: null }`, head() falls back to platform defaults — no leaked metadata.
+- shipped: admin/videos/[id] — inline note: "shared links may show outdated previews in messaging apps (WhatsApp / iMessage / Telegram) for up to 7 days after edits — they cache the scrape per URL."
+
+Sidebar version bumped to **alpha 0.6.8**.
+
 
