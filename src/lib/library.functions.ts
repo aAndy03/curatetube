@@ -778,7 +778,27 @@ export const listVideosByCategorySlug = createServerFn({ method: "GET" })
       .eq("slug", data.slug)
       .maybeSingle();
     if (!cat)
-      return { category: null, videos: [], breadcrumb: [], nextCursor: null as number | null };
+      return {
+        category: null,
+        videos: [],
+        breadcrumb: [],
+        nextCursor: null as number | null,
+        coverThumbnail: null as string | null,
+      };
+
+    // Cover thumbnail for OG / share previews — first entry from the
+    // pre-aggregated mv_category_stats.top_thumbnails array (refreshed by
+    // the existing materialised-view cron). Non-fatal if missing.
+    let coverThumbnail: string | null = null;
+    {
+      const { data: stat } = await supabaseAdmin
+        .from("mv_category_stats" as never)
+        .select("top_thumbnails")
+        .eq("category_id", cat.id as string)
+        .maybeSingle();
+      const thumbs = (stat as { top_thumbnails?: string[] | null } | null)?.top_thumbnails;
+      coverThumbnail = thumbs && thumbs.length > 0 ? thumbs[0] : null;
+    }
 
     // Breadcrumb (parents only, root→leaf) via closure table.
     const { data: ancRows } = await supabaseAdmin
