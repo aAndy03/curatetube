@@ -45,22 +45,44 @@ export const getLandingData = createServerFn({ method: "GET" }).handler(
         }));
     }
 
-    const [{ count: videoCount }, { count: categoryCount }, { count: contribCount }] =
-      await Promise.all([
-        supabaseAdmin
-          .from("videos")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "approved"),
-        supabaseAdmin
-          .from("categories")
-          .select("id", { count: "exact", head: true })
-          .is("deleted_at", null),
-        supabaseAdmin
-          .from("profiles")
-          .select("id", { count: "exact", head: true })
-          .eq("audit_privacy_mode", "public")
-          .is("deleted_at", null),
-      ]);
+    const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+
+    const [
+      { count: videoCount },
+      { count: categoryCount },
+      { count: contribCount },
+      { count: suggestionCount },
+      { count: weeklySubs },
+      { data: topCats },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("videos")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "approved"),
+      supabaseAdmin
+        .from("categories")
+        .select("id", { count: "exact", head: true })
+        .is("deleted_at", null),
+      supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("audit_privacy_mode", "public")
+        .is("deleted_at", null),
+      supabaseAdmin
+        .from("video_suggestions")
+        .select("id", { count: "exact", head: true }),
+      supabaseAdmin
+        .from("videos")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "approved")
+        .gte("created_at", weekAgo),
+      supabaseAdmin
+        .from("categories")
+        .select("name, slug, video_count")
+        .is("deleted_at", null)
+        .order("video_count", { ascending: false })
+        .limit(10),
+    ]);
 
     return {
       videos,
@@ -68,7 +90,14 @@ export const getLandingData = createServerFn({ method: "GET" }).handler(
         videos: videoCount ?? 0,
         categories: categoryCount ?? 0,
         contributors: contribCount ?? 0,
+        suggestions: suggestionCount ?? 0,
+        weeklySubmissions: weeklySubs ?? 0,
       },
+      topCategories: ((topCats ?? []) as Array<{ name: string; slug: string; video_count: number | null }>).map((c) => ({
+        name: c.name,
+        slug: c.slug,
+        count: c.video_count ?? 0,
+      })),
     };
   },
 );
