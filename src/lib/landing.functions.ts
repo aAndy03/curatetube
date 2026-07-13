@@ -61,8 +61,7 @@ export const getLandingData = createServerFn({ method: "GET" }).handler(
         .eq("status", "approved"),
       supabaseAdmin
         .from("categories")
-        .select("id", { count: "exact", head: true })
-        .is("deleted_at", null),
+        .select("id", { count: "exact", head: true }),
       supabaseAdmin
         .from("profiles")
         .select("id", { count: "exact", head: true })
@@ -79,9 +78,9 @@ export const getLandingData = createServerFn({ method: "GET" }).handler(
       supabaseAdmin
         .from("categories")
         .select("name, slug, video_count")
-        .is("deleted_at", null)
         .order("video_count", { ascending: false })
         .limit(10),
+
     ]);
 
     return {
