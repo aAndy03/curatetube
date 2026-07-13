@@ -308,9 +308,9 @@ function Landing() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             {[
               { label: "Curated videos", value: stats?.videos, icon: PlayCircle },
-              { label: "Categories", value: stats?.categories, icon: Flag },
-              { label: "Suggestions cast", value: stats?.suggestions, icon: TrendingUp },
-              { label: "New this week", value: stats?.weeklySubmissions, icon: Sparkles },
+              { label: "Topics & categories", value: stats?.categories, icon: Flag },
+              { label: "Suggestions cast (all-time)", value: stats?.suggestions, icon: TrendingUp },
+              { label: "Added this week", value: stats?.weeklySubmissions, icon: Sparkles },
               { label: "Public contributors", value: stats?.contributors, icon: Users2 },
             ].map((s) => (
               <div
