@@ -59,7 +59,7 @@ function CyclingWord() {
     return () => clearInterval(t);
   }, []);
   return (
-    <span className="relative inline-flex items-baseline overflow-hidden pb-[0.15em] leading-[1.1] align-baseline">
+    <span className="relative block overflow-hidden pb-[0.15em] leading-[1.1]">
       <span
         key={i}
         className="inline-block animate-slide-down-in pb-[0.15em] leading-[1.1]"
@@ -71,9 +71,8 @@ function CyclingWord() {
           backgroundClip: "text",
         }}
       >
-        {CYCLE_NAMES[i]}
+        {CYCLE_NAMES[i]},
       </span>
-      <span className="text-white/60">,&nbsp;</span>
     </span>
   );
 }
