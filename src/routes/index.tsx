@@ -223,8 +223,10 @@ function Landing() {
 
           <h1 className="text-balance pb-2 text-5xl font-semibold leading-[1.05] tracking-tight md:text-7xl lg:text-[5.5rem]">
             <CyclingWord />
-            <span className="text-white/50">but </span>
-            <span className="text-white">free.</span>
+            <span className="block">
+              <span className="text-white/50">but </span>
+              <span className="text-white">free.</span>
+            </span>
           </h1>
 
           <p className="mt-8 max-w-2xl text-pretty text-base leading-relaxed text-white/60 md:text-lg">
