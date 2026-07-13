@@ -173,7 +173,7 @@ function LoginPage() {
               {stats && (
                 <div className="mt-8 flex flex-wrap gap-3 text-sm">
                   <MiniStat label="curated videos" value={stats.videos} />
-                  <MiniStat label="categories" value={stats.categories} />
+                  <MiniStat label="topics" value={stats.categories} />
                   <MiniStat label="contributors" value={stats.contributors} />
                 </div>
               )}
