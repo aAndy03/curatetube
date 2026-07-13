@@ -186,7 +186,7 @@ function LoginPage() {
                   {tab === "signup" ? "Create your account" : "Welcome back"}
                 </h2>
                 <p className="mt-1 text-xs text-white/55">
-                  The first user becomes Owner. Session lasts 10 days.
+                  Sessions last 10 days. No spam, ever.
                 </p>
 
                 <div className="mt-5">
