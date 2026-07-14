@@ -186,22 +186,24 @@ function CategoryDetailPage() {
               <ToggleGroupItem value="direct">Direct only</ToggleGroupItem>
             </ToggleGroup>
             {categoryId ? (
-              <Button
-                variant={isPinned ? "outline" : "default"}
-                size="sm"
-                onClick={() => (isPinned ? unpin.mutate() : pin.mutate())}
-                disabled={pin.isPending || unpin.isPending}
-              >
-                {isPinned ? (
-                  <>
-                    <PinOff className="mr-1 h-4 w-4" /> Unpin from feed
-                  </>
-                ) : (
-                  <>
-                    <Pin className="mr-1 h-4 w-4" /> Pin to feed
-                  </>
-                )}
-              </Button>
+              <SignInGate action="pin this category" signedIn={signedIn}>
+                <Button
+                  variant={isPinned ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => (isPinned ? unpin.mutate() : pin.mutate())}
+                  disabled={pin.isPending || unpin.isPending}
+                >
+                  {isPinned ? (
+                    <>
+                      <PinOff className="mr-1 h-4 w-4" /> Unpin from feed
+                    </>
+                  ) : (
+                    <>
+                      <Pin className="mr-1 h-4 w-4" /> Pin to feed
+                    </>
+                  )}
+                </Button>
+              </SignInGate>
             ) : null}
           </div>
         </div>
