@@ -85,6 +85,8 @@ function CategoryDetailPage() {
   const pinFn = useServerFn(pinCategory);
   const unpinFn = useServerFn(unpinCategory);
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const signedIn = !!user;
   const [scope, setScope] = React.useState<"all" | "direct">("all");
 
   const query = useInfiniteQuery({
@@ -100,7 +102,8 @@ function CategoryDetailPage() {
   if (!query.isLoading && head && !head.category) throw notFound();
 
   const { data: pinsData } = useQuery({
-    queryKey: ["pinned-categories"],
+    queryKey: ["pinned-categories", user?.id ?? null],
+    enabled: signedIn,
     queryFn: () => pinsFn(),
     staleTime: 60_000,
   });
