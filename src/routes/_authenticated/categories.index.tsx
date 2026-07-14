@@ -230,7 +230,7 @@ function PinnedTracker() {
     reorderMut.mutate(next);
   };
 
-  if (isLoading || pins.length === 0) return null;
+  if (!user || isLoading || pins.length === 0) return null;
 
   return (
     <section className="rounded-xl border bg-card">
