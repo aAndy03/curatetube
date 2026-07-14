@@ -21,6 +21,8 @@ import { type VideoCardData } from "@/components/video-card";
 import { InfiniteVideoGrid } from "@/components/infinite-video-grid";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { SignInGate } from "@/components/sign-in-gate";
+import { useAuth } from "@/lib/auth-context";
 
 const PAGE_SIZE = 24;
 
@@ -83,6 +85,8 @@ function CategoryDetailPage() {
   const pinFn = useServerFn(pinCategory);
   const unpinFn = useServerFn(unpinCategory);
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const signedIn = !!user;
   const [scope, setScope] = React.useState<"all" | "direct">("all");
 
   const query = useInfiniteQuery({
@@ -98,7 +102,8 @@ function CategoryDetailPage() {
   if (!query.isLoading && head && !head.category) throw notFound();
 
   const { data: pinsData } = useQuery({
-    queryKey: ["pinned-categories"],
+    queryKey: ["pinned-categories", user?.id ?? null],
+    enabled: signedIn,
     queryFn: () => pinsFn(),
     staleTime: 60_000,
   });
@@ -181,22 +186,24 @@ function CategoryDetailPage() {
               <ToggleGroupItem value="direct">Direct only</ToggleGroupItem>
             </ToggleGroup>
             {categoryId ? (
-              <Button
-                variant={isPinned ? "outline" : "default"}
-                size="sm"
-                onClick={() => (isPinned ? unpin.mutate() : pin.mutate())}
-                disabled={pin.isPending || unpin.isPending}
-              >
-                {isPinned ? (
-                  <>
-                    <PinOff className="mr-1 h-4 w-4" /> Unpin from feed
-                  </>
-                ) : (
-                  <>
-                    <Pin className="mr-1 h-4 w-4" /> Pin to feed
-                  </>
-                )}
-              </Button>
+              <SignInGate action="pin this category" signedIn={signedIn}>
+                <Button
+                  variant={isPinned ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => (isPinned ? unpin.mutate() : pin.mutate())}
+                  disabled={pin.isPending || unpin.isPending}
+                >
+                  {isPinned ? (
+                    <>
+                      <PinOff className="mr-1 h-4 w-4" /> Unpin from feed
+                    </>
+                  ) : (
+                    <>
+                      <Pin className="mr-1 h-4 w-4" /> Pin to feed
+                    </>
+                  )}
+                </Button>
+              </SignInGate>
             ) : null}
           </div>
         </div>

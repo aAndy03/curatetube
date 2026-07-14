@@ -36,6 +36,7 @@ import {
   reorderPinnedCategories,
 } from "@/lib/category-feed.functions";
 import { usePermissions } from "@/lib/use-permissions";
+import { useAuth } from "@/lib/auth-context";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -178,11 +179,13 @@ function CategoriesPage() {
 // ============ Pinned tracker (batch unpin) ============
 function PinnedTracker() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const listFn = useServerFn(listPinnedCategories);
   const unpinBatchFn = useServerFn(unpinCategoriesBatch);
   const reorderFn = useServerFn(reorderPinnedCategories);
   const { data, isLoading } = useQuery({
-    queryKey: ["pinned-categories"],
+    queryKey: ["pinned-categories", user?.id ?? null],
+    enabled: !!user,
     queryFn: () => listFn(),
     staleTime: 30_000,
   });
@@ -227,7 +230,7 @@ function PinnedTracker() {
     reorderMut.mutate(next);
   };
 
-  if (isLoading || pins.length === 0) return null;
+  if (!user || isLoading || pins.length === 0) return null;
 
   return (
     <section className="rounded-xl border bg-card">
