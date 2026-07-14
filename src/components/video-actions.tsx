@@ -35,8 +35,10 @@ export function VideoActions({
   const { statuses, suggested } = useHydratedStatus(videoId);
   const has = (s: ListStatus) => statuses.includes(s);
 
+  const stateKey = ["video-state", videoId, user?.id ?? null] as const;
+
   const optimisticStatus = (status: ListStatus, on: boolean) => {
-    qc.setQueryData<VideoState>(["video-state", videoId], (prev) => {
+    qc.setQueryData<VideoState>(stateKey, (prev) => {
       const base = prev ?? { statuses: [], suggested: false };
       let next = base.statuses.filter((s) => s !== status);
       if (on) {
@@ -54,7 +56,7 @@ export function VideoActions({
   };
 
   const onSuggestClick = () => {
-    qc.setQueryData<VideoState>(["video-state", videoId], (prev) => ({
+    qc.setQueryData<VideoState>(stateKey, (prev) => ({
       ...(prev ?? { statuses: [], suggested: false }),
       suggested: !suggested,
     }));
