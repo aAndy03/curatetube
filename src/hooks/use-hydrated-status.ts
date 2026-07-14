@@ -12,6 +12,7 @@ import {
   subscribeQueue,
   type QueuedAction,
 } from "@/lib/action-queue";
+import { useAuth } from "@/lib/auth-context";
 
 export type ListStatus = "wishlist" | "liked" | "disliked" | "watched";
 
@@ -26,9 +27,14 @@ export type HydratedVideoState = {
 type ServerState = { statuses: ListStatus[]; suggested: boolean };
 
 export function useHydratedStatus(videoId: string): HydratedVideoState {
+  const { user } = useAuth();
   const fetchState = useServerFn(getMyVideoState);
+  // Guests never call the auth-required server fn — the middleware would 401
+  // on every card mount. The queue-only path still surfaces optimistic writes
+  // for the SignInGate popover flow.
   const q = useQuery<ServerState>({
-    queryKey: ["video-state", videoId],
+    queryKey: ["video-state", videoId, user?.id ?? null],
+    enabled: !!user,
     queryFn: () => fetchState({ data: { videoId } }),
   });
 
