@@ -179,11 +179,13 @@ function CategoriesPage() {
 // ============ Pinned tracker (batch unpin) ============
 function PinnedTracker() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const listFn = useServerFn(listPinnedCategories);
   const unpinBatchFn = useServerFn(unpinCategoriesBatch);
   const reorderFn = useServerFn(reorderPinnedCategories);
   const { data, isLoading } = useQuery({
-    queryKey: ["pinned-categories"],
+    queryKey: ["pinned-categories", user?.id ?? null],
+    enabled: !!user,
     queryFn: () => listFn(),
     staleTime: 30_000,
   });
