@@ -21,6 +21,8 @@ import { type VideoCardData } from "@/components/video-card";
 import { InfiniteVideoGrid } from "@/components/infinite-video-grid";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { SignInGate } from "@/components/sign-in-gate";
+import { useAuth } from "@/lib/auth-context";
 
 const PAGE_SIZE = 24;
 
