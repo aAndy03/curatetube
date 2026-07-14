@@ -36,6 +36,7 @@ import {
   reorderPinnedCategories,
 } from "@/lib/category-feed.functions";
 import { usePermissions } from "@/lib/use-permissions";
+import { useAuth } from "@/lib/auth-context";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
