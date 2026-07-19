@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Flag, Search, Sparkles, Trophy, ShieldCheck, Users2, PlayCircle, TrendingUp } from "lucide-react";
+import { ArrowRight, Flag, Search, Sparkles, Trophy, ShieldCheck, Users2, PlayCircle, TrendingUp, Github } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
