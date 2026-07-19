@@ -195,6 +195,15 @@ function Landing() {
               <NavPill to="/terms">Terms</NavPill>
             </div>
             <div className="flex items-center gap-2">
+              <a
+                href={GITHUB_PROJECT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="View CurateTube on GitHub"
+                className="rounded-full p-2 text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+              >
+                <Github className="h-[18px] w-[18px]" />
+              </a>
               <Link
                 to="/login"
                 className="hidden rounded-full px-3 py-1.5 text-sm text-white/70 transition hover:text-white sm:inline-block"
