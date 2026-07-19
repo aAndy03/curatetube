@@ -285,7 +285,17 @@ async function stampVideoAi(videoId: string, jobType: AiJobType, model: string, 
   await supabaseAdmin.from("videos").update(patch).eq("id", videoId);
 }
 
-async function runJob(job: AiJobRow, settings: AiSettings, snapshot: TaxonomySnapshot): Promise<{ throttled: boolean }> {
+// Per-tick in-memory accumulator for a session, flushed once at tick end.
+// Kills the 3 SELECTs previously issued per completed job.
+type SessionAcc = { completed: number; promptTokens: number; completionTokens: number };
+
+async function runJob(
+  job: AiJobRow,
+  settings: AiSettings,
+  snapshot: TaxonomySnapshot,
+  throttledModels: Set<string>,
+  sessionAcc: Map<string, SessionAcc>,
+): Promise<{ throttled: boolean }> {
   const ctx = await loadVideoContext(job.video_id);
   if (!ctx) {
     await failJob(job.id, "video_not_found");
@@ -293,7 +303,14 @@ async function runJob(job: AiJobRow, settings: AiSettings, snapshot: TaxonomySna
   }
 
   const primaryModel = modelForScope(job.scope, settings);
-  const tryModels = [primaryModel, ...settings.fallbackOrder.filter((m) => m !== primaryModel)];
+  const tryModels = [primaryModel, ...settings.fallbackOrder.filter((m) => m !== primaryModel)]
+    // Skip models already known-throttled earlier in this tick.
+    .filter((m) => !throttledModels.has(m));
+
+  if (tryModels.length === 0) {
+    // Everything is throttled — leave the claim so the sweeper reissues it.
+    return { throttled: true };
+  }
 
   let lastError = "no_attempt";
   for (const model of tryModels) {
@@ -307,7 +324,6 @@ async function runJob(job: AiJobRow, settings: AiSettings, snapshot: TaxonomySna
     });
 
     if (result.ok) {
-      // Persist results
       const slugs = result.results.map((r) => r.slug);
       const idMap = await resolveSlugsToIds(job.job_type, slugs);
       const autoAccept = job.scope === "user_submit" && settings.userSubmitAuto;
@@ -342,17 +358,15 @@ async function runJob(job: AiJobRow, settings: AiSettings, snapshot: TaxonomySna
       });
 
       if (job.assigned_session_id) {
-        await supabaseAdmin.rpc("set_updated_at" as never).select(); // no-op safety
-        await supabaseAdmin
-          .from("ai_agent_sessions")
-          .update({
-            last_heartbeat: new Date().toISOString(),
-            total_jobs_completed: (await getSessionCompleted(job.assigned_session_id)) + 1,
-            total_prompt_tokens: (await getSessionTokens(job.assigned_session_id, "prompt")) + result.prompt_tokens,
-            total_completion_tokens:
-              (await getSessionTokens(job.assigned_session_id, "completion")) + result.completion_tokens,
-          })
-          .eq("id", job.assigned_session_id);
+        const acc = sessionAcc.get(job.assigned_session_id) ?? {
+          completed: 0,
+          promptTokens: 0,
+          completionTokens: 0,
+        };
+        acc.completed += 1;
+        acc.promptTokens += result.prompt_tokens;
+        acc.completionTokens += result.completion_tokens;
+        sessionAcc.set(job.assigned_session_id, acc);
       }
       return { throttled: false };
     }
@@ -363,11 +377,11 @@ async function runJob(job: AiJobRow, settings: AiSettings, snapshot: TaxonomySna
       return { throttled: true };
     }
     if (result.error === "rate_limited") {
-      // try next model
+      // Remember: any other job in this tick should skip this model outright.
+      throttledModels.add(model);
       continue;
     }
     if (result.error === "context_exceeded") {
-      // End session, fail this attempt — sweeper will retry.
       if (job.assigned_session_id) {
         await supabaseAdmin
           .from("ai_agent_sessions")
@@ -385,7 +399,6 @@ async function runJob(job: AiJobRow, settings: AiSettings, snapshot: TaxonomySna
   }
 
   await failJob(job.id, lastError);
-  // If all models rate-limited, mark throttled + pause + notify admins.
   if (lastError.startsWith("rate_limited")) {
     await enterThrottledState("rate_limited");
     return { throttled: true };
@@ -393,22 +406,40 @@ async function runJob(job: AiJobRow, settings: AiSettings, snapshot: TaxonomySna
   return { throttled: false };
 }
 
-async function getSessionCompleted(sessionId: string): Promise<number> {
-  const { data } = await supabaseAdmin
+async function flushSessionAcc(sessionAcc: Map<string, SessionAcc>) {
+  if (sessionAcc.size === 0) return;
+  // One SELECT + one UPDATE per session, regardless of how many jobs it ran.
+  const ids = Array.from(sessionAcc.keys());
+  const { data: prior } = await supabaseAdmin
     .from("ai_agent_sessions")
-    .select("total_jobs_completed")
-    .eq("id", sessionId)
-    .maybeSingle();
-  return data?.total_jobs_completed ?? 0;
-}
-async function getSessionTokens(sessionId: string, kind: "prompt" | "completion"): Promise<number> {
-  const col = kind === "prompt" ? "total_prompt_tokens" : "total_completion_tokens";
-  const { data } = await supabaseAdmin
-    .from("ai_agent_sessions")
-    .select(col)
-    .eq("id", sessionId)
-    .maybeSingle();
-  return (data as Record<string, number> | null)?.[col] ?? 0;
+    .select("id, total_jobs_completed, total_prompt_tokens, total_completion_tokens")
+    .in("id", ids);
+  const priorById = new Map(
+    (prior ?? []).map((r) => [
+      r.id as string,
+      {
+        completed: (r.total_jobs_completed as number) ?? 0,
+        promptTokens: (r.total_prompt_tokens as number) ?? 0,
+        completionTokens: (r.total_completion_tokens as number) ?? 0,
+      },
+    ]),
+  );
+  const nowIso = new Date().toISOString();
+  await Promise.all(
+    ids.map((id) => {
+      const acc = sessionAcc.get(id)!;
+      const base = priorById.get(id) ?? { completed: 0, promptTokens: 0, completionTokens: 0 };
+      return supabaseAdmin
+        .from("ai_agent_sessions")
+        .update({
+          last_heartbeat: nowIso,
+          total_jobs_completed: base.completed + acc.completed,
+          total_prompt_tokens: base.promptTokens + acc.promptTokens,
+          total_completion_tokens: base.completionTokens + acc.completionTokens,
+        })
+        .eq("id", id);
+    }),
+  );
 }
 
 export async function tick(): Promise<{
@@ -420,39 +451,56 @@ export async function tick(): Promise<{
   const settings = await loadAiSettings();
   const snapshot = await getCurrentSnapshot();
 
-  // Sweepers
+  // Sweepers (kept sequential — they touch shared state).
   const { data: reissuedCount } = await supabaseAdmin.rpc("sweep_stale_ai_sessions", {
     _timeout_s: settings.heartbeatTimeoutS,
   } as never);
   const { data: retriedCount } = await supabaseAdmin.rpc("sweep_ai_retries" as never);
-
-  // Post-batch validator: flag results whose category/tag was deleted/renamed.
   await supabaseAdmin.rpc("validate_ai_results_deleted_entities" as never);
 
-  // Dispatch up to N jobs per tick (one per session slot).
-  let ranJobs = 0;
-  let throttled = false;
+  // Claim up to N jobs first (claim_ai_job uses FOR UPDATE SKIP LOCKED so
+  // parallel workers won't collide). Then run them concurrently.
+  const claimed: AiJobRow[] = [];
   for (let i = 0; i < settings.maxParallel; i++) {
     const job = await claimNextJob(null, null);
     if (!job) break;
-
-    const model = modelForScope(job.scope, settings);
-    const sessionId = await ensureSession(snapshot, model, job.scope);
-    await supabaseAdmin
-      .from("ai_jobs")
-      .update({ assigned_session_id: sessionId, taxonomy_snapshot_id: snapshot.id })
-      .eq("id", job.id);
-
-    const r = await runJob({ ...job, assigned_session_id: sessionId }, settings, snapshot);
-    ranJobs++;
-    if (r.throttled) {
-      throttled = true;
-      break;
-    }
+    claimed.push(job);
   }
 
+  if (claimed.length === 0) {
+    return {
+      ranJobs: 0,
+      reissued: typeof reissuedCount === "number" ? reissuedCount : 0,
+      retried: typeof retriedCount === "number" ? retriedCount : 0,
+      throttled: false,
+    };
+  }
+
+  // Attach sessions in parallel (one session per scope+model pair).
+  const withSessions = await Promise.all(
+    claimed.map(async (job) => {
+      const model = modelForScope(job.scope, settings);
+      const sessionId = await ensureSession(snapshot, model, job.scope);
+      await supabaseAdmin
+        .from("ai_jobs")
+        .update({ assigned_session_id: sessionId, taxonomy_snapshot_id: snapshot.id })
+        .eq("id", job.id);
+      return { ...job, assigned_session_id: sessionId };
+    }),
+  );
+
+  const throttledModels = new Set<string>();
+  const sessionAcc = new Map<string, SessionAcc>();
+  const results = await Promise.all(
+    withSessions.map((job) => runJob(job, settings, snapshot, throttledModels, sessionAcc)),
+  );
+
+  await flushSessionAcc(sessionAcc);
+
+  const throttled = results.some((r) => r.throttled);
+  const ranJobs = results.length;
+
   if (!throttled && ranJobs > 0) {
-    // Successful work → clear throttle flag and resume paused jobs.
     await exitThrottledStateIfNeeded();
   }
 
