@@ -17,14 +17,23 @@ type AiSettings = {
   userSubmitAuto: boolean;
 };
 
+// Model defaults tuned Jul-2026: prefer Gemini 3.x fast/lite tier for
+// user-submit + batch (cheap, sub-second, strict-JSON reliable); reserve
+// the pro-preview tier for admin single dispatches where quality matters.
+// Limits shrunk to match real UX (5 cats, ~8 secondary tags) — prior 30/50
+// bloated prompts + over-tagged videos.
 const DEFAULTS: AiSettings = {
-  maxParallel: 2,
-  userSubmitModel: "google/gemini-2.5-flash-lite",
-  adminModel: "openai/gpt-5-mini",
-  batchModel: "google/gemini-2.5-flash",
-  fallbackOrder: ["google/gemini-2.5-flash-lite", "google/gemini-2.5-flash", "openai/gpt-5-nano"],
-  maxCategories: 30,
-  minSecondary: 50,
+  maxParallel: 4,
+  userSubmitModel: "google/gemini-3.1-flash-lite",
+  adminModel: "google/gemini-3.1-pro-preview",
+  batchModel: "google/gemini-3-flash-preview",
+  fallbackOrder: [
+    "google/gemini-3.1-flash-lite",
+    "google/gemini-3-flash-preview",
+    "google/gemini-2.5-flash-lite",
+  ],
+  maxCategories: 5,
+  minSecondary: 8,
   sessionMaxJobs: 20,
   heartbeatTimeoutS: 90,
   userSubmitAuto: true,
