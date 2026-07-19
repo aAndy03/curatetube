@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Flag, Search, Sparkles, Trophy, ShieldCheck, Users2, PlayCircle, TrendingUp } from "lucide-react";
+import { ArrowRight, Flag, Search, Sparkles, Trophy, ShieldCheck, Users2, PlayCircle, TrendingUp, Github } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ export const Route = createFileRoute("/")({
 });
 
 const CYCLE_NAMES = ["Nebula", "Curiosity Stream", "MagellanTV"];
+const GITHUB_PROJECT_URL = "https://github.com/your-org/curatetube"; // TODO: replace with real repo
 
 function CyclingWord() {
   const [i, setI] = useState(0);
@@ -194,6 +195,15 @@ function Landing() {
               <NavPill to="/terms">Terms</NavPill>
             </div>
             <div className="flex items-center gap-2">
+              <a
+                href={GITHUB_PROJECT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="View CurateTube on GitHub"
+                className="rounded-full p-2 text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+              >
+                <Github className="h-[18px] w-[18px]" />
+              </a>
               <Link
                 to="/login"
                 className="hidden rounded-full px-3 py-1.5 text-sm text-white/70 transition hover:text-white sm:inline-block"
