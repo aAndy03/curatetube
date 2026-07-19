@@ -51,6 +51,7 @@ export const Route = createFileRoute("/")({
 });
 
 const CYCLE_NAMES = ["Nebula", "Curiosity Stream", "MagellanTV"];
+const GITHUB_PROJECT_URL = "https://github.com/your-org/curatetube"; // TODO: replace with real repo
 
 function CyclingWord() {
   const [i, setI] = useState(0);
